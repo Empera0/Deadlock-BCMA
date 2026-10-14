@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1d1915"/>
+      <stop offset="1" stop-color="#0a0908"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f6dc96"/>
+      <stop offset="0.55" stop-color="#d9a84e"/>
+      <stop offset="1" stop-color="#a5722a"/>
+    </linearGradient>
+    <linearGradient id="rim" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#e8c77d"/>
+      <stop offset="1" stop-color="#7a5420"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Plate -->
+  <rect x="32" y="32" width="960" height="960" rx="210" fill="url(#bg)"/>
+  <rect x="58" y="58" width="908" height="908" rx="186" fill="none" stroke="url(#rim)" stroke-width="14" opacity="0.85"/>
+
+  <!-- Art deco rays behind the lock -->
+  <g stroke="#d9a84e" stroke-width="10" opacity="0.28" stroke-linecap="round">
+    <line x1="512" y1="150" x2="512" y2="230"/>
+    <line x1="380" y1="175" x2="420" y2="245"/>
+    <line x1="644" y1="175" x2="604" y2="245"/>
+    <line x1="270" y1="245" x2="335" y2="300"/>
+    <line x1="754" y1="245" x2="689" y2="300"/>
+  </g>
+
+  <!-- Shackle -->
+  <path d="M 345 470 L 345 400 A 167 167 0 0 1 679 400 L 679 470" fill="none" stroke="url(#gold)" stroke-width="78" stroke-linecap="butt"/>
+  <path d="M 345 470 L 345 400 A 167 167 0 0 1 679 400 L 679 470" fill="none" stroke="#fff3c9" stroke-width="10" opacity="0.35" transform="translate(-22 0)"/>
+
+  <!-- Body: a faceted shield -->
+  <path d="M 250 450 L 774 450 L 774 690 L 512 870 L 250 690 Z" fill="url(#gold)"/>
+  <path d="M 250 450 L 774 450 L 774 690 L 512 870 L 250 690 Z" fill="none" stroke="#5c3e14" stroke-width="10" stroke-linejoin="round"/>
+  <!-- Facet lines -->
+  <path d="M 290 486 L 734 486 L 734 670 L 512 822 L 290 670 Z" fill="none" stroke="#7a5420" stroke-width="7" opacity="0.65" stroke-linejoin="round"/>
+
+  <!-- Keyhole, shaped like a gauge needle -->
+  <circle cx="512" cy="600" r="64" fill="#120f0c"/>
+  <path d="M 478 630 L 546 630 L 528 770 L 496 770 Z" fill="#120f0c"/>
+  <circle cx="512" cy="600" r="22" fill="#d9a84e" opacity="0.9"/>
+</svg>
