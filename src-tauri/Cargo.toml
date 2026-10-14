@@ -1,0 +1,21 @@
+[package]
+name = "deadlock-stat-calculator"
+version = "0.1.0"
+description = "Deadlock build and stat calculator"
+edition = "2021"
+
+[lib]
+name = "deadlock_stat_calculator_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+engine = { path = "../engine" }
+tauri = { version = "2", features = [] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+ureq = "2"
+tauri-plugin-updater = "2"
+tauri-plugin-process = "2"

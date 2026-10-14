@@ -1,0 +1,13 @@
+//! Deadlock calculation engine. Independent of the UI: data and formulas only.
+
+pub mod build;
+pub mod calc;
+pub mod combo;
+pub mod counters;
+pub mod data;
+pub mod fights;
+pub mod kit;
+pub mod matches;
+pub mod misc;
+pub mod raw;
+pub mod suggest;
