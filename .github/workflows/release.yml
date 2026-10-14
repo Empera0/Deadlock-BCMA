@@ -16,7 +16,7 @@ jobs:
     runs-on: windows-latest
     env:
       # The local .cargo/config.toml points the build output at a folder on the developer's PC.
-      CARGO_TARGET_DIR: target
+      CARGO_TARGET_DIR: ${{ github.workspace }}/target
     steps:
       - uses: actions/checkout@v4
 
