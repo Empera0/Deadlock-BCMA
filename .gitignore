@@ -6,3 +6,6 @@ data-raw
 *.log
 *.exe
 screenshots
+
+# Local build settings (paths on this computer)
+.cargo/config.toml

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { api, Build, Combo, ComboResult, fmt, GameData, Ranked, Sheet } from "./api";
+import { api, Build, Combo, ComboResult, fmt, GameData, Ranked, Sheet, MatchPreset } from "./api";
 import BuildBar from "./components/BuildBar";
 import ComboPanel from "./components/ComboPanel";
 import GeneratorView from "./components/GeneratorView";
@@ -57,6 +57,8 @@ export default function App() {
   const [status, setStatus] = useState("");
   const [tab, setTab] = useState<"stats" | "combo" | "misc">("stats");
   const [mode, setMode] = useState<"build" | "generator" | "match">("build");
+  /** A match player handed to the master builder. */
+  const [masterPreset, setMasterPreset] = useState<MatchPreset | null>(null);
   const [navOpen, setNavOpen] = useState(() => {
     try {
       return localStorage.getItem("nav-open") !== "0";
@@ -282,6 +284,10 @@ export default function App() {
             setMode("build");
             setStatus(target ? "Opened a build from the match, with that enemy as the target" : "Opened a build from the match");
           }}
+          onOpenMaster={(preset) => {
+            setMasterPreset(preset);
+            setMode("generator");
+          }}
         />
       </div>
 
@@ -291,6 +297,7 @@ export default function App() {
           hero={hero}
           build={build}
           souls={sheet.souls}
+          preset={masterPreset}
           onUse={(purchases, what) => {
             patch({ purchases, active: purchases, upto: null, imbues: {} });
             setMode("build");

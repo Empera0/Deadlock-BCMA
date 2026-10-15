@@ -2,6 +2,31 @@
 
 All notable changes to Deadlock BCMA are listed here. Versions follow [semantic versioning](https://semver.org).
 
+## [0.2.26] – 2026-10-15
+
+This release connects match analysis to the Master builder and makes the builder read heroes by the damage they actually deal.
+
+### Added
+
+1. **Compare a match with the master builder.** In match analysis, a player's details have a new **Compare with the master builder** button. It opens the Master builder with that match's teams, the player's lane opponents and the player's purchases, then builds for the same hero. Above the suggested build, each phase shows:
+   - which items to buy instead of which, with the reasons on both sides;
+   - suggested items to add;
+   - purchases that could be skipped;
+   - purchases that were good picks.
+
+   Phases the player never reached in the match are marked as such.
+2. **Purchases judged on the same terms.** The items a player bought are placed in the phase of the player's net worth at the time of purchase. They are then judged like the suggested items: how many top players buy them at that point, what they answer, whether the team already does it, and whether they suit the hero's range.
+
+### Changed
+
+3. **Damage by what heroes deal, not what they buy.** Whether a hero deals gun or spirit damage is now worked out by the calculator. It runs a fight with the hero's usual build at 30,000 souls: every ability and active item once, plus six seconds of shooting. Previously this came from the prices of the items in the build, which misjudged heroes that buy weapon items but deal most of their damage with abilities. This applies to the enemy team, your teammates and your own hero.
+4. **Items that work through one kind of damage.** Items that only work through spirit damage (such as Suppressor), through bullets, or through bursts of spirit damage now count in proportion to how much of the hero's damage is of that kind. They are no longer suggested to heroes that deal little of it.
+5. **No cheap items late.** From the second rift on, items below 1,600 souls are no longer suggested, and from the all-boons phase items below 3,200 souls. By then souls come quickly and slots are what is short. Upgrades bought on top of an owned item are still suggested.
+
+### Fixed
+
+6. **Local build settings removed from the repository.** A local build settings file that contained a path on the developer's computer has been removed from the repository and from its history.
+
 ## [0.2.25] – 2026-10-15
 
 This release makes clear what the calculated builds are for. It contains 1 change.
@@ -139,6 +164,7 @@ This release adds the **Build generator**, with builds read from top-ranked matc
   - trends across your last matches.
 - Windows installer with a desktop shortcut and automatic updates from GitHub releases.
 
+[0.2.26]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.25...v0.2.26
 [0.2.25]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.24...v0.2.25
 [0.2.24]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.13...v0.2.24
 [0.2.13]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.0...v0.2.13

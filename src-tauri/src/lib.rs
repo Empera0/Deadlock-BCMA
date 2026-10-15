@@ -221,6 +221,7 @@ async fn master_build(
     lane: Vec<u64>,
     focus: String,
     damage: String,
+    bought: Option<Vec<(String, u32)>>,
 ) -> Result<MasterReport, String> {
     let data = state.data.read().unwrap().clone();
     let cache = data_dir(&app)?.join("analytics");
@@ -279,6 +280,7 @@ async fn master_build(
             matchup: popular::Matchup {
                 my_hero: Some(&my_hero),
                 my_spirit,
+                my_gun_pct: popular::gun_pct(&data, &mine),
                 my_core: &my_core,
                 allies: &ally_team,
                 enemies: &team,
@@ -292,6 +294,7 @@ async fn master_build(
             focus: &focus,
             damage: &damage,
             scaling: &scaling,
+            bought: bought.as_deref().unwrap_or(&[]),
         };
         let master = master::master_build(&data, &input)?;
         let plan = master.counter.clone();

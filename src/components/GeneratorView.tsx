@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { api, Build, fmt, Hero, MasterReport, PopularItem, PopularReport } from "../api";
+import { api, Build, fmt, Hero, JudgedItem, MasterBuild, MasterItem, MasterReport, MatchPreset, PopularItem, PopularReport } from "../api";
 import SuggestPanel from "./SuggestPanel";
 
 interface Props {
@@ -7,6 +7,8 @@ interface Props {
   hero: Hero;
   build: Build;
   souls: number;
+  /** A match player handed over from the match analysis. */
+  preset: MatchPreset | null;
   onUse: (purchases: string[], what: string) => void;
 }
 
@@ -116,12 +118,134 @@ const DAMAGES: [string, string][] = [
 /** The stage of the game an item's price fits. */
 const stageOf = (cost: number) => (cost <= 1600 ? "lane" : cost <= 3200 ? "mid game" : "late game");
 
-function MasterPanel({ heroes, hero, onUse }: { heroes: Hero[]; hero: Hero; onUse: Props["onUse"] }) {
+/** A small item tile for the comparison. */
+function MiniItem({ item, cost }: { item: { name: string; icon: string; category: string; description: string }; cost: number }) {
+  return (
+    <span className={"mini-item " + item.category} title={`${item.name} · ${fmt(cost)} souls\n\n${item.description}`}>
+      <img src={item.icon} alt="" />
+      <span>
+        <b>{item.name}</b>
+        <small>{fmt(cost)}</small>
+      </span>
+    </span>
+  );
+}
+
+/** Why the suggested item beats the one bought, in a few words each. */
+function whyOut(j: JudgedItem): string[] {
+  return [
+    j.popular_pct >= 0.5 ? `${fmt(j.popular_pct, 0)}% of top players buy it at this point` : "Top players rarely buy it at this point",
+    ...j.notes.filter((n) => n.startsWith("Your team has it") || n.startsWith("Works within") || n.startsWith("Harder")),
+  ];
+}
+
+function whyIn(x: MasterItem, style: string): string[] {
+  return [
+    ...(x.popular_pct >= 0.5 ? [`${fmt(x.popular_pct, 0)}% of top players buy it here`] : []),
+    ...(x.engine_pct >= 1 ? [`+${fmt(x.engine_pct, 0)}% to your ${style} damage`] : []),
+    ...x.jobs.map((j) => j.toLowerCase()),
+  ];
+}
+
+/** The player's purchases in the match set against the master build, phase by phase: what to buy instead of what. */
+function MatchComparison({ master, preset }: { master: MasterBuild; preset: MatchPreset }) {
+  const bought = new Set(master.judged.map((j) => j.item));
+  return (
+    <div className="group compare-match">
+      <h3>
+        Match {preset.match_id}: {preset.player_name}'s build against the suggested one{" "}
+        <small className="muted">
+          · ended at {fmt(preset.net_worth)} souls · {preset.won ? "won" : "lost"}
+        </small>
+      </h3>
+      {master.phases.map((phase, i) => {
+        const mine = master.judged.filter((j) => j.phase === i);
+        const suggested = master.items.filter((x) => x.phase === i);
+        const kept = mine.filter((j) => j.in_master);
+        const extra = mine.filter((j) => !j.in_master);
+        const missing = suggested.filter((x) => !bought.has(x.item)).sort((a, b) => b.score - a.score);
+        // Each missing item takes the place of a bought one: the same kind first, then the closest price.
+        const left = [...extra];
+        const swaps: { out: JudgedItem; in: MasterItem }[] = [];
+        const add: MasterItem[] = [];
+        for (const m of missing) {
+          if (left.length === 0) {
+            add.push(m);
+            continue;
+          }
+          const pool = left.some((j) => j.category === m.category) ? left.filter((j) => j.category === m.category) : left;
+          const out = pool.reduce((a, b) => (Math.abs(b.cost - m.cost) < Math.abs(a.cost - m.cost) ? b : a));
+          left.splice(left.indexOf(out), 1);
+          swaps.push({ out, in: m });
+        }
+        const reached = preset.net_worth > phase.souls_from;
+        return (
+          <div key={phase.key} className="compare-phase">
+            <div className="master-phase-head">
+              <b>{phase.title}</b>
+              <small>
+                {fmt(phase.souls_from)}–{fmt(phase.souls_to)} souls
+              </small>
+              {!reached && <small className="muted">not reached in this match</small>}
+            </div>
+            {swaps.map((sw) => (
+              <div key={sw.out.item + sw.in.item} className="swap">
+                <MiniItem item={sw.out} cost={sw.out.cost} />
+                <span className="swap-arrow">→</span>
+                <MiniItem item={sw.in} cost={sw.in.cost} />
+                <span className="swap-why">
+                  <span className="out">
+                    {sw.out.name}: {whyOut(sw.out).join("; ")}.
+                  </span>
+                  <span className="in">
+                    {sw.in.name}: {whyIn(sw.in, master.style).join("; ") || "fits the build better"}.
+                  </span>
+                </span>
+              </div>
+            ))}
+            {add.length > 0 && (
+              <div className="compare-line">
+                <small>{reached ? "Also buy" : "Next"}:</small>
+                {add.map((x) => (
+                  <MiniItem key={x.item} item={x} cost={x.cost} />
+                ))}
+              </div>
+            )}
+            {left.length > 0 && (
+              <div className="compare-line">
+                <small>Could skip:</small>
+                {left.map((j) => (
+                  <span key={j.item} title={whyOut(j).join("\n")}>
+                    <MiniItem item={j} cost={j.cost} />
+                  </span>
+                ))}
+              </div>
+            )}
+            {kept.length > 0 && (
+              <div className="compare-line good">
+                <small>Good picks:</small>
+                {kept.map((j) => (
+                  <MiniItem key={j.item} item={j} cost={j.cost} />
+                ))}
+              </div>
+            )}
+            {mine.length === 0 && suggested.length === 0 && <small className="muted">Nothing in this phase.</small>}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function MasterPanel({ heroes, hero, preset, onUse }: { heroes: Hero[]; hero: Hero; preset: MatchPreset | null; onUse: Props["onUse"] }) {
   const [focus, setFocus] = useState("auto");
   const [damage, setDamage] = useState("auto");
   const [enemies, setEnemies] = useState<number[]>([]);
   const [mine, setMine] = useState(hero.class_name);
-  useEffect(() => setMine(hero.class_name), [hero.class_name]);
+  useEffect(() => {
+    if (!preset) setMine(hero.class_name);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hero.class_name]);
   const me = heroes.find((h) => h.class_name === mine) ?? hero;
   const [allies, setAllies] = useState<number[]>([]);
   const [lane, setLane] = useState<number[]>([]);
@@ -152,15 +276,31 @@ function MasterPanel({ heroes, hero, onUse }: { heroes: Hero[]; hero: Hero; onUs
     setMine(h.class_name);
   };
   const byId = (id: number) => heroes.find((h) => h.id === id);
-  const find = () => {
+  const run = (who: string, al: number[], en: number[], ln: number[]) => {
     setBusy(true);
     setError("");
+    const bought = preset && preset.hero === who ? preset.bought.map((b) => [b.item, b.net_worth] as [string, number]) : null;
     api
-      .masterBuild(mine, allies, enemies, lane, focus, damage)
+      .masterBuild(who, al, en, ln, focus, damage, bought)
       .then(setReport)
       .catch((e) => setError(String(e)))
       .finally(() => setBusy(false));
   };
+  const find = () => run(mine, allies, enemies, lane);
+  // A player handed over from a match: both teams, the lane, and a build to set the purchases against.
+  useEffect(() => {
+    if (!preset) return;
+    const ids = (classes: string[]) => classes.map((c) => heroes.find((h) => h.class_name === c)?.id).filter((x): x is number => x !== undefined);
+    const al = ids(preset.allies);
+    const en = ids(preset.enemies);
+    const ln = ids(preset.lane);
+    setMine(preset.hero);
+    setAllies(al);
+    setEnemies(en);
+    setLane(ln);
+    run(preset.hero, al, en, ln);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [preset?.key]);
 
   return (
     <>
@@ -261,6 +401,7 @@ function MasterPanel({ heroes, hero, onUse }: { heroes: Hero[]; hero: Hero; onUs
 
       {report && (
         <>
+          {preset && report.master.hero === preset.hero && report.master.judged.length > 0 && <MatchComparison master={report.master} preset={preset} />}
           <div className="group master">
             <h3>
               {report.master.hero_name} as {report.master.focus_name} <small className="muted">· {report.master.focus_goal} · {report.master.style} damage</small>
@@ -490,7 +631,7 @@ function MasterPanel({ heroes, hero, onUse }: { heroes: Hero[]; hero: Hero; onUs
                 <tr>
                   <th className="left">Hero</th>
                   <th className="left">Usual build</th>
-                  <th title="Share of the usual build's weapon and spirit souls">Gun / spirit</th>
+                  <th title="Share of its damage in a fight that is gun and spirit damage, worked out by the calculator with its usual build late in the match">Gun / spirit</th>
                   <th className="left">Heals with</th>
                   <th className="left">Moves with</th>
                   <th className="left">Locks down with</th>
@@ -562,8 +703,11 @@ function MasterPanel({ heroes, hero, onUse }: { heroes: Hero[]; hero: Hero; onUs
 }
 
 /** Builds put together for the hero: by the calculator, from what players build, and for a match by the master builder. */
-export default function GeneratorView({ heroes, hero, build, souls, onUse }: Props) {
-  const [tab, setTab] = useState<"calculated" | "popular" | "master">("calculated");
+export default function GeneratorView({ heroes, hero, build, souls, preset, onUse }: Props) {
+  const [tab, setTab] = useState<"calculated" | "popular" | "master">(preset ? "master" : "calculated");
+  useEffect(() => {
+    if (preset) setTab("master");
+  }, [preset?.key]);
   return (
     <div className="generator-view">
       <div className="side-tabs gen-tabs">
@@ -580,7 +724,7 @@ export default function GeneratorView({ heroes, hero, build, souls, onUse }: Pro
       <div className="gen-body">
         {tab === "calculated" && <SuggestPanel hero={hero} build={build} souls={souls} onUse={(p) => onUse(p, "Loaded a build the calculator put together")} />}
         {tab === "popular" && <PopularPanel hero={hero} onUse={onUse} />}
-        {tab === "master" && <MasterPanel heroes={heroes} hero={hero} onUse={onUse} />}
+        {tab === "master" && <MasterPanel heroes={heroes} hero={hero} preset={preset} onUse={onUse} />}
       </div>
     </div>
   );

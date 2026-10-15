@@ -3604,3 +3604,82 @@ header.match {
 .calc-warning b {
   color: #e0736f;
 }
+
+/* ---- A match player against the master build */
+.compare-match .compare-phase {
+  margin: 8px 0 12px;
+}
+
+.mini-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px 2px 2px;
+  background: color-mix(in srgb, var(--cat) 10%, var(--panel));
+  border: 1px solid color-mix(in srgb, var(--cat) 40%, var(--border));
+  border-radius: 3px;
+  min-width: 150px;
+  cursor: help;
+}
+
+.mini-item img {
+  width: 28px;
+  height: 28px;
+  border-radius: 3px;
+}
+
+.mini-item > span {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.1;
+}
+
+.mini-item small {
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.swap {
+  display: grid;
+  grid-template-columns: auto auto auto 1fr;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0;
+}
+
+.swap-arrow {
+  color: var(--accent);
+  font-size: 16px;
+}
+
+.swap-why {
+  display: flex;
+  flex-direction: column;
+  font-size: 11.5px;
+  line-height: 1.35;
+}
+
+.swap-why .out {
+  color: #e0736f;
+}
+
+.swap-why .in {
+  color: var(--souls);
+}
+
+.compare-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 4px 0;
+}
+
+.compare-line > small {
+  width: 70px;
+  color: var(--muted);
+}
+
+.compare-line.good > small {
+  color: var(--souls);
+}

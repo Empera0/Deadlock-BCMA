@@ -448,6 +448,18 @@ fn put_together(data: &GameData, start: &BuildInput, budget: u32, stages_souls: 
     })
 }
 
+/// How much of a hero's damage in a fight is spirit damage (0 to 1): every ability and active item once and six
+/// seconds of shooting, with the build at its souls. Melee counts with the gun; damage that ignores resists with
+/// neither.
+pub fn spirit_share(data: &GameData, b: &BuildInput) -> Option<f64> {
+    let sheet = calc::compute(data, b).ok()?;
+    let result = combo::simulate(data, b, &window_input(data, b, sheet.abilities.len(), Window::Hybrid)).ok()?;
+    let by = |kinds: &[combo::Kind]| result.sources.iter().filter(|s| kinds.contains(&s.kind)).map(|s| s.damage).sum::<f64>();
+    let gun = by(&[combo::Kind::Bullet, combo::Kind::Melee]);
+    let spirit = by(&[combo::Kind::Spirit]);
+    (gun + spirit > 0.0).then(|| spirit / (gun + spirit))
+}
+
 /// What one candidate item adds to a build for a playstyle.
 #[derive(Debug, Clone)]
 pub struct Gain {

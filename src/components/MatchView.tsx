@@ -1,5 +1,5 @@
 import { MouseEvent, useEffect, useMemo, useState } from "react";
-import { api, Build, FightSide, fmt, HistoryEntry, LocalScan, MatchPlayer, MatchReport, MatchSample, MatchSummary } from "../api";
+import { api, Build, FightSide, fmt, HistoryEntry, LocalScan, MatchPlayer, MatchPreset, MatchReport, MatchSample, MatchSummary } from "../api";
 import { MatchDuels, MatchLanes, MatchMap, MatchTrend } from "./MatchExtras";
 import { Bars, clock, FightStrip, LineChart, Marker, Series } from "./MatchCharts";
 import MatchCompare from "./MatchCompare";
@@ -7,6 +7,34 @@ import MatchCompare from "./MatchCompare";
 interface Props {
   /** Opens a build from the match in the builder. */
   onOpenBuild: (build: Build, target?: Build["target"]) => void;
+  /** Opens a player of the match in the master builder, teams and purchases included. */
+  onOpenMaster: (preset: MatchPreset) => void;
+}
+
+/** A player of the match as the master builder takes it: both teams, the lane, and every purchase with the
+ * player's net worth at the time (read between the match's snapshots). */
+function masterPreset(report: MatchReport, player: MatchPlayer): MatchPreset {
+  const points = [{ time: 0, net_worth: 0 }, ...player.timeline.map((s) => ({ time: s.time, net_worth: s.net_worth }))];
+  const worthAt = (t: number) => {
+    const after = points.findIndex((p) => p.time >= t);
+    if (after <= 0) return after === 0 ? points[0].net_worth : points[points.length - 1].net_worth;
+    const a = points[after - 1];
+    const b = points[after];
+    return a.net_worth + ((b.net_worth - a.net_worth) * (t - a.time)) / Math.max(b.time - a.time, 1);
+  };
+  const hero = (slot: number) => report.players.find((o) => o.slot === slot)?.hero;
+  return {
+    key: `${report.match_id}-${player.slot}`,
+    match_id: report.match_id,
+    player_name: player.player_name || player.hero_name,
+    hero: player.hero,
+    allies: report.players.filter((o) => o.team === player.team && o.slot !== player.slot).map((o) => o.hero),
+    enemies: report.players.filter((o) => o.team !== player.team).map((o) => o.hero),
+    lane: player.lane_opponents.map(hero).filter((h): h is string => !!h),
+    net_worth: player.net_worth,
+    won: player.won,
+    bought: player.purchases.map((p) => ({ item: p.item, net_worth: Math.round(worthAt(p.time)), time: p.time })),
+  };
 }
 
 const TEAM_NAME = ["Hidden King", "Archmother"];
@@ -136,12 +164,14 @@ function PlayerDetail({
   color,
   names,
   onOpenBuild,
+  onOpenMaster,
 }: {
   report: MatchReport;
   player: MatchPlayer;
   color: string;
   names: Map<number, string>;
   onOpenBuild: (build: Build, target?: Build["target"]) => void;
+  onOpenMaster: Props["onOpenMaster"];
 }) {
   const accuracy = player.hero_shots > 0 ? (player.hero_hits / player.hero_shots) * 100 : null;
   const headshots = player.hero_hits > 0 ? (player.hero_headshots / player.hero_hits) * 100 : null;
@@ -180,6 +210,12 @@ function PlayerDetail({
         </div>
         <div className="open-against">
           <button onClick={() => onOpenBuild(player.build)}>Open final build in the builder</button>
+          <button
+            title="Opens the master builder with this match's teams and lane, and sets this player's purchases next to the build it suggests"
+            onClick={() => onOpenMaster(masterPreset(report, player))}
+          >
+            Compare with the master builder
+          </button>
           <span title="Opens the final build with that enemy's final health and resists as the target, so the builder shows what the build does to them">
             <small>against</small>
             {report.players
@@ -789,7 +825,15 @@ function PlayerDetail({
   );
 }
 
-function Report({ report, onOpenBuild }: { report: MatchReport; onOpenBuild: (build: Build, target?: Build["target"]) => void }) {
+function Report({
+  report,
+  onOpenBuild,
+  onOpenMaster,
+}: {
+  report: MatchReport;
+  onOpenBuild: (build: Build, target?: Build["target"]) => void;
+  onOpenMaster: Props["onOpenMaster"];
+}) {
   const [section, setSection] = useState<"overview" | "lanes" | "graphs" | "player" | "compare" | "duels" | "map">("overview");
   const [selected, setSelected] = useState<number | null>(null);
   const [metricKey, setMetricKey] = useState("souls");
@@ -1476,7 +1520,7 @@ function Report({ report, onOpenBuild }: { report: MatchReport; onOpenBuild: (bu
                 </button>
               ))}
             </div>
-            <PlayerDetail report={report} player={player} color={colors.get(player.slot) ?? "inherit"} names={names} onOpenBuild={onOpenBuild} />
+            <PlayerDetail report={report} player={player} color={colors.get(player.slot) ?? "inherit"} names={names} onOpenBuild={onOpenBuild} onOpenMaster={onOpenMaster} />
           </>
         ) : (
           <p className="muted">Pick a player in the overview.</p>
@@ -1485,7 +1529,7 @@ function Report({ report, onOpenBuild }: { report: MatchReport; onOpenBuild: (bu
   );
 }
 
-export default function MatchView({ onOpenBuild }: Props) {
+export default function MatchView({ onOpenBuild, onOpenMaster }: Props) {
   const [matchId, setMatchId] = useState("");
   const [accountId, setAccountId] = useState("");
   const [report, setReport] = useState<MatchReport | null>(null);
@@ -1669,7 +1713,7 @@ export default function MatchView({ onOpenBuild }: Props) {
             />
           ) : report ? (
             // A new match starts from the overview with nobody selected.
-            <Report key={report.match_id} report={report} onOpenBuild={onOpenBuild} />
+            <Report key={report.match_id} report={report} onOpenBuild={onOpenBuild} onOpenMaster={onOpenMaster} />
           ) : (
             <p className="muted">
               Enter a match ID to see the player ranking, graphs of how the match went, every player's purchases, soul sources, damage

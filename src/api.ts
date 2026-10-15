@@ -249,8 +249,8 @@ export const api = {
   refreshData: () => invoke<GameData>("refresh_data"),
   compute: (build: Build) => invoke<Sheet>("compute", { build }),
   popularBuild: (heroId: number) => invoke<PopularReport>("popular_build", { heroId }),
-  masterBuild: (myHero: string, allies: number[], enemies: number[], lane: number[], focus: string, damage: string) =>
-    invoke<MasterReport>("master_build", { myHero, allies, enemies, lane, focus, damage }),
+  masterBuild: (myHero: string, allies: number[], enemies: number[], lane: number[], focus: string, damage: string, bought: [string, number][] | null) =>
+    invoke<MasterReport>("master_build", { myHero, allies, enemies, lane, focus, damage, bought }),
   riftComeback: (minute: number, ownSouls: number, enemySouls: number) =>
     invoke<RiftComeback>("rift_comeback", { minute, ownSouls, enemySouls }),
   suggestBuilds: (build: Build, styles: string[]) => invoke<Suggestions>("suggest_builds", { build, styles }),
@@ -780,6 +780,40 @@ export interface MasterPhase {
   sold: string[];
 }
 
+/** An item a player bought in a match, judged on the same terms as the master build's items. */
+export interface JudgedItem {
+  item: string;
+  name: string;
+  icon: string;
+  category: Category;
+  cost: number;
+  active: boolean;
+  description: string;
+  phase: number;
+  net_worth: number;
+  popular_pct: number;
+  jobs: string[];
+  notes: string[];
+  in_master: boolean;
+}
+
+/** A player of a match handed to the master builder: who played what, and what the player bought. */
+export interface MatchPreset {
+  /** Match and slot, so the same player is not built twice. */
+  key: string;
+  match_id: number;
+  player_name: string;
+  /** Hero class names. */
+  hero: string;
+  allies: string[];
+  enemies: string[];
+  lane: string[];
+  net_worth: number;
+  won: boolean;
+  /** Every purchase with the player's net worth at the time. */
+  bought: { item: string; net_worth: number; time: number }[];
+}
+
 export interface MasterBuild {
   hero: string;
   hero_name: string;
@@ -791,6 +825,7 @@ export interface MasterBuild {
   items: MasterItem[];
   purchases: string[];
   notes: string[];
+  judged: JudgedItem[];
 }
 
 export interface MasterReport {

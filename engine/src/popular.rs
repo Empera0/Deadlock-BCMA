@@ -128,8 +128,31 @@ pub fn lifts(general: &[ItemStat], against: &[ItemStat]) -> Vec<(u64, f64)> {
 
 /// Whether a build deals mostly spirit damage: more of its souls in spirit items than in weapon items.
 pub fn deals_spirit(data: &GameData, build: &PopularBuild) -> bool {
-    let souls = |category: &str| build.core.iter().filter_map(|p| data.item(&p.item)).filter(|i| i.category == category).map(|i| i.cost).sum::<u32>();
-    souls("spirit") > souls("weapon")
+    match gun_pct(data, build) {
+        Some(gun) => gun < 50.0,
+        None => {
+            let souls = |category: &str| build.core.iter().filter_map(|p| data.item(&p.item)).filter(|i| i.category == category).map(|i| i.cost).sum::<u32>();
+            souls("spirit") > souls("weapon")
+        }
+    }
+}
+
+/// The souls and ability upgrades a hero is taken to have when its damage is split into gun and spirit: late in
+/// the match, when the damage that decides fights is dealt.
+const SPLIT_SOULS: u32 = 30_000;
+const SPLIT_TIERS: [u8; 4] = [2, 2, 2, 2];
+
+/// Share of a hero's damage in a fight that is gun damage, with its usual build late in the match, percent.
+/// Item souls are no guide: a hero buying weapon items can still deal most of its damage with abilities.
+pub fn gun_pct(data: &GameData, build: &PopularBuild) -> Option<f64> {
+    let b = BuildInput {
+        hero: build.hero.clone(),
+        purchases: build.core.iter().map(|c| c.item.clone()).collect(),
+        souls: Some(SPLIT_SOULS),
+        ability_tiers: SPLIT_TIERS.to_vec(),
+        ..Default::default()
+    };
+    crate::suggest::spirit_share(data, &b).map(|s| (1.0 - s) * 100.0)
 }
 
 /// What an enemy hero brings, read from its kit and its usual build.
@@ -137,7 +160,8 @@ pub fn deals_spirit(data: &GameData, build: &PopularBuild) -> bool {
 pub struct EnemyProfile {
     pub hero: String,
     pub hero_name: String,
-    /// Share of the usual build's weapon and spirit souls that is weapon, percent.
+    /// Share of its damage in a fight that is gun damage (bullets and melee), percent, worked out by the calculator
+    /// with its usual build late in the match.
     pub weapon_pct: f64,
     /// Abilities and items it heals with.
     pub heals: Vec<String>,
@@ -370,10 +394,11 @@ const FIGHT_S: f64 = 10.0;
 /// A headshot or a burst of spirit damage is harder to bring about than a bullet hit or a cast; an active
 /// that lasts a few seconds covers only part of a fight; an effect that cannot hit the same enemy again for a
 /// while is up only part of the time.
-fn ease(item: &Item, my_spirit: Option<bool>) -> (f64, Vec<String>) {
+/// `gun` is the share of the player's damage that is gun damage (0 to 1), when known.
+fn ease(item: &Item, gun: Option<f64>) -> (f64, Vec<String>) {
     let d = item.description.to_lowercase();
-    let caster = my_spirit == Some(true);
-    let gunner = my_spirit == Some(false);
+    let gun_share = gun.unwrap_or(0.5);
+    let spirit_share = 1.0 - gun_share;
     let mut notes = vec![];
     let mut hard = |factor: f64, why: &str| {
         notes.push(format!("Harder to use: {why}"));
@@ -384,11 +409,15 @@ fn ease(item: &Item, my_spirit: Option<bool>) -> (f64, Vec<String>) {
     } else if d.contains("melee attack") {
         hard(0.5, "only works on melee hits")
     } else if d.contains("dealing significant spirit damage") {
-        if gunner { hard(0.45, "needs bursts of spirit damage, which this hero rarely deals") } else { 0.9 }
+        // An effect that comes with the hero's damage works as much as the hero deals that kind of damage.
+        let f = 0.3 + 0.6 * spirit_share;
+        if f < 0.7 { hard(f, &format!("needs bursts of spirit damage, and only {:.0}% of this hero's damage is spirit", spirit_share * 100.0)) } else { f }
     } else if d.contains("your bullets") {
-        if caster { hard(0.65, "works through bullets, and this hero mostly casts") } else if d.contains("chance") { 0.8 } else { 1.0 }
-    } else if d.contains("your spirit damage") {
-        if gunner { hard(0.8, "works through spirit damage, and this hero mostly shoots") } else { 1.0 }
+        let f = (0.4 + 0.6 * gun_share) * if d.contains("chance") { 0.8 } else { 1.0 };
+        if gun_share < 0.5 { hard(f, &format!("works through bullets, and only {:.0}% of this hero's damage is the gun", gun_share * 100.0)) } else { f }
+    } else if d.contains("your spirit damage") || d.contains("deal spirit damage") {
+        let f = 0.4 + 0.6 * spirit_share;
+        if spirit_share < 0.5 { hard(f, &format!("works through spirit damage, and only {:.0}% of this hero's damage is spirit", spirit_share * 100.0)) } else { f }
     } else {
         1.0
     };
@@ -519,7 +548,7 @@ fn profile(data: &GameData, enemy: &Enemy) -> EnemyProfile {
     EnemyProfile {
         hero: enemy.build.hero.clone(),
         hero_name: enemy.build.hero_name.clone(),
-        weapon_pct: if weapon + spirit > 0.0 { weapon / (weapon + spirit) * 100.0 } else { 50.0 },
+        weapon_pct: gun_pct(data, enemy.build).unwrap_or(if weapon + spirit > 0.0 { weapon / (weapon + spirit) * 100.0 } else { 50.0 }),
         heals: heals_with,
         mobility,
         lockdown,
@@ -533,8 +562,8 @@ fn need(role: Role, p: &EnemyProfile, own_escape: bool) -> (f64, String) {
     match role {
         Role::Healing if !p.heals.is_empty() => ((p.heals.len() as f64 * 0.45).min(1.2), format!("{} heals with {}", p.hero_name, p.heals.join(", "))),
         // Most heroes mix the two; each side counts from 40% of the build up.
-        Role::Gun if p.weapon_pct >= 40.0 => ((p.weapon_pct - 30.0) / 60.0, format!("{} builds {:.0}% weapon items", p.hero_name, p.weapon_pct)),
-        Role::Spirit if p.weapon_pct <= 60.0 => ((70.0 - p.weapon_pct) / 60.0, format!("{} builds {:.0}% spirit items", p.hero_name, 100.0 - p.weapon_pct)),
+        Role::Gun if p.weapon_pct >= 40.0 => ((p.weapon_pct - 30.0) / 60.0, format!("{} deals about {:.0}% of its damage with the gun", p.hero_name, p.weapon_pct)),
+        Role::Spirit if p.weapon_pct <= 60.0 => ((70.0 - p.weapon_pct) / 60.0, format!("{} deals about {:.0}% spirit damage", p.hero_name, 100.0 - p.weapon_pct)),
         Role::Mobility if !p.mobility.is_empty() => ((p.mobility.len() as f64 * 0.3).min(0.6), format!("{} gets around with {}", p.hero_name, p.mobility.join(", "))),
         Role::Control if !p.lockdown.is_empty() => {
             let base = (p.lockdown.len() as f64 * 0.35).min(0.9);
@@ -558,6 +587,8 @@ pub struct Matchup<'a> {
     pub my_hero: Option<&'a str>,
     /// Whether the player's hero deals mostly spirit damage.
     pub my_spirit: Option<bool>,
+    /// Share of the player's damage in a fight that is gun damage, percent, when it is known.
+    pub my_gun_pct: Option<f64>,
     /// The player's own usual build (item class names): those items are not suggested again.
     pub my_core: &'a [String],
     /// The rest of the player's team.
@@ -659,6 +690,7 @@ pub fn counter_plan(data: &GameData, m: &Matchup) -> CounterPlan {
         .unwrap_or_default();
     let escape = !own_escape.is_empty();
     let shred = shred_weights(my_spirit, &allies);
+    let my_gun = m.my_gun_pct.map(|g| g / 100.0).or(my_spirit.map(|s| if s { 0.2 } else { 0.8 }));
     // What teammates' usual builds already do to the enemies for the whole team.
     let ally_covers: Vec<(Role, String)> = m
         .allies
@@ -805,7 +837,7 @@ pub fn counter_plan(data: &GameData, m: &Matchup) -> CounterPlan {
         if my_core.contains(&item.class_name) {
             return None;
         }
-        let (mut easy, mut notes) = ease(item, my_spirit);
+        let (mut easy, mut notes) = ease(item, my_gun);
         if let Some(radius) = close_range(item).filter(|_| m.ranged) {
             easy *= 0.5;
             notes.insert(0, format!("Harder to use: works within {radius:.0}m, and this hero fights from range"));
@@ -896,7 +928,7 @@ pub fn counter_plan(data: &GameData, m: &Matchup) -> CounterPlan {
         .iter()
         .filter_map(|c| data.item(c))
         .flat_map(|i| {
-            let easy = ease(i, my_spirit).0;
+            let easy = ease(i, my_gun).0;
             roles_of(i, shred).into_iter().filter(move |r| r.1 * easy >= RELIABLE).map(|r| (r.0, CARRIED))
         })
         .collect();

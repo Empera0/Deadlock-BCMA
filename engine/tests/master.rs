@@ -27,7 +27,7 @@ fn the_master_build_fills_every_phase_within_its_souls() {
     let phase_stats = stats(include_str!("popular/phases-haze.json"));
     let scaling = vec![(1, 6.0)];
     let allies = [Ally { hero_id: 1, build: &infernus }];
-    let matchup = Matchup { my_hero: Some("hero_haze"), my_spirit: Some(false), my_core: &core, allies: &allies, enemies: &enemies, lane: &[1], ranged: true };
+    let matchup = Matchup { my_hero: Some("hero_haze"), my_spirit: Some(false), my_gun_pct: None, my_core: &core, allies: &allies, enemies: &enemies, lane: &[1], ranged: true };
     let input = MasterInput {
         matchup,
         hero_id: 13,
@@ -37,6 +37,7 @@ fn the_master_build_fills_every_phase_within_its_souls() {
         focus: "auto",
         damage: "auto",
         scaling: &scaling,
+        bought: &[("upgrade_headshot_booster".into(), 2_000), ("upgrade_toxic_bullets".into(), 12_000)],
     };
     let build = master::master_build(&d, &input).unwrap();
     println!("{} as {} ({}) | notes {:?}", build.hero_name, build.focus_name, build.style, build.notes);
@@ -59,6 +60,11 @@ fn the_master_build_fills_every_phase_within_its_souls() {
         assert!(build.items.iter().any(|x| x.phase == i), "nothing bought in {}", phase.title);
     }
     assert!(build.purchases.len() <= 12 + 4);
+    // What the player bought in a match is judged in the phase of their net worth then.
+    for j in &build.judged {
+        println!("JUDGED {} phase {} pop {:.1}% jobs {:?} notes {:?} in master {}", j.name, j.phase, j.popular_pct, j.jobs, j.notes, j.in_master);
+    }
+    assert!(build.judged.iter().all(|j| j.phase == if j.net_worth < 6_000 { 0 } else { 1 }));
 }
 
 #[test]
