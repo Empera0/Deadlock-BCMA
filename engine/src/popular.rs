@@ -13,6 +13,7 @@ use crate::counters::{self, Threat};
 use crate::data::{GameData, Item};
 use crate::matches::{gives_resist, heal_cut_of, reduces_healing, resist_of, shred_of, shreds_bullet, shreds_spirit};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 /// One row of the API's item statistics.
 #[derive(Debug, Clone, Deserialize)]
@@ -112,7 +113,32 @@ pub fn popular_build(data: &GameData, hero_id: u64, hero_matches: u64, stats: &[
 /// How much more often each item is bought against an enemy than in general, from two sets of statistics with
 /// the same filters, one of them limited to matches against that enemy. Both are measured against the most
 /// bought item of their own set, so the two sets need not be the same size.
-pub fn lifts(general: &[ItemStat], against: &[ItemStat]) -> Vec<(u64, f64)> {
+/// How an item does against one enemy compared with in general.
+#[derive(Debug, Clone, Copy)]
+pub struct Lift {
+    pub item_id: u64,
+    /// How many times as often top players buy it against this enemy.
+    pub bought: f64,
+    /// How many points more (or fewer) of the matches are won with it against this enemy than with it in general,
+    /// shrunk towards zero when there are few matches.
+    pub win_pp: f64,
+}
+
+/// A win rate from this many matches counts half: fewer move a lot by chance.
+pub const WIN_PRIOR: f64 = 300.0;
+
+/// Win rate of rows, percent, and the matches it is from.
+pub fn win_rate(rows: &[&ItemStat]) -> (f64, f64) {
+    let (w, l) = rows.iter().fold((0.0, 0.0), |(w, l), r| (w + r.wins as f64, l + r.losses as f64));
+    if w + l > 0.0 { (w / (w + l) * 100.0, w + l) } else { (0.0, 0.0) }
+}
+
+/// A difference in win rate, shrunk towards zero by the size of the sample.
+pub fn shrunk(diff_pp: f64, matches: f64) -> f64 {
+    diff_pp * matches / (matches + WIN_PRIOR)
+}
+
+pub fn lifts(general: &[ItemStat], against: &[ItemStat]) -> Vec<Lift> {
     let top = |rows: &[ItemStat]| rows.iter().map(|r| r.matches).max().unwrap_or(1).max(1) as f64;
     let (g_top, a_top) = (top(general), top(against));
     against
@@ -121,7 +147,12 @@ pub fn lifts(general: &[ItemStat], against: &[ItemStat]) -> Vec<(u64, f64)> {
             let g = general.iter().find(|g| g.item_id == a.item_id)?;
             let base = g.matches as f64 / g_top;
             // Items almost nobody buys move a lot by chance.
-            (base >= 0.03).then(|| (a.item_id, (a.matches as f64 / a_top) / base))
+            if base < 0.03 {
+                return None;
+            }
+            let (wr_a, n_a) = win_rate(&[a]);
+            let (wr_g, _) = win_rate(&[g]);
+            Some(Lift { item_id: a.item_id, bought: (a.matches as f64 / a_top) / base, win_pp: shrunk(wr_a - wr_g, n_a) })
         })
         .collect()
 }
@@ -241,6 +272,8 @@ pub struct CounterStage {
 #[derive(Debug, Clone, Serialize)]
 pub struct CounterPick {
     pub advice: CounterAdvice,
+    /// Already in the player's usual build: against this team it is worth buying early rather than as an extra.
+    pub in_core: bool,
     /// The jobs it does, by title, most valuable first.
     pub jobs: Vec<String>,
 }
@@ -256,6 +289,14 @@ const STAGES: [(&str, &str, u32, u32, &str); 3] = [
     ("mid", "Mid game", 3_200, 3_200, "Once the first fights and objectives start, around 10 to 20 minutes"),
     ("late", "Late game", 6_400, 6_400, "For the big fights from about 20 minutes, often replacing a lane counter"),
 ];
+/// Where each stage's measurements are taken: souls, and the ability upgrades a hero usually has by then.
+const MEASURE_AT: [(u32, [u8; 4]); 3] = [(5_000, [0, 0, 0, 0]), (15_000, [1, 1, 1, 0]), (30_000, [2, 2, 2, 2])];
+/// What taking a whole enemy's damage away is worth against the other jobs: an item that takes a third off two
+/// enemies' damage scores about as an item made for a job the whole team calls for.
+const MEASURED_K: f64 = 3.0;
+/// A cut this small is not worth mentioning.
+const CUT_WORTH_SAYING: f64 = 0.03;
+
 /// The team heals a lot once the healing job weighs this much (about three healers): one of the two picks
 /// then has to cut healing, and do it reliably.
 const HEAVY_HEALING: f64 = 1.3;
@@ -270,7 +311,7 @@ const CARRIED: f64 = 0.6;
 pub struct Enemy<'a> {
     pub hero_id: u64,
     pub build: &'a PopularBuild,
-    pub lifts: &'a [(u64, f64)],
+    pub lifts: &'a [Lift],
 }
 
 /// Ability properties that mean the ability heals its hero.
@@ -335,6 +376,18 @@ const ABILITY_MOVE_KEYS: [&str; 20] = [
 const ABILITY_ESCAPE_KEYS: [&str; 6] = ["ImmunityDuration", "InvisFadeToDuration", "TeleportCompletedTime", "DashRange", "DashSpeed", "FlightControlEnabled"];
 /// An item bought this much more often against an enemy than in general is a counter top players reach for.
 const LIFT_FROM: f64 = 1.1;
+/// A difference in win rate against an enemy is mentioned from this many points.
+const WIN_SAY_PP: f64 = 2.0;
+/// What a point of win rate against an enemy adds to an item's answer: 5 points more is about half a job.
+const WIN_K: f64 = 10.0;
+
+fn win_text(pp: f64, enemy: &str) -> String {
+    if pp > 0.0 {
+        format!("Top players win {pp:.0} points more often with it against {enemy} than with it in general")
+    } else {
+        format!("Top players win {:.0} points less often with it against {enemy} than with it in general", -pp)
+    }
+}
 /// Each job lists its best items in each of these price ranges: two cheap ones for the lane, then one each.
 const PRICE_BANDS: [(u32, u32, usize); 3] = [(0, 1_600, 2), (3_200, 3_200, 1), (6_400, 6_400, 1)];
 /// Lifesteal on a weapon or spirit item from this much is a healing item in its own right.
@@ -376,7 +429,7 @@ fn prop(item: &Item, key: &str) -> f64 {
     item.props.iter().filter(|p| p.key == key).map(|p| p.value.abs()).fold(0.0, f64::max)
 }
 
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 enum Role {
     Healing,
     Gun,
@@ -404,7 +457,7 @@ fn ease(item: &Item, gun: Option<f64>) -> (f64, Vec<String>) {
         notes.push(format!("Harder to use: {why}"));
         factor
     };
-    let trigger = if d.contains("headshot") {
+    let trigger = if d.starts_with("landing a headshot") || d.starts_with("your next headshot") {
         hard(0.5, "only works on headshots")
     } else if d.contains("melee attack") {
         hard(0.5, "only works on melee hits")
@@ -451,14 +504,20 @@ fn roles_of(item: &Item, shred: (f64, f64)) -> Vec<(Role, f64, String)> {
     let fire_slow = prop(item, "FireRateSlow");
     let reflect = prop(item, "BulletDamageReflectedPct");
     // "Disarms enemy target" is a disarm; "immune to ... Disarm" (Unstoppable) is not.
-    let disarm = item.description.contains("Disarms");
+    let disarm = crate::team::disarms_enemies(item);
     let bullet = resist_of(item, false);
+    let damage_cut = crate::team::enemy_damage_cut(item);
+    let deflect = prop(item, "DeflectionPercent");
     if item.description.to_lowercase().contains("immune to bullets") {
         out.push((Role::Gun, 1.4, "immune to bullets while it lasts".into()));
+    } else if damage_cut > 0.0 {
+        out.push((Role::Gun, damage_cut / 25.0, format!("-{damage_cut:.0}% damage dealt by the target")));
     } else if fire_slow > 0.0 {
         out.push((Role::Gun, fire_slow / 25.0, format!("-{fire_slow:.0}% fire rate on enemies it hits")));
     } else if disarm {
         out.push((Role::Gun, 1.2, "disarms: the enemy cannot shoot for a while".into()));
+    } else if deflect > 0.0 {
+        out.push((Role::Gun, deflect / 22.0, format!("deflects {deflect:.0}% of the bullets that hit you")));
     } else if reflect > 0.0 {
         out.push((Role::Gun, reflect / 70.0, format!("reflects {reflect:.0}% of the bullet damage taken")));
     } else if bullet >= 10.0 {
@@ -468,23 +527,28 @@ fn roles_of(item: &Item, shred: (f64, f64)) -> Vec<(Role, f64, String)> {
     let spirit_cut = prop(item, "TechDamageReduction");
     let proc_cut = prop(item, "SpiritDamageReductionProc");
     let spirit = resist_of(item, true);
-    if sap > 0.0 {
+    if damage_cut > 0.0 {
+        out.push((Role::Spirit, damage_cut / 25.0, format!("-{damage_cut:.0}% damage dealt by the target")));
+    } else if sap > 0.0 {
         out.push((Role::Spirit, sap / 25.0, format!("-{sap:.0} spirit power on the target")));
     } else if spirit_cut > 0.0 {
         out.push((Role::Spirit, spirit_cut / 22.0, format!("-{spirit_cut:.0}% spirit damage dealt by the target")));
     } else if proc_cut > 0.0 {
         out.push((Role::Spirit, proc_cut / 60.0, format!("cuts the next big spirit hit by {proc_cut:.0}%")));
+    } else if crate::team::silences_enemies(item) {
+        out.push((Role::Spirit, 1.0, "silences: the enemy cannot cast for a while".into()));
     } else if spirit >= 10.0 {
         out.push((Role::Spirit, spirit / 22.0, format!("{spirit:.0}% spirit resist")));
     }
     let dash = prop(item, "GroundDashReductionPercent");
-    let slow = prop(item, "SlowPercent").max(prop(item, "MovementSpeedSlow"));
+    // A slow counts when the item's own text says it slows enemies (Glass Cannon carries unused slow numbers).
+    let slow = if crate::team::slows_enemies(item) { prop(item, "SlowPercent").max(prop(item, "MovementSpeedSlow")).max(prop(item, "MaxSlowPercent")) } else { 0.0 };
     let flight = counters::answers(item).contains(&Threat::Flight);
     // A dash penalty only pins enemies down when it comes with a slow on them: on Metal Skin it is the
     // owner's own penalty while the item is active.
     if dash > 0.0 && slow > 0.0 {
         out.push((Role::Mobility, (dash + slow) / 40.0, format!("-{dash:.0}% dash distance{}", if slow > 0.0 { format!(" and {slow:.0}% slow") } else { String::new() })));
-    } else if slow >= 20.0 && item.category != "vitality" {
+    } else if slow >= 20.0 {
         out.push((Role::Mobility, slow / 50.0, format!("{slow:.0}% slow")));
     }
     if flight {
@@ -542,6 +606,12 @@ fn profile(data: &GameData, enemy: &Enemy) -> EnemyProfile {
                 }
             }
         }
+        // Stuns and silences the property names do not show (checked against the wiki).
+        for a in hero.abilities.iter().filter(|a| crate::team::locks_down(a)) {
+            if !lockdown.contains(&a.name) {
+                lockdown.push(a.name.clone());
+            }
+        }
     }
     // Flight is its own job; it is not counted again as getting around.
     mobility.retain(|m| !flying.contains(m));
@@ -589,7 +659,7 @@ pub struct Matchup<'a> {
     pub my_spirit: Option<bool>,
     /// Share of the player's damage in a fight that is gun damage, percent, when it is known.
     pub my_gun_pct: Option<f64>,
-    /// The player's own usual build (item class names): those items are not suggested again.
+    /// The player's own usual build (item class names): those items are marked when suggested.
     pub my_core: &'a [String],
     /// The rest of the player's team.
     pub allies: &'a [Ally<'a>],
@@ -611,14 +681,14 @@ pub(crate) fn close_range(item: &Item) -> Option<f64> {
     if item.active {
         return None;
     }
-    let radius = item.props.iter().find(|p| p.key == "Radius").map(|p| p.value).unwrap_or(0.0);
-    if radius > 0.0 && radius <= CLOSE_RANGE_M {
-        Some(radius)
-    } else if item.description.to_lowercase().contains("close range") {
-        Some(CLOSE_RANGE_M)
-    } else {
-        None
+    // A radius is not enough (Mystic Reverb's is around its target, Mystic Shot's is the bullet): the text has to say
+    // the effect is on enemies near you.
+    let t = item.description.to_lowercase();
+    if !(t.contains("nearby") || t.contains("close range")) {
+        return None;
     }
+    let radius = ["Radius", "CloseRangeBonusDamageRange", "ProcRadius", "DamagePulseRadius"].iter().filter_map(|k| item.props.iter().find(|p| p.key == *k)).map(|p| p.value).fold(0.0, f64::max);
+    Some(if radius > 0.0 && radius <= CLOSE_RANGE_M { radius } else { CLOSE_RANGE_M })
 }
 
 /// One enemy hero: what it threatens and which of the planned items answer it, stage by stage.
@@ -761,9 +831,15 @@ pub fn counter_plan(data: &GameData, m: &Matchup) -> CounterPlan {
                     }
                     against.push(profile.hero_name.clone());
                     reasons.push(why.clone());
-                    if let Some((_, lift)) = enemy.lifts.iter().find(|l| l.0 == item.id).filter(|l| l.1 >= LIFT_FROM) {
-                        score += (lift - 1.0) * 2.5 * n.max(0.3);
-                        reasons.push(format!("Top players buy it {lift:.1}× as often against {}", profile.hero_name));
+                    if let Some(l) = enemy.lifts.iter().find(|l| l.item_id == item.id) {
+                        if l.bought >= LIFT_FROM {
+                            score += (l.bought - 1.0) * 2.5 * n.max(0.3);
+                            reasons.push(format!("Top players buy it {:.1}× as often against {}", l.bought, profile.hero_name));
+                        }
+                        if l.win_pp.abs() >= WIN_SAY_PP {
+                            score += l.win_pp / 100.0 * WIN_K * n.max(0.3);
+                            reasons.push(win_text(l.win_pp, &profile.hero_name));
+                        }
                     }
                 }
                 // When: as soon as the enemy usually has what it answers.
@@ -833,10 +909,53 @@ pub fn counter_plan(data: &GameData, m: &Matchup) -> CounterPlan {
     // that one item answering two problems beats two answering one each, and by how easily and how long its
     // effect lands. The second pick gets little for a job the first already does. Items in the player's own
     // build are left out.
-    let value = |item: &Item, jobs: &[Job], included: &[bool], covered: &[(Role, f64)]| -> Option<(f64, CounterPick, Vec<(Role, f64)>)> {
-        if my_core.contains(&item.class_name) {
-            return None;
-        }
+    // What each item that blunts damage takes off each enemy's damage in a fight against the player's hero, stage by
+    // stage, worked out by the calculator with everyone's usual items, levels, boons and spirit power at those souls.
+    let my_build_at = |souls: u32, tiers: &[u8]| -> Option<BuildInput> {
+        let hero = m.my_hero?;
+        let mut spent = 0;
+        let purchases = my_core
+            .iter()
+            .filter(|c| {
+                spent += data.item(c).map(|i| i.cost).unwrap_or(0);
+                spent <= souls
+            })
+            .cloned()
+            .collect();
+        Some(BuildInput { hero: hero.to_string(), purchases, souls: Some(souls), ability_tiers: tiers.to_vec(), ..Default::default() })
+    };
+    let measured_items: Vec<&Item> = shop.iter().copied().filter(|i| roles_of(i, shred).iter().any(|r| matches!(r.0, Role::Gun | Role::Spirit))).collect();
+    let stage_cuts: Vec<HashMap<String, Vec<f64>>> = MEASURE_AT
+        .iter()
+        .map(|(souls, tiers)| {
+            let me = my_build_at(*souls, tiers).map(|b| crate::measure::target_of(data, &b)).unwrap_or_default();
+            let per_enemy: Vec<HashMap<String, f64>> = std::thread::scope(|scope| {
+                let handles: Vec<_> = enemies
+                    .iter()
+                    .map(|e| {
+                        let (me, items) = (&me, &measured_items);
+                        scope.spawn(move || {
+                            let b = crate::measure::build_at(e.build, *souls, tiers);
+                            let Some(fight) = crate::measure::Fight::new(data, &b, me) else { return HashMap::new() };
+                            items.iter().filter_map(|i| fight.cut(data, i).map(|c| (i.class_name.clone(), c))).collect()
+                        })
+                    })
+                    .collect();
+                handles.into_iter().map(|h| h.join().unwrap_or_default()).collect()
+            });
+            measured_items
+                .iter()
+                .map(|i| (i.class_name.clone(), per_enemy.iter().map(|m| m.get(&i.class_name).copied().unwrap_or(0.0)).collect()))
+                .collect()
+        })
+        .collect();
+
+    // Items of the player's usual build count like any other: an item the hero buys anyway can still be the best
+    // answer to this team, and then it is worth buying early. They are marked as such.
+    // `covered`: jobs already done, how much they are still worth, and the item doing them (an item is never held
+    // against itself).
+    let value = |item: &Item, jobs: &[Job], included: &[bool], covered: &[(Role, f64, String)], cuts: &HashMap<String, Vec<f64>>| -> Option<(f64, CounterPick, Vec<(Role, f64)>)> {
+        let in_core = my_core.contains(&item.class_name);
         let (mut easy, mut notes) = ease(item, my_gun);
         if let Some(radius) = close_range(item).filter(|_| m.ranged) {
             easy *= 0.5;
@@ -847,13 +966,24 @@ pub fn counter_plan(data: &GameData, m: &Matchup) -> CounterPlan {
         let mut reliable: Vec<(Role, f64)> = vec![];
         let mut reasons: Vec<String> = vec![];
         let mut against: Vec<String> = vec![];
+        // Measured: the share of each enemy's damage it takes away, counted once even when it blunts both.
+        let measured = cuts.get(&item.class_name);
+        let mut measured_done = false;
         for (role, strength, effect) in roles_of(item, shred) {
             let Some((_, _, title, weight, needs)) = jobs.iter().find(|j| j.0 == role) else { continue };
-            let factor = covered.iter().filter(|c| c.0 == role).map(|c| c.1).fold(1.0, f64::min);
-            let part = strength * easy * weight * factor;
+            let factor = covered.iter().filter(|c| c.0 == role && c.2 != item.class_name).map(|c| c.1).fold(1.0, f64::min);
+            let (part, reach) = match (role, measured) {
+                (Role::Gun | Role::Spirit, Some(cut)) => {
+                    let on: Vec<f64> = cut.iter().zip(included).filter(|(_, on)| **on).map(|(c, _)| *c).collect();
+                    let part = if measured_done { 0.0 } else { MEASURED_K * on.iter().sum::<f64>() * easy * factor };
+                    measured_done = true;
+                    (part, MEASURED_K * on.iter().cloned().fold(0.0, f64::max) * easy)
+                }
+                _ => (strength * easy * weight * factor, strength * easy),
+            };
             score += part;
             done.push((part, title, effect));
-            reliable.push((role, strength * easy));
+            reliable.push((role, reach));
             for ((n, why), p) in needs.iter().zip(&profiles) {
                 if *n > 0.0 {
                     if !reasons.contains(why) {
@@ -875,13 +1005,39 @@ pub fn counter_plan(data: &GameData, m: &Matchup) -> CounterPlan {
             if !on || answers <= 0.0 {
                 continue;
             }
-            if let Some((_, lift)) = enemy.lifts.iter().find(|l| l.0 == item.id).filter(|l| l.1 >= LIFT_FROM) {
-                score += (lift - 1.0) * 2.5 * easy * answers;
-                reasons.push(format!("Top players buy it {lift:.1}× as often against {}", p.hero_name));
+            if let Some(l) = enemy.lifts.iter().find(|l| l.item_id == item.id) {
+                if l.bought >= LIFT_FROM {
+                    score += (l.bought - 1.0) * 2.5 * easy * answers;
+                    reasons.push(format!("Top players buy it {:.1}× as often against {}", l.bought, p.hero_name));
+                }
+                // Winning more with it against this enemy than with it in general is the item working against them.
+                if l.win_pp.abs() >= WIN_SAY_PP {
+                    score += l.win_pp / 100.0 * WIN_K * answers;
+                    reasons.push(win_text(l.win_pp, &p.hero_name));
+                }
+            }
+        }
+        if let Some(cut) = measured.filter(|_| measured_done) {
+            let mut said: Vec<(f64, String)> = cut
+                .iter()
+                .zip(&profiles)
+                .zip(included)
+                .filter(|((c, _), on)| **on && **c >= CUT_WORTH_SAYING)
+                .map(|((c, p), _)| (*c, p.hero_name.clone()))
+                .collect();
+            said.sort_by(|a, b| b.0.total_cmp(&a.0));
+            for (i, (c, name)) in said.iter().enumerate() {
+                reasons.insert(i, format!("Takes {:.0}% off {name}'s damage in a fight", c * 100.0));
+                if !against.contains(name) {
+                    against.push(name.clone());
+                }
             }
         }
         for note in notes.into_iter().rev() {
             reasons.insert(0, note);
+        }
+        if in_core {
+            reasons.insert(0, "Already in your usual build: against this team, buy it early".into());
         }
         done.sort_by(|a, b| b.0.total_cmp(&a.0));
         let advice = CounterAdvice {
@@ -904,32 +1060,36 @@ pub fn counter_plan(data: &GameData, m: &Matchup) -> CounterPlan {
                 titles.push(d.1.to_string());
             }
         }
-        Some((score, CounterPick { advice, jobs: titles }, reliable))
+        Some((score, CounterPick { advice, in_core, jobs: titles }, reliable))
     };
-    let best = |low: u32, high: u32, jobs: &[Job], included: &[bool], covered: &[(Role, f64)], skip: &[String]| -> Vec<(f64, CounterPick, Vec<(Role, f64)>)> {
+    let best = |low: u32, high: u32, jobs: &[Job], included: &[bool], covered: &[(Role, f64, String)], skip: &[String], cuts: &HashMap<String, Vec<f64>>| -> Vec<(f64, CounterPick, Vec<(Role, f64)>)> {
         let mut all: Vec<_> = shop
             .iter()
             .filter(|i| i.cost >= low && i.cost <= high && !skip.contains(&i.class_name))
-            .filter_map(|i| value(i, jobs, included, covered))
+            .filter_map(|i| value(i, jobs, included, covered, cuts))
             .collect();
         all.sort_by(|a, b| b.0.total_cmp(&a.0));
         all
     };
     let job_titles: Vec<(Role, &str)> = JOBS.iter().map(|j| (j.0, j.2)).collect();
-    let picks_roles = |picks: &[CounterPick]| -> Vec<(Role, f64)> {
-        picks.iter().flat_map(|p| p.jobs.iter()).filter_map(|t| job_titles.iter().find(|j| j.1 == t).map(|j| (j.0, CARRIED))).collect()
+    let picks_roles = |picks: &[CounterPick]| -> Vec<(Role, f64, String)> {
+        picks
+            .iter()
+            .flat_map(|p| p.jobs.iter().map(move |t| (t, p.advice.item.clone())))
+            .filter_map(|(t, item)| job_titles.iter().find(|j| j.1 == t).map(|j| (j.0, CARRIED, item)))
+            .collect()
     };
     let does = |r: &[(Role, f64)], role: Role| r.iter().any(|x| x.0 == role && x.1 >= RELIABLE);
     let lane_names: Vec<String> = profiles.iter().zip(&in_lane).filter(|(_, on)| **on).map(|(p, _)| p.hero_name.clone()).collect();
     let mut stage_jobs: Vec<Vec<Job>> = vec![];
     // What the player's own usual build already does counts for every stage, and what the items of the stage
     // before still do: they stay in the build until they are sold.
-    let own: Vec<(Role, f64)> = my_core
+    let own: Vec<(Role, f64, String)> = my_core
         .iter()
         .filter_map(|c| data.item(c))
         .flat_map(|i| {
             let easy = ease(i, my_gun).0;
-            roles_of(i, shred).into_iter().filter(move |r| r.1 * easy >= RELIABLE).map(|r| (r.0, CARRIED))
+            roles_of(i, shred).into_iter().filter(move |r| r.1 * easy >= RELIABLE).map(move |r| (r.0, CARRIED, i.class_name.clone()))
         })
         .collect();
     let own_heal_cut: Vec<String> =
@@ -937,10 +1097,12 @@ pub fn counter_plan(data: &GameData, m: &Matchup) -> CounterPlan {
     if !own_heal_cut.is_empty() {
         team.push(format!("Your usual build already cuts healing with {}", own_heal_cut.join(", ")));
     }
-    let mut carried: Vec<(Role, f64)> = vec![];
+    let mut carried: Vec<(Role, f64, String)> = vec![];
     let stages: Vec<CounterStage> = STAGES
         .iter()
-        .map(|(key, title, low, high, note)| {
+        .enumerate()
+        .map(|(si, (key, title, low, high, note))| {
+            let cuts = &stage_cuts[si];
             let lane_only = *key == "lane" && !lane_names.is_empty();
             let included: &[bool] = if lane_only { &in_lane[..] } else { &everyone[..] };
             let jobs = jobs_for(included, *key != "lane");
@@ -948,28 +1110,28 @@ pub fn counter_plan(data: &GameData, m: &Matchup) -> CounterPlan {
             let heaviest = jobs.iter().map(|j| j.3).fold(0.0, f64::max);
             let must_heal = heal_weight >= HEAVY_HEALING || (heal_weight > 0.0 && heal_weight >= heaviest);
             let mut picks: Vec<CounterPick> = vec![];
-            let mut covered: Vec<(Role, f64)> = carried.iter().chain(&own).cloned().collect();
+            let mut covered: Vec<(Role, f64, String)> = carried.iter().chain(&own).cloned().collect();
             let mut taken: Vec<String> = vec![];
             let mut healed = !own_heal_cut.is_empty();
             for slot in 0..COUNTER_SLOTS {
-                let options = best(*low, *high, &jobs, included, &covered, &taken);
+                let options = best(*low, *high, &jobs, included, &covered, &taken, cuts);
                 // A team that heals a lot has to have its healing cut: the last slot goes to it if nothing did yet.
                 let last = slot + 1 == COUNTER_SLOTS;
                 let chosen = if must_heal && last && !healed { options.iter().find(|o| does(&o.2, Role::Healing)).or(options.first()) } else { options.first() };
                 let Some((_, pick, done)) = chosen.cloned() else { break };
                 healed |= does(&done, Role::Healing);
-                covered.extend(done.iter().filter(|d| d.1 >= RELIABLE).map(|d| (d.0, COVERED)));
+                covered.extend(done.iter().filter(|d| d.1 >= RELIABLE).map(|d| (d.0, COVERED, pick.advice.item.clone())));
                 taken.push(pick.advice.item.clone());
                 picks.push(pick);
             }
-            let alternatives = best(*low, *high, &jobs, included, &[], &taken).into_iter().take(ALTERNATIVES).map(|b| b.1).collect();
+            let alternatives = best(*low, *high, &jobs, included, &[], &taken, cuts).into_iter().take(ALTERNATIVES).map(|b| b.1).collect();
             let note = if lane_only {
                 format!("Against your lane: {}. The rest of their team comes later and is answered in the mid game", lane_names.join(" and "))
             } else {
                 note.to_string()
             };
             carried = picks_roles(&picks);
-            let scored = best(0, u32::MAX, &jobs, included, &[], &[])
+            let scored = best(0, u32::MAX, &jobs, included, &[], &[], cuts)
                 .into_iter()
                 .map(|(score, p, _)| (p.advice.item.clone(), score, p.jobs.clone(), p.advice.reasons.clone()))
                 .collect();
@@ -978,7 +1140,7 @@ pub fn counter_plan(data: &GameData, m: &Matchup) -> CounterPlan {
         })
         .collect();
     let picked: Vec<String> = stages.iter().flat_map(|s| s.picks.iter().map(|p| p.advice.item.clone())).collect();
-    let others = best(0, STAGES[STAGES.len() - 1].3, &full, &everyone, &[], &picked).into_iter().take(OTHERS).map(|b| b.1).collect();
+    let others = best(0, STAGES[STAGES.len() - 1].3, &full, &everyone, &[], &picked, &stage_cuts[STAGES.len() - 1]).into_iter().take(OTHERS).map(|b| b.1).collect();
 
     // Hero by hero: what each enemy threatens, and which planned item answers it at which stage.
     let heroes = profiles
@@ -1005,4 +1167,22 @@ pub fn counter_plan(data: &GameData, m: &Matchup) -> CounterPlan {
         })
         .collect();
     CounterPlan { enemies: profiles, allies, roles, own_escape, stages, others, heroes, team }
+}
+
+/// How the counter planner reads an item, in words: the jobs it does with their strength and effect, how easily it
+/// lands for a gun hero and for a spirit hero, and its range. For checking items one by one.
+pub fn item_reading(item: &Item) -> String {
+    let jobs: Vec<String> = roles_of(item, (1.0, 1.0)).into_iter().map(|(r, s, e)| format!("{r:?} {s:.2} ({e})")).collect();
+    let (gun, gun_notes) = ease(item, Some(0.8));
+    let (spirit, spirit_notes) = ease(item, Some(0.2));
+    let mut notes: Vec<String> = gun_notes.into_iter().chain(spirit_notes).collect();
+    notes.dedup();
+    format!(
+        "jobs: {} | ease gun {:.2} spirit {:.2}{} | {}",
+        if jobs.is_empty() { "-".to_string() } else { jobs.join("; ") },
+        gun,
+        spirit,
+        close_range(item).map(|r| format!(" | close range {r:.0}m")).unwrap_or_default(),
+        notes.join(" / ")
+    )
 }

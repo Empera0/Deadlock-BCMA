@@ -3683,3 +3683,41 @@ header.match {
 .compare-line.good > small {
   color: var(--souls);
 }
+
+/* ---- Items weighed and not bought */
+.considered {
+  margin-top: 4px;
+}
+
+.considered > summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 11.5px;
+}
+
+.considered tr.left-out td {
+  opacity: 0.6;
+}
+
+.considered .other-what small {
+  display: block;
+}
+
+.considered .other-what small.hard {
+  color: #e0736f;
+}
+
+.tag-core {
+  color: var(--souls);
+  border: 1px solid color-mix(in srgb, var(--souls) 50%, transparent);
+  border-radius: 2px;
+  padding: 0 4px;
+}
+
+.master-why .why-win {
+  color: #8fd18f;
+}
+
+.master-why .why-lose {
+  color: #e0736f;
+}

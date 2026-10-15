@@ -53,11 +53,12 @@ fn counters_are_planned_job_by_job_against_the_enemy_team() {
     assert!(!plan.others.is_empty());
     assert!(plan.others.iter().all(|o| plan.stages.iter().all(|s| s.picks.iter().all(|p| p.advice.item != o.advice.item))));
     assert!(plan.others.windows(2).all(|w| w[0].advice.score >= w[1].advice.score));
-    // An item already in the player's build is not suggested again.
+    // An item already in the player's build is still suggested when it answers the team, marked as such.
     let first = lane.picks[0].advice.item.clone();
     let core = [first.clone()];
     let again = popular::counter_plan(&d, &Matchup { my_hero: Some("hero_dynamo"), my_spirit: Some(true), my_gun_pct: None, my_core: &core, allies: &[], enemies: &enemies, lane: &[], ranged: false });
-    assert!(again.stages[0].picks.iter().all(|p| p.advice.item != first));
+    let marked = again.stages[0].picks.iter().find(|p| p.advice.item == first).expect("still picked");
+    assert!(marked.in_core && marked.advice.reasons[0].starts_with("Already in your usual build"));
 
     // Hero by hero: both enemies have threats, and the plan answers each of them somewhere.
     assert_eq!(plan.heroes.len(), 2);

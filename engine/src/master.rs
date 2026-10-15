@@ -39,6 +39,11 @@ const FOCUS: [(&str, &str, &str, [f64; 3]); 4] = [
     ("frontline", "Frontline", "Staying alive at the front while your carries deal the damage", [0.50, 0.30, 0.20]),
 ];
 
+/// A counter score this high (an item that takes about a third off two enemies' damage, or answers a job the
+/// whole team calls for) is the full answer part.
+const COUNTER_FULL: f64 = 2.0;
+/// The answer part of an item whose jobs the build already does, against one doing a new job.
+const DONE_JOB: f64 = 0.35;
 /// An item that adds this much to the hero's numbers (0.25 = a quarter more) gets the full engine part.
 const ENGINE_FULL: f64 = 0.25;
 /// How strongly price is held against an item in each phase: in the lane souls are short, late the slots are.
@@ -108,6 +113,8 @@ pub struct JudgedItem {
     pub net_worth: u32,
     /// Share of the hero's top players who buy it in this phase, percent.
     pub popular_pct: f64,
+    pub win_pct: f64,
+    pub win_pp: f64,
     /// The jobs it does against the enemy team at this phase, and notes on it.
     pub jobs: Vec<String>,
     pub notes: Vec<String>,
@@ -131,6 +138,10 @@ pub struct MasterItem {
     pub score: f64,
     /// Share of the hero's top players who buy it in this phase, percent.
     pub popular_pct: f64,
+    /// Matches won when it is bought in this phase, percent, and how many points that is above the hero's win rate
+    /// (shrunk for small samples).
+    pub win_pct: f64,
+    pub win_pp: f64,
     /// How much it adds to the hero's own numbers for the role, percent.
     pub engine_pct: f64,
     /// The jobs it does against the enemy team at this phase, and notes on them.
@@ -151,7 +162,33 @@ pub struct MasterPhase {
     pub souls_to: u32,
     /// Items sold in this phase to make room.
     pub sold: Vec<String>,
+    /// The best items not bought in this phase, with their scores: why they lost.
+    pub considered: Vec<Considered>,
 }
+
+/// An item weighed in a phase and not bought, with the three things it was weighed on.
+#[derive(Debug, Clone, Serialize)]
+pub struct Considered {
+    pub item: String,
+    pub name: String,
+    pub icon: String,
+    pub category: String,
+    pub cost: u32,
+    pub score: f64,
+    pub popular_pct: f64,
+    pub win_pct: f64,
+    pub win_pp: f64,
+    pub engine_pct: f64,
+    /// Its answer to the enemy team against the best answer at this point, percent.
+    pub counter_pct: f64,
+    pub jobs: Vec<String>,
+    pub notes: Vec<String>,
+    /// Few top players buy it at this point and it is no strong answer, so it was not in the running.
+    pub left_out: bool,
+}
+
+/// This many items not bought are shown for each phase.
+const CONSIDERED: usize = 8;
 
 #[derive(Debug, Clone, Serialize)]
 pub struct MasterBuild {
@@ -190,6 +227,25 @@ fn share(stats: &[ItemStat], item_id: u64, from: u32, to: u32, matches: u64) -> 
         .fold(0.0, |a, b| a + b)
         / matches.max(1) as f64
 }
+
+/// Win rate when the item is bought between the two net worths, percent, and the matches it is from.
+fn phase_win(stats: &[ItemStat], item_id: u64, from: u32, to: u32) -> (f64, f64) {
+    let rows: Vec<&ItemStat> = stats.iter().filter(|r| r.item_id == item_id && r.bucket.is_some_and(|b| b >= from as u64 && b < to as u64)).collect();
+    popular::win_rate(&rows)
+}
+
+/// Win rate of every purchase the hero's top players make between the two net worths, percent. Players who get
+/// far are often already winning, so an item bought late is held against what is bought at the same point, not
+/// against the hero's win rate overall.
+fn phase_base(stats: &[ItemStat], from: u32, to: u32) -> f64 {
+    let rows: Vec<&ItemStat> = stats.iter().filter(|r| r.bucket.is_some_and(|b| b >= from as u64 && b < to as u64)).collect();
+    popular::win_rate(&rows).0
+}
+
+/// What a point of win rate above the phase's does to an item's score: 5 points more is about 15% more.
+const WIN_WEIGHT: f64 = 0.03;
+/// The win rate moves an item's score by at most this share either way.
+const WIN_CAP: f64 = 0.3;
 
 fn phase_of(net_worth: u32) -> usize {
     PHASES.iter().position(|p| net_worth < p.3).unwrap_or(PHASES.len() - 1)
@@ -274,15 +330,23 @@ pub fn master_build(data: &GameData, input: &MasterInput) -> Result<MasterBuild,
         b.souls = Some(*to);
         b.ability_tiers = tiers.to_vec();
         let counter_scores = stage_scores(stage);
-        let counter_top = counter_scores.iter().map(|c| c.1).fold(0.0, f64::max).max(1e-9);
+        // The answer to the enemy team on a fixed scale: one outstanding answer must not make every other look small.
+        let counter_top = COUNTER_FULL;
         // Share of the hero's matches in which top players bought the item during this phase.
         let popular = |item: &Item| -> f64 { share(input.phase_stats, item.id, *from, *to, input.hero_matches) };
         let pop_top = shop.iter().map(|i| popular(i)).fold(0.0, f64::max).max(1e-9);
         let price_weight = PRICE_WEIGHT[index] + if focus.0 == "tempo" && (1..=2).contains(&index) { TEMPO_PRICE } else { 0.0 };
         // The item's score: its popularity in the phase (against the most popular item), what it adds to the
         // hero's own numbers, and what it answers on the enemy team (against the best answer).
+        // How much more often the hero wins when it buys the item at this point, against its usual win rate.
+        let base = phase_base(input.phase_stats, *from, *to);
+        let win = |item: &Item| -> (f64, f64) {
+            let (wr, n) = phase_win(input.phase_stats, item.id, *from, *to);
+            (wr, if n > 0.0 { popular::shrunk(wr - base, n) } else { 0.0 })
+        };
         let score = |item: &Item, pop: f64, gain: f64, ctr: f64| -> f64 {
             let mut s = w_pop * pop / pop_top + w_engine * (gain.max(0.0) / ENGINE_FULL).min(1.0) + w_counter * ctr;
+            s *= 1.0 + (win(item).1 * WIN_WEIGHT).clamp(-WIN_CAP, WIN_CAP);
             if focus.0 == "support" && TEAM_ITEMS.contains(&item.name.as_str()) {
                 s += TEAM_ITEM_BONUS;
             }
@@ -293,7 +357,15 @@ pub fn master_build(data: &GameData, input: &MasterInput) -> Result<MasterBuild,
         };
         let eligible = |pop: f64, ctr: f64| pop / pop_top >= POPULAR_FROM || ctr >= STRONG_COUNTER;
         let mut sold_here: Vec<String> = vec![];
+        let mut considered: Vec<Considered> = vec![];
+        let mut first = true;
         loop {
+            // A job items already bought do is worth less a second time: never two items for the same job.
+            let done_jobs: Vec<String> = items.iter().filter(|x| !x.sold).flat_map(|x| x.jobs.clone()).collect();
+            let answer = |c: &(String, f64, Vec<String>, Vec<String>)| -> f64 {
+                let fresh = if c.2.is_empty() { 1.0 } else { c.2.iter().filter(|j| !done_jobs.contains(j)).count() as f64 / c.2.len() as f64 };
+                (c.1 / counter_top).min(1.0) * (DONE_JOB + (1.0 - DONE_JOB) * fresh)
+            };
             let left = to.saturating_sub(paid_total);
             let owned = calc::compute(data, &b).map(|s| s.owned).unwrap_or_default();
             let candidates: Vec<String> = shop
@@ -308,7 +380,7 @@ pub fn master_build(data: &GameData, input: &MasterInput) -> Result<MasterBuild,
                 let (ctr, jobs, why) = counter_scores
                     .iter()
                     .find(|c| c.0 == class)
-                    .map(|c| (c.1 / counter_top, c.2.clone(), c.3.clone()))
+                    .map(|c| (answer(c), c.2.clone(), c.3.clone()))
                     .unwrap_or((0.0, vec![], vec![]));
                 if !eligible(pop, ctr) {
                     return None;
@@ -316,6 +388,41 @@ pub fn master_build(data: &GameData, input: &MasterInput) -> Result<MasterBuild,
                 Some((score(item, pop, gain, ctr), pop, jobs, why))
             };
             // The best item the souls left pay for, by its score with price held against it as the role says.
+            if first {
+                first = false;
+                // Only what the phase could have bought instead: affordable, and not too cheap for it.
+                for g in gains.iter().filter(|g| g.paid <= left) {
+                    let Some(item) = data.item(&g.item) else { continue };
+                    if item.cost < MIN_COST[index] && g.paid >= item.cost {
+                        continue;
+                    }
+                    let pop = popular(item);
+                    let (ctr, jobs, why) = counter_scores
+                        .iter()
+                        .find(|c| c.0 == g.item)
+                        .map(|c| (answer(c), c.2.clone(), c.3.clone()))
+                        .unwrap_or((0.0, vec![], vec![]));
+                    let mut notes: Vec<String> = team.redundancy(item).1.into_iter().collect();
+                    notes.extend(why.into_iter().filter(|w| ["Takes", "Harder", "Timing", "Top players"].iter().any(|p| w.starts_with(p))));
+                    considered.push(Considered {
+                        item: g.item.clone(),
+                        name: item.name.clone(),
+                        icon: item.icon.clone(),
+                        category: item.category.clone(),
+                        cost: item.cost,
+                        score: score(item, pop, g.gain, ctr),
+                        popular_pct: pop * 100.0,
+                        win_pct: win(item).0,
+                        win_pp: win(item).1,
+                        engine_pct: g.gain.max(0.0) * 100.0,
+                        counter_pct: ctr * 100.0,
+                        jobs,
+                        notes,
+                        left_out: !eligible(pop, ctr),
+                    });
+                }
+                considered.sort_by(|a, b| b.score.total_cmp(&a.score));
+            }
             let best = gains
                 .iter()
                 .filter(|g| g.paid <= left)
@@ -343,13 +450,15 @@ pub fn master_build(data: &GameData, input: &MasterInput) -> Result<MasterBuild,
                     paid: g.paid,
                     score,
                     popular_pct: pop * 100.0,
+                    win_pct: win(item).0,
+                    win_pp: win(item).1,
                     engine_pct: g.gain.max(0.0) * 100.0,
                     jobs,
                     notes: team
                         .redundancy(item)
                         .1
                         .into_iter()
-                        .chain(why.into_iter().filter(|w| w.starts_with("Harder") || w.starts_with("Timing") || w.starts_with("Top players")))
+                        .chain(why.into_iter().filter(|w| ["Takes", "Harder", "Timing", "Top players"].iter().any(|p| w.starts_with(p))))
                         .collect(),
                     sold: false,
                     upgrades: upgrades.and_then(|c| data.item(&c)).map(|i| i.name.clone()),
@@ -380,7 +489,7 @@ pub fn master_build(data: &GameData, input: &MasterInput) -> Result<MasterBuild,
                 .filter(|g| data.item(&g.item).is_some_and(|i| i.cost >= MIN_COST[index] || g.paid < i.cost))
                 .filter_map(|g| {
                     let item = data.item(&g.item)?;
-                    let ctr = counter_scores.iter().find(|c| c.0 == g.item).map(|c| c.1 / counter_top).unwrap_or(0.0);
+                    let ctr = counter_scores.iter().find(|c| c.0 == g.item).map(|c| answer(c)).unwrap_or(0.0);
                     let pop = popular(item);
                     let score = score(item, pop, g.gain, ctr);
                     (eligible(pop, ctr) && score >= weakest.1 * SELL_FOR[index] && score >= MIN_SCORE).then_some(score)
@@ -397,7 +506,9 @@ pub fn master_build(data: &GameData, input: &MasterInput) -> Result<MasterBuild,
             }
             sold_here.push(weakest.3);
         }
-        phases.push(MasterPhase { key: key.to_string(), title: title.to_string(), souls_from: *from, souls_to: *to, sold: sold_here });
+        considered.retain(|c| !items.iter().any(|x| x.item == c.item));
+        considered.truncate(CONSIDERED);
+        phases.push(MasterPhase { key: key.to_string(), title: title.to_string(), souls_from: *from, souls_to: *to, sold: sold_here, considered });
     }
     let sheet = calc::compute(data, &b).map_err(|e| e.to_string())?;
     // An item bought into a bigger one is no longer owned at the end, but it was not sold either.
@@ -431,6 +542,11 @@ pub fn master_build(data: &GameData, input: &MasterInput) -> Result<MasterBuild,
                 phase,
                 net_worth: *net_worth,
                 popular_pct: share(input.phase_stats, item.id, from, to, input.hero_matches) * 100.0,
+                win_pct: phase_win(input.phase_stats, item.id, from, to).0,
+                win_pp: {
+                    let (wr, n) = phase_win(input.phase_stats, item.id, from, to);
+                    if n > 0.0 { popular::shrunk(wr - phase_base(input.phase_stats, from, to), n) } else { 0.0 }
+                },
                 jobs,
                 notes,
                 in_master: items.iter().any(|x| &x.item == class),

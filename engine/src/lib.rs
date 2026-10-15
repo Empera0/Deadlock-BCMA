@@ -8,6 +8,7 @@ pub mod data;
 pub mod fights;
 pub mod kit;
 pub mod matches;
+pub mod measure;
 pub mod misc;
 pub mod popular;
 pub mod master;

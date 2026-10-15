@@ -45,8 +45,8 @@ fn the_master_build_fills_every_phase_within_its_souls() {
         println!("-- {} ({}-{}) sold {:?}", phase.title, phase.souls_from, phase.souls_to, phase.sold);
         for x in build.items.iter().filter(|x| x.phase == i) {
             println!(
-                "   {:<22} {:>5} paid {:>5} score {:.2} pop {:>4.1}% engine {:>4.1}% jobs {:?} {}",
-                x.name, x.cost, x.paid, x.score, x.popular_pct, x.engine_pct, x.jobs, if x.sold { "SOLD" } else { "" }
+                "   {:<22} {:>5} paid {:>5} score {:.2} pop {:>4.1}% win {:>4.1}% ({:+.1}) engine {:>4.1}% jobs {:?} {}",
+                x.name, x.cost, x.paid, x.score, x.popular_pct, x.win_pct, x.win_pp, x.engine_pct, x.jobs, if x.sold { "SOLD" } else { "" }
             );
         }
     }
@@ -86,4 +86,10 @@ fn an_item_whose_job_the_team_already_does_is_worth_less() {
     let names: Vec<&str> = d.items.iter().filter(|i| i.name == "Toxic Bullets").map(|i| i.class_name.as_str()).collect();
     let covered = if names.contains(&"upgrade_toxic_bullets") { covered } else { TeamEffects::of(&d, &[(id("Wraith"), names.iter().map(|n| n.to_string()).collect())]) };
     assert!(covered.redundancy(healbane).0 <= 0.5);
+    // An ability that does it for a few seconds of its cooldown (Flog: 3s of 10s) takes off little.
+    let suppressor = d.items.iter().find(|i| i.name == "Suppressor").unwrap();
+    let lash = TeamEffects::of(&d, &[(id("Lash"), vec![])]);
+    let (f, why) = lash.redundancy(suppressor);
+    println!("Suppressor with Lash: {f:.2} {why:?}");
+    assert!(f > 0.85, "{why:?}");
 }

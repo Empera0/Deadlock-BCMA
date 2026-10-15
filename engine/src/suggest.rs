@@ -448,12 +448,28 @@ fn put_together(data: &GameData, start: &BuildInput, budget: u32, stages_souls: 
     })
 }
 
+/// A hero's fight: every ability and active item once and six seconds of shooting, against the build's target.
+pub fn fight(data: &GameData, b: &BuildInput) -> Option<combo::ComboResult> {
+    fight_for(data, b, SHOOT_SECONDS)
+}
+
+/// The same fight with the shooting lasting the given seconds.
+pub fn fight_for(data: &GameData, b: &BuildInput, shooting: f64) -> Option<combo::ComboResult> {
+    let sheet = calc::compute(data, b).ok()?;
+    let mut input = window_input(data, b, sheet.abilities.len(), Window::Hybrid);
+    for a in &mut input.actions {
+        if let Action::Shoot { seconds } = a {
+            *seconds = shooting;
+        }
+    }
+    combo::simulate(data, b, &input).ok()
+}
+
 /// How much of a hero's damage in a fight is spirit damage (0 to 1): every ability and active item once and six
 /// seconds of shooting, with the build at its souls. Melee counts with the gun; damage that ignores resists with
 /// neither.
 pub fn spirit_share(data: &GameData, b: &BuildInput) -> Option<f64> {
-    let sheet = calc::compute(data, b).ok()?;
-    let result = combo::simulate(data, b, &window_input(data, b, sheet.abilities.len(), Window::Hybrid)).ok()?;
+    let result = fight(data, b)?;
     let by = |kinds: &[combo::Kind]| result.sources.iter().filter(|s| kinds.contains(&s.kind)).map(|s| s.damage).sum::<f64>();
     let gun = by(&[combo::Kind::Bullet, combo::Kind::Melee]);
     let spirit = by(&[combo::Kind::Spirit]);

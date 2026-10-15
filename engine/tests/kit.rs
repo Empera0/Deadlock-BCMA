@@ -270,12 +270,21 @@ fn graves_essence_theft_builds_weapon_damage_while_shooting() {
 }
 
 #[test]
-fn wraith_card_uses_the_average_of_the_four_suits() {
+fn wraith_cards_come_from_weapon_hits_and_use_the_average_of_the_four_suits() {
     let d = data();
     let b = hero(&d, "Wraith");
-    let (index, card) = ability(&d, &b, "Card Trick");
-    let r = run(&d, &b, vec![cast(index)], 0.0);
-    assert!(close(r.total, value(&card, "Damage") * (1.0 + value(&card, "SpadeDamageBonus") / 100.0 / 4.0)));
+    let (_, card) = ability(&d, &b, "Card Trick");
+    // A card every ResourcePerCard of resource, CardResourcePerBulletHit a hit: shoot just long enough for one.
+    let hits_per_card = value(&card, "ResourcePerCard") / value(&card, "CardResourcePerBulletHit");
+    let rate = calc::compute(&d, &b).unwrap().stat("shots_per_second").unwrap();
+    let one_card = Action::Shoot { seconds: (hits_per_card + 0.5) / rate };
+    let r = run(&d, &b, vec![one_card.clone()], 0.0);
+    assert!(close(source(&r, "Card Trick"), value(&card, "Damage") * (1.0 + value(&card, "SpadeDamageBonus") / 100.0 / 4.0)));
+    // Slower shooting gives fewer cards in the same time.
+    let mut slowed = b.clone();
+    slowed.fire_rate_slow = 30.0;
+    let r = run(&d, &slowed, vec![one_card], 0.0);
+    assert_eq!(source(&r, "Card Trick"), 0.0);
 }
 
 #[test]

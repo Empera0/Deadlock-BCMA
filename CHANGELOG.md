@@ -2,6 +2,58 @@
 
 All notable changes to Deadlock BCMA are listed here. Versions follow [semantic versioning](https://semver.org).
 
+## [0.2.27] – 2026-10-16
+
+This release makes the builders calculate what counter items do instead of estimating it. It also checks every hero ability against the Deadlock wiki and every item against its own in-game text.
+
+### Added
+
+1. **Measured counters.** What an item does to each enemy is now worked out by the calculator: the enemy's damage in fights against your hero, with its usual build, levels, boons and spirit power, is simulated with and without the item's effect. Every counter card now says how much each enemy loses, for example "Takes 18% off Haze's damage in a fight". The effects measured are:
+   - fire-rate slows;
+   - spirit power reduction;
+   - spirit or all outgoing damage reduction;
+   - disarms and silences;
+   - bullet immunity, deflection and resists;
+   - big-hit reduction.
+2. **Win rates.**
+   - Each item's win rate when top players buy it at a given point of the match is compared with everything bought at that same point. Players who get far are often already winning, so this keeps that out.
+   - The difference moves the item's score, and the builds show it, for example "+4 pts wins".
+   - Against each enemy, the win rate with the item is compared with the item's win rate in general.
+3. **Why not something else?** Each phase of the Master builder lists the best items it did not buy. Each one shows its score, popularity, win rate, effect on your own damage and answer to the enemy, with the reasons.
+4. **Your usual items count as counters.** Items from your hero's usual build are no longer left out of the counter suggestions. When one of them is a strong answer to the enemy team, it is suggested as "already in your usual build: buy it early". This is how Suppressor now shows up early against Haze or Wraith.
+
+### Changed
+
+5. **Ability audit.** All 42 heroes' abilities were checked against deadlock.wiki. Effects the game data does not name clearly are now counted, for example:
+   - launches, pulls and stuns: Bebop, Billy, Dynamo, Holliday, Lash, Mo & Krill, Paradox, Doorman, Vindicta, Viscous;
+   - silences: Celeste, Drifter, Mina, Paradox, Warden;
+   - Exploding Uppercut's fire-rate slow, Afterburn's spirit damage cut, Affliction's healing prevention and Fire Scarabs' damage cut;
+   - werewolf Silver's disarm and resist reduction.
+
+   Wrong reads were removed:
+   - Deadman Danny's own heat counted as a slow;
+   - Djinn's Mark's stun, which does not trigger;
+   - Binding Word's bullet bonus counted as a resist reduction.
+6. **Item audit.** All 156 shop items were checked against their own in-game text:
+   - Golden Goose Egg's and Cursed Relic's damage penalties are on their owner, not on enemies.
+   - Cursed Relic, Silence Wave and Focus Lens silence; Phantom Strike disarms.
+   - Inhibitor and Plated Armor now count against enemy guns.
+   - Capacitor's and Lifestrike's slows are counted; Glass Cannon's unused slow numbers are not.
+   - Arctic Blast's freeze counts as a stun. Knockdown no longer counts as helping allies.
+   - "Close range" now comes only from items whose text says so.
+   - "Headshot only" now applies only to items whose main effect needs a headshot.
+7. **Timing of team effects.**
+   - A teammate's ability counts for how long its effect lasts over its cooldown, upgrades included. Lash's Flog, fully upgraded, slows fire rate for 3s every 10s.
+   - An ability counts for less than an item, because it reaches only the enemies it hits.
+   - Ability upgrades that raise a value by a percentage are no longer added as flat seconds.
+8. **No two items for the same job.** The Master builder counts a job that items already bought do for less, instead of stacking several items against the same threat.
+9. **Answers on a fixed scale.** One outstanding answer, such as Metal Skin against Haze, no longer makes every other answer look small.
+
+### Fixed
+
+10. **Wraith's cards.** They now come from weapon hits, as in the game, instead of a short cooldown. A fire-rate slow now also slows her cards.
+11. **Spirit power.** Spirit power reduced by an enemy (Spirit Sap, Threadsap) now stops at zero instead of going negative and shrinking magazines and ability damage.
+
 ## [0.2.26] – 2026-10-15
 
 This release connects match analysis to the Master builder and makes the builder read heroes by the damage they actually deal.
@@ -164,6 +216,7 @@ This release adds the **Build generator**, with builds read from top-ranked matc
   - trends across your last matches.
 - Windows installer with a desktop shortcut and automatic updates from GitHub releases.
 
+[0.2.27]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.26...v0.2.27
 [0.2.26]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.25...v0.2.26
 [0.2.25]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.24...v0.2.25
 [0.2.24]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.13...v0.2.24

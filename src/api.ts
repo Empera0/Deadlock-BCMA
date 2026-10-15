@@ -730,6 +730,8 @@ export interface RoleAdvice {
 /** An item for a counter slot, with every job it does against the team. */
 export interface CounterPick {
   advice: CounterAdvice;
+  /** Already in the player's usual build. */
+  in_core: boolean;
   jobs: string[];
 }
 
@@ -764,6 +766,8 @@ export interface MasterItem {
   paid: number;
   score: number;
   popular_pct: number;
+  win_pct: number;
+  win_pp: number;
   engine_pct: number;
   jobs: string[];
   notes: string[];
@@ -772,12 +776,31 @@ export interface MasterItem {
   upgraded: boolean;
 }
 
+/** An item weighed in a phase and not bought. */
+export interface Considered {
+  item: string;
+  name: string;
+  icon: string;
+  category: Category;
+  cost: number;
+  score: number;
+  popular_pct: number;
+  win_pct: number;
+  win_pp: number;
+  engine_pct: number;
+  counter_pct: number;
+  jobs: string[];
+  notes: string[];
+  left_out: boolean;
+}
+
 export interface MasterPhase {
   key: string;
   title: string;
   souls_from: number;
   souls_to: number;
   sold: string[];
+  considered: Considered[];
 }
 
 /** An item a player bought in a match, judged on the same terms as the master build's items. */
@@ -792,6 +815,8 @@ export interface JudgedItem {
   phase: number;
   net_worth: number;
   popular_pct: number;
+  win_pct: number;
+  win_pp: number;
   jobs: string[];
   notes: string[];
   in_master: boolean;

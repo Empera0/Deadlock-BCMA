@@ -1622,25 +1622,35 @@ fn customize(ability: &AbilitySheet, plan: &mut Plan, ctx: &Context, duration: O
         }
         // --- Wraith ---
         "citadel_ability_card_toss" => {
-            // One card in four is a spade (bonus damage) and one in four a diamond (resist shred); jokers are left out.
+            // Cards are not on a cooldown: weapon hits fill a card resource (CardResourcePerBulletHit per hit, more on
+            // a headshot) and every ResourcePerCard of it gives a card, thrown as soon as it is there. So the cards
+            // come as fast as Wraith hits, and anything that slows her fire rate slows them too.
+            // One card in four is a spade (bonus damage); jokers and the diamond shred are left out.
             let spade = v("SpadeDamageBonus") / 100.0 * 0.25;
-            let shred = v("DiamondResistShred").abs() * 0.25;
-            for part in &mut plan.parts {
-                if let Part::Instant { raw, label, .. } = part {
-                    *raw *= 1.0 + spade;
-                    *label = "Average card".into();
-                }
+            let card = plan.parts.iter().find_map(|p| if let Part::Instant { raw, .. } = p { Some(*raw) } else { None }).unwrap_or(v("Damage"));
+            let per_hit = v("CardResourcePerBulletHit");
+            if per_hit > 0.0 && v("ResourcePerCard") > 0.0 {
+                passive_only(
+                    plan,
+                    Passive::StackingBuff {
+                        per_stack: Buff::default(),
+                        max_stacks: 0.0,
+                        // The card resource does not run out.
+                        seconds: f64::INFINITY,
+                        per_shot: per_hit,
+                        per_headshot: (v("CardResourcePerBulletCrit") - per_hit).max(0.0),
+                        proc_every: v("ResourcePerCard"),
+                        proc_raw: card * (1.0 + spade),
+                    },
+                );
+                plan.notes.push(format!(
+                    "Cards come from weapon hits: {} card resource a hit ({} on a headshot), a card every {}, each thrown at once for the average of the suits (+{}% damage from spades one card in four). Jokers and the diamond resist shred are not counted.",
+                    n(per_hit),
+                    n(v("CardResourcePerBulletCrit")),
+                    n(v("ResourcePerCard")),
+                    n(spade * 100.0)
+                ));
             }
-            plan.debuffs.push(once(
-                "Diamond (average)",
-                Effect { bullet: shred, spirit: shred, ..Default::default() },
-                v("DiamondResistShredDuration"),
-            ));
-            plan.notes.push(format!(
-                "The average of the four suits: +{}% damage from spades and -{}% resists from diamonds, each one card in four. Jokers are not counted.",
-                n(spade * 100.0),
-                n(shred)
-            ));
         }
         // --- Yamato ---
         "citadel_ability_power_slash" => {

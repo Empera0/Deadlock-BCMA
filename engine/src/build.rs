@@ -45,6 +45,10 @@ pub struct BuildInput {
     pub bonus_spirit: f64,
     #[serde(skip)]
     pub bonus_spirit_pct: f64,
+    /// Fire rate taken away by an enemy's item, percent points. Set when an item's effect on this hero is
+    /// measured, never saved with a build.
+    #[serde(skip)]
+    pub fire_rate_slow: f64,
 }
 
 #[derive(Debug, Clone, Serialize)]

@@ -135,6 +135,7 @@ function MiniItem({ item, cost }: { item: { name: string; icon: string; category
 function whyOut(j: JudgedItem): string[] {
   return [
     j.popular_pct >= 0.5 ? `${fmt(j.popular_pct, 0)}% of top players buy it at this point` : "Top players rarely buy it at this point",
+    ...(Math.abs(j.win_pp) >= 1 ? [`top players who buy it here win ${fmt(Math.abs(j.win_pp), 0)} points ${j.win_pp > 0 ? "more" : "less"} often than with other items bought here`] : []),
     ...j.notes.filter((n) => n.startsWith("Your team has it") || n.startsWith("Works within") || n.startsWith("Harder")),
   ];
 }
@@ -142,6 +143,7 @@ function whyOut(j: JudgedItem): string[] {
 function whyIn(x: MasterItem, style: string): string[] {
   return [
     ...(x.popular_pct >= 0.5 ? [`${fmt(x.popular_pct, 0)}% of top players buy it here`] : []),
+    ...(Math.abs(x.win_pp) >= 1 ? [`they win ${fmt(Math.abs(x.win_pp), 0)} points ${x.win_pp > 0 ? "more" : "less"} often with it than with other items bought here`] : []),
     ...(x.engine_pct >= 1 ? [`+${fmt(x.engine_pct, 0)}% to your ${style} damage`] : []),
     ...x.jobs.map((j) => j.toLowerCase()),
   ];
@@ -441,6 +443,12 @@ function MasterPanel({ heroes, hero, preset, onUse }: { heroes: Hero[]; hero: He
                           </small>
                           <span className="master-why">
                             {x.popular_pct >= 0.5 && <i className="why-pop">{fmt(x.popular_pct, 0)}% of top players</i>}
+                            {Math.abs(x.win_pp) >= 1 && (
+                              <i className={x.win_pp > 0 ? "why-win" : "why-lose"} title={`Top players win ${fmt(x.win_pct, 0)}% of the matches in which they buy it at this point`}>
+                                {x.win_pp > 0 ? "+" : "−"}
+                                {fmt(Math.abs(x.win_pp), 0)} pts wins
+                              </i>
+                            )}
                             {x.engine_pct >= 1 && <i className="why-engine">+{fmt(x.engine_pct, 0)}% {report.master.style}</i>}
                             {x.notes.some((n) => n.startsWith("Your team has it")) && <i className="why-team">team has it</i>}
                             {x.jobs.map((j) => (
@@ -453,6 +461,50 @@ function MasterPanel({ heroes, hero, preset, onUse }: { heroes: Hero[]; hero: He
                       </div>
                     ))}
                 </div>
+                {phase.considered.length > 0 && (
+                  <details className="considered">
+                    <summary>Why not something else? The best items not bought here</summary>
+                    <table className="match-table compare">
+                      <thead>
+                        <tr>
+                          <th className="left">Item</th>
+                          <th title="The item's score: popularity, own numbers and the answer to their team, weighed by the role">Score</th>
+                          <th title="Share of your hero's top players who buy it at this point">Top players</th>
+                          <th title="Win rate when bought at this point, against everything bought at this point (points, shrunk for small samples)">Wins</th>
+                          <th title="What it adds to your own damage">Own numbers</th>
+                          <th title="Its answer to the enemy team, against the best answer at this point">Answer</th>
+                          <th className="left">Why</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {phase.considered.map((c) => (
+                          <tr key={c.item} className={c.left_out ? "left-out" : ""}>
+                            <td className="left">
+                              <span className="other-item">
+                                <img src={c.icon} alt="" />
+                                <span>
+                                  <b>{c.name}</b>
+                                  <small className="muted">{fmt(c.cost)}</small>
+                                </span>
+                              </span>
+                            </td>
+                            <td>{fmt(c.score, 2)}</td>
+                            <td>{fmt(c.popular_pct, 0)}%</td>
+                            <td>{c.win_pct > 0 ? `${fmt(c.win_pct, 0)}% (${c.win_pp >= 0 ? "+" : "−"}${fmt(Math.abs(c.win_pp), 1)})` : "–"}</td>
+                            <td>+{fmt(c.engine_pct, 0)}%</td>
+                            <td>{fmt(c.counter_pct, 0)}%</td>
+                            <td className="left other-what">
+                              {c.left_out && <small className="hard">Few top players buy it at this point and it is no strong answer, so it was left out</small>}
+                              {[...c.jobs.map((j) => j.toLowerCase()), ...c.notes].map((n) => (
+                                <small key={n}>{n}</small>
+                              ))}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </details>
+                )}
               </div>
             ))}
             <button
@@ -479,6 +531,7 @@ function MasterPanel({ heroes, hero, preset, onUse }: { heroes: Hero[]; hero: He
                         <b>{p.advice.name}</b>
                         <small>{fmt(p.advice.cost)} souls</small>
                         {p.advice.active && <small className="tag-active">active</small>}
+                        {p.in_core && <small className="tag-core">in your build</small>}
                       </div>
                       <div className="pick-jobs">{p.jobs.join(" · ")}</div>
                       <div className="counter-effect">{p.advice.effect}</div>

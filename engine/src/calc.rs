@@ -535,6 +535,7 @@ fn compute_at(data: &GameData, b: &BuildInput, force_level: Option<u32>) -> Resu
     // Same formula as the spirit power stat further down.
     let spirit_now = (boons * per_boon("MODIFIER_VALUE_TECH_POWER") + invest_bonus(&hero.invest.spirit, spent_s) + bag.peek("MODIFIER_VALUE_TECH_POWER"))
         * (1.0 + bag.peek("MODIFIER_VALUE_TECH_POWER_PERCENT") / 100.0);
+    let spirit_now = spirit_now.max(0.0);
     let from_spirit = |stat: &str| hero.spirit_scaling.get(stat).copied().unwrap_or(0.0) * spirit_now;
     let spirit_term = |stat: &str, unit: &str| {
         let per_point = hero.spirit_scaling.get(stat).copied().unwrap_or(0.0);
@@ -593,6 +594,9 @@ fn compute_at(data: &GameData, b: &BuildInput, force_level: Option<u32>) -> Resu
     let mut fr_terms = bag.take(&["MODIFIER_VALUE_FIRE_RATE"]);
     if from_spirit("EFireRate") != 0.0 {
         fr_terms.insert(0, spirit_term("EFireRate", "%"));
+    }
+    if b.fire_rate_slow != 0.0 {
+        fr_terms.push(term("Fire rate slow from an enemy", -b.fire_rate_slow, "%"));
     }
     let fr = total(&fr_terms);
     add("fire_rate_pct", "Fire rate bonus", "weapon", fr, "%", "Σ fire rate % (additive)", fr_terms);
@@ -913,7 +917,8 @@ fn compute_at(data: &GameData, b: &BuildInput, force_level: Option<u32>) -> Resu
         "",
     );
     let sp_pct_terms = bag.take(&["MODIFIER_VALUE_TECH_POWER_PERCENT"]);
-    let spirit_power = (boons * sp_growth + total(&sp_flat_terms)) * (1.0 + total(&sp_pct_terms) / 100.0);
+    // Spirit power taken away by an enemy (Spirit Sap, Focus Lens) stops at zero.
+    let spirit_power = ((boons * sp_growth + total(&sp_flat_terms)) * (1.0 + total(&sp_pct_terms) / 100.0)).max(0.0);
     let mut sp_terms = vec![term(format!("Level: {boon_count} boons × {}", fmt(sp_growth)), boons * sp_growth, "")];
     sp_terms.extend(sp_flat_terms);
     sp_terms.extend(sp_pct_terms);
@@ -923,7 +928,7 @@ fn compute_at(data: &GameData, b: &BuildInput, force_level: Option<u32>) -> Resu
         "spirit",
         spirit_power,
         "",
-        "(boons × per-level gain + investment + Σ items) × (1 + spirit power %)",
+        "(boons × per-level gain + investment + Σ items) × (1 + spirit power %), not below 0",
         sp_terms,
     );
     let mut spirit_mods = [0.0; 3];
