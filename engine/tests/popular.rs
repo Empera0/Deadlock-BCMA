@@ -1,5 +1,5 @@
 use engine::data::GameData;
-use engine::popular::{self, Enemy, HeroStat, ItemStat};
+use engine::popular::{self, Ally, Enemy, HeroStat, ItemStat, Matchup};
 
 fn data() -> GameData {
     serde_json::from_str(include_str!("../../src-tauri/data/snapshot.json")).unwrap()
@@ -33,7 +33,7 @@ fn counters_are_planned_job_by_job_against_the_enemy_team() {
     let vs_haze = popular::lifts(&general, &stats(include_str!("popular/items-vs-haze.json")));
     let vs_infernus = popular::lifts(&general, &stats(include_str!("popular/items-vs-infernus.json")));
     let enemies = [Enemy { hero_id: 13, build: &haze, lifts: &vs_haze }, Enemy { hero_id: 1, build: &infernus, lifts: &vs_infernus }];
-    let plan = popular::counter_plan(&d, Some("hero_dynamo"), Some(true), &[], &enemies);
+    let plan = popular::counter_plan(&d, &Matchup { my_hero: Some("hero_dynamo"), my_spirit: Some(true), my_core: &[], allies: &[], enemies: &enemies, lane: &[] });
     // Two counter slots for each stage, two different items at the stage's price.
     assert_eq!(plan.stages.len(), 3);
     for stage in &plan.stages {
@@ -55,8 +55,31 @@ fn counters_are_planned_job_by_job_against_the_enemy_team() {
     assert!(plan.others.windows(2).all(|w| w[0].advice.score >= w[1].advice.score));
     // An item already in the player's build is not suggested again.
     let first = lane.picks[0].advice.item.clone();
-    let again = popular::counter_plan(&d, Some("hero_dynamo"), Some(true), &[first.clone()], &enemies);
+    let core = [first.clone()];
+    let again = popular::counter_plan(&d, &Matchup { my_hero: Some("hero_dynamo"), my_spirit: Some(true), my_core: &core, allies: &[], enemies: &enemies, lane: &[] });
     assert!(again.stages[0].picks.iter().all(|p| p.advice.item != first));
+
+    // Hero by hero: both enemies have threats, and the plan answers each of them somewhere.
+    assert_eq!(plan.heroes.len(), 2);
+    for h in &plan.heroes {
+        println!("HERO {} threats {:?} answers {:?}", h.hero_name, h.threats, h.answers);
+        assert!(!h.threats.is_empty() && !h.answers.is_empty(), "{}", h.hero_name);
+    }
+
+    // Only Infernus in the lane: the lane counters answer Infernus alone, Haze comes in the mid game.
+    let laned = popular::counter_plan(&d, &Matchup { my_hero: Some("hero_dynamo"), my_spirit: Some(true), my_core: &[], allies: &[], enemies: &enemies, lane: &[1] });
+    let lane = &laned.stages[0];
+    println!("LANE vs Infernus: {:?} | {}", lane.picks.iter().map(|p| p.advice.name.as_str()).collect::<Vec<_>>(), lane.note);
+    assert!(lane.picks.iter().all(|p| !p.advice.against.iter().any(|a| a == "Haze")));
+    assert!(laned.heroes.iter().any(|h| h.hero_name == "Infernus" && h.in_lane));
+    assert!(laned.stages[1].picks.iter().any(|p| p.advice.against.iter().any(|a| a == "Haze")));
+
+    // A teammate who usually buys healing reduction takes some of that job off the player from the mid game.
+    let allies = [Ally { hero_id: 1, build: &infernus }];
+    let with_team = popular::counter_plan(&d, &Matchup { my_hero: Some("hero_dynamo"), my_spirit: Some(true), my_core: &[], allies: &allies, enemies: &enemies[..1], lane: &[] });
+    println!("TEAM {:?}", with_team.team);
+    assert_eq!(with_team.allies.len(), 1);
+    assert!(!with_team.team.is_empty());
     for p in &plan.enemies {
         println!("{:<10} weapon {:>3.0}% heals {:?} moves {:?} locks {:?} resists {:?}", p.hero_name, p.weapon_pct, p.heals, p.mobility, p.lockdown, p.resists);
     }

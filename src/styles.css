@@ -3389,3 +3389,98 @@ header.match {
   border-radius: 3px;
   object-fit: cover;
 }
+
+/* ---- Both teams and the lane */
+.enemy-cell.ally {
+  opacity: 1;
+  border-color: #6fa8e0;
+  background: color-mix(in srgb, #6fa8e0 18%, var(--panel));
+}
+
+.teams {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 8px 0;
+}
+
+.team-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.team-label {
+  width: 86px;
+  color: var(--muted);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.team-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px 2px 2px;
+  background: color-mix(in srgb, #6fa8e0 14%, var(--panel));
+  border: 1px solid color-mix(in srgb, #6fa8e0 40%, var(--border));
+  border-radius: 3px;
+  color: var(--text);
+  font-size: 12px;
+}
+
+.team-chip img {
+  width: 24px;
+  height: 24px;
+  border-radius: 3px;
+  object-fit: cover;
+}
+
+.team-chip small {
+  color: var(--accent);
+  text-transform: uppercase;
+  font-size: 9.5px;
+  letter-spacing: 0.06em;
+}
+
+.team-chip.you {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 16%, var(--panel));
+}
+
+.team-chip.enemy {
+  background: color-mix(in srgb, #e0736f 12%, var(--panel));
+  border-color: color-mix(in srgb, #e0736f 35%, var(--border));
+}
+
+.team-chip.enemy.lane {
+  border-color: #e0736f;
+  background: color-mix(in srgb, #e0736f 30%, var(--panel));
+}
+
+.teams .gen-actions {
+  margin: 4px 0 0 92px;
+}
+
+.hero-answers td {
+  vertical-align: top;
+}
+
+.hero-answers ul.plain {
+  margin: 0;
+  padding-left: 14px;
+  line-height: 1.45;
+}
+
+.lane-tag {
+  color: #e0736f;
+  text-transform: uppercase;
+  font-size: 9.5px;
+  letter-spacing: 0.06em;
+}
+
+.team-note {
+  margin: 2px 0;
+}

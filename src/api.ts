@@ -249,7 +249,8 @@ export const api = {
   refreshData: () => invoke<GameData>("refresh_data"),
   compute: (build: Build) => invoke<Sheet>("compute", { build }),
   popularBuild: (heroId: number) => invoke<PopularReport>("popular_build", { heroId }),
-  counterAdvice: (myHero: string | null, enemies: number[]) => invoke<CounterReport>("counter_advice", { myHero, enemies }),
+  counterAdvice: (myHero: string | null, allies: number[], enemies: number[], lane: number[]) =>
+    invoke<CounterReport>("counter_advice", { myHero, allies, enemies, lane }),
   riftComeback: (minute: number, ownSouls: number, enemySouls: number) =>
     invoke<RiftComeback>("rift_comeback", { minute, ownSouls, enemySouls }),
   suggestBuilds: (build: Build, styles: string[]) => invoke<Suggestions>("suggest_builds", { build, styles }),
@@ -714,6 +715,7 @@ export interface EnemyProfile {
   mobility: string[];
   lockdown: string[];
   resists: string[];
+  flying: string[];
 }
 
 /** A job items do against the enemy team: why the team calls for it, and the best items for it by price. */
@@ -731,6 +733,15 @@ export interface CounterPick {
   jobs: string[];
 }
 
+/** One enemy: what it threatens and which planned item answers it, stage by stage. */
+export interface HeroAnswer {
+  hero: string;
+  hero_name: string;
+  in_lane: boolean;
+  threats: string[];
+  answers: string[];
+}
+
 /** The two counter items for one stage of the game. */
 export interface CounterStage {
   key: string;
@@ -742,7 +753,13 @@ export interface CounterStage {
 
 export interface CounterReport {
   builds: PopularBuild[];
-  plan: { enemies: EnemyProfile[]; roles: RoleAdvice[]; own_escape: string[]; stages: CounterStage[]; others: CounterPick[] };
+  plan: { enemies: EnemyProfile[]; roles: RoleAdvice[]; own_escape: string[];
+    stages: CounterStage[];
+    others: CounterPick[];
+    allies: EnemyProfile[];
+    heroes: HeroAnswer[];
+    team: string[];
+  };
   days: number;
   rank: string;
 }

@@ -204,13 +204,23 @@ async fn popular_build(app: AppHandle, state: State<'_, AppState>, hero_id: u64)
 
 /// Items to buy against a team of enemies, for a hero of the player's choice or for anyone.
 #[tauri::command]
-async fn counter_advice(app: AppHandle, state: State<'_, AppState>, my_hero: Option<String>, enemies: Vec<u64>) -> Result<CounterReport, String> {
+async fn counter_advice(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    my_hero: Option<String>,
+    allies: Vec<u64>,
+    enemies: Vec<u64>,
+    lane: Vec<u64>,
+) -> Result<CounterReport, String> {
     let data = state.data.read().unwrap().clone();
     let cache = data_dir(&app)?.join("analytics");
     tauri::async_runtime::spawn_blocking(move || {
         let my_id = my_hero.as_deref().and_then(|h| data.hero(h)).map(|h| h.id);
         // The same hero cannot be on both teams.
-        let enemies: Vec<u64> = enemies.into_iter().filter(|id| Some(*id) != my_id).collect();
+        let enemies: Vec<u64> = enemies.into_iter().filter(|id| Some(*id) != my_id && !allies.contains(id)).collect();
+        let allies: Vec<u64> = allies.into_iter().filter(|id| Some(*id) != my_id).collect();
+        let ally_builds: Vec<popular::PopularBuild> = allies.iter().map(|id| popular_for(&data, &cache, *id).map(|b| b.0)).collect::<Result<_, _>>()?;
+        let ally_team: Vec<popular::Ally> = allies.iter().zip(&ally_builds).map(|(id, build)| popular::Ally { hero_id: *id, build }).collect();
         // What everybody buys against an enemy: one hero's own sample at the top ranks is too small to read.
         let mut lowest = ETERNUS;
         let mut builds = vec![];
@@ -241,7 +251,10 @@ async fn counter_advice(app: AppHandle, state: State<'_, AppState>, my_hero: Opt
         };
         let my_spirit = mine.as_ref().map(|b| popular::deals_spirit(&data, b));
         let my_core: Vec<String> = mine.as_ref().map(|b| b.core.iter().map(|c| c.item.clone()).collect()).unwrap_or_default();
-        let plan = popular::counter_plan(&data, my_hero.as_deref(), my_spirit, &my_core, &team);
+        let plan = popular::counter_plan(
+            &data,
+            &popular::Matchup { my_hero: my_hero.as_deref(), my_spirit, my_core: &my_core, allies: &ally_team, enemies: &team, lane: &lane },
+        );
         Ok(CounterReport { builds: builds.clone(), plan, days: ANALYTICS_DAYS, rank: rank_name(lowest).into() })
     })
     .await

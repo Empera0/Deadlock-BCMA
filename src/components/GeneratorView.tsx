@@ -105,58 +105,123 @@ function CounterPanel({ heroes, hero }: { heroes: Hero[]; hero: Hero }) {
   const [mine, setMine] = useState(hero.class_name);
   useEffect(() => setMine(hero.class_name), [hero.class_name]);
   const me = heroes.find((h) => h.class_name === mine) ?? hero;
+  const [allies, setAllies] = useState<number[]>([]);
+  const [lane, setLane] = useState<number[]>([]);
   // The same hero cannot be on both teams.
-  useEffect(() => setEnemies((on) => on.filter((id) => id !== me.id)), [me.id]);
+  useEffect(() => {
+    setEnemies((on) => on.filter((id) => id !== me.id));
+    setAllies((on) => on.filter((id) => id !== me.id));
+  }, [me.id]);
+  useEffect(() => setLane((on) => on.filter((id) => enemies.includes(id))), [enemies]);
   const [report, setReport] = useState<CounterReport | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
-  const toggle = (id: number) => setEnemies((on) => (on.includes(id) ? on.filter((x) => x !== id) : on.length >= 6 ? on : [...on, id]));
+  // Click: enemy team. Right-click: your team. A hero moves from one team to the other.
+  const toggle = (id: number) => {
+    if (id === me.id) return;
+    setAllies((on) => on.filter((x) => x !== id));
+    setEnemies((on) => (on.includes(id) ? on.filter((x) => x !== id) : on.length >= 6 ? on : [...on, id]));
+  };
+  const toggleAlly = (id: number) => {
+    if (id === me.id) return;
+    setEnemies((on) => on.filter((x) => x !== id));
+    setAllies((on) => (on.includes(id) ? on.filter((x) => x !== id) : on.length >= 5 ? on : [...on, id]));
+  };
+  const toggleLane = (id: number) => setLane((on) => (on.includes(id) ? on.filter((x) => x !== id) : on.length >= 3 ? on : [...on, id]));
+  // Playing a teammate: the old hero takes its place on the team.
+  const playAs = (h: Hero) => {
+    setAllies((on) => [...on.filter((x) => x !== h.id), me.id]);
+    setMine(h.class_name);
+  };
+  const byId = (id: number) => heroes.find((h) => h.id === id);
   const find = () => {
     setBusy(true);
     setError("");
     api
-      .counterAdvice(mine, enemies)
+      .counterAdvice(mine, allies, enemies, lane)
       .then(setReport)
       .catch((e) => setError(String(e)))
       .finally(() => setBusy(false));
   };
-  const name = (id: number) => heroes.find((h) => h.id === id)?.name ?? "?";
 
   return (
     <>
       <p className="muted">
-        Click the enemy team (up to six) and right-click the hero you play. Out of twelve slots, two go to counters, so for each stage of the game the engine
-        picks the two items that answer the most of what this team does: one item that answers two problems beats two that answer one,
-        items that land on their own beat ones that need headshots, a team of healers always gets its healing cut, and nothing your usual
-        build already has is suggested.
+        Click a hero for the enemy team, right-click one for your team. Below, mark the enemies in your lane and pick which teammate you
+        play. Out of twelve slots, two go to counters: for each stage of the game the engine picks the two items that answer the most. The
+        lane counters answer your lane opponents only; the mid and late game answer their whole team, taking into account what your
+        teammates usually bring.
       </p>
       <div className="enemy-grid">
         {heroes.map((h) => (
           <button
             key={h.id}
-            className={"enemy-cell" + (enemies.includes(h.id) ? " on" : "") + (h.id === me.id ? " mine" : "")}
-            onClick={() => h.id !== me.id && toggle(h.id)}
+            className={
+              "enemy-cell" + (enemies.includes(h.id) ? " on" : "") + (allies.includes(h.id) ? " ally" : "") + (h.id === me.id ? " mine" : "")
+            }
+            onClick={() => toggle(h.id)}
             onContextMenu={(e) => {
               e.preventDefault();
-              setMine(h.class_name);
+              toggleAlly(h.id);
             }}
-            title={h.id === me.id ? `You play ${h.name}` : `${h.name}: click for the enemy team, right-click to play it`}
+            title={h.id === me.id ? `You play ${h.name}` : `${h.name}: click for the enemy team, right-click for your team`}
           >
             <img src={h.icon} alt="" loading="lazy" />
             <span>{h.name}</span>
           </button>
         ))}
       </div>
-      <div className="gen-actions">
-        <span className="you-play">
-          <img src={me.icon} alt="" />
-          You play <b>{me.name}</b>
-          <small className="muted">(right-click a hero to change)</small>
-        </span>
-        <button disabled={busy || enemies.length === 0} onClick={find}>
-          {busy ? "Working…" : `Find counters against ${enemies.length || "the"} enem${enemies.length === 1 ? "y" : "ies"}`}
-        </button>
-        {enemies.length > 0 && <small className="muted">{enemies.map(name).join(", ")}</small>}
+      <div className="teams">
+        <div className="team-row">
+          <span className="team-label">Your team</span>
+          <span className="team-chip you" title="You">
+            <img src={me.icon} alt="" />
+            {me.name}
+            <small>you</small>
+          </span>
+          {allies.map((id) => {
+            const h = byId(id);
+            return (
+              h && (
+                <button key={id} className="team-chip" onClick={() => playAs(h)} title={`Play ${h.name} instead`}>
+                  <img src={h.icon} alt="" />
+                  {h.name}
+                </button>
+              )
+            );
+          })}
+          {allies.length === 0 && <small className="muted">right-click heroes to add your teammates</small>}
+        </div>
+        <div className="team-row">
+          <span className="team-label">Enemy team</span>
+          {enemies.map((id) => {
+            const h = byId(id);
+            return (
+              h && (
+                <button
+                  key={id}
+                  className={"team-chip enemy" + (lane.includes(id) ? " lane" : "")}
+                  onClick={() => toggleLane(id)}
+                  title={lane.includes(id) ? `${h.name} is in your lane` : `Mark ${h.name} as in your lane`}
+                >
+                  <img src={h.icon} alt="" />
+                  {h.name}
+                  {lane.includes(id) && <small>lane</small>}
+                </button>
+              )
+            );
+          })}
+          {enemies.length === 0 ? (
+            <small className="muted">click heroes to add the enemy team</small>
+          ) : (
+            lane.length === 0 && <small className="muted">click the enemies in your lane</small>
+          )}
+        </div>
+        <div className="gen-actions">
+          <button disabled={busy || enemies.length === 0} onClick={find}>
+            {busy ? "Working…" : `Find counters against ${enemies.length || "the"} enem${enemies.length === 1 ? "y" : "ies"}`}
+          </button>
+        </div>
       </div>
       {error && <div className="error">{error}</div>}
 
@@ -205,6 +270,60 @@ function CounterPanel({ heroes, hero }: { heroes: Hero[]; hero: Hero }) {
               )}
             </div>
           ))}
+
+          <div className="group">
+            <h3>Hero by hero</h3>
+            {report.plan.team.map((t) => (
+              <p key={t} className="muted team-note">
+                {t}.
+              </p>
+            ))}
+            <table className="match-table compare hero-answers">
+              <thead>
+                <tr>
+                  <th className="left">Enemy</th>
+                  <th className="left">What they bring</th>
+                  <th className="left">Answered by</th>
+                </tr>
+              </thead>
+              <tbody>
+                {report.plan.heroes.map((h) => {
+                  const icon = heroes.find((x) => x.class_name === h.hero)?.icon;
+                  return (
+                    <tr key={h.hero}>
+                      <td className="left">
+                        <span className="other-item">
+                          {icon && <img src={icon} alt="" />}
+                          <span>
+                            <b>{h.hero_name}</b>
+                            {h.in_lane && <small className="lane-tag">in your lane</small>}
+                          </span>
+                        </span>
+                      </td>
+                      <td className="left">
+                        <ul className="plain">
+                          {h.threats.map((t) => (
+                            <li key={t}>{t}</li>
+                          ))}
+                        </ul>
+                      </td>
+                      <td className="left">
+                        {h.answers.length > 0 ? (
+                          <ul className="plain">
+                            {h.answers.map((a) => (
+                              <li key={a}>{a}</li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <span className="muted">Nothing above; see the other counter items</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
 
           {report.plan.others.length > 0 && (
             <div className="group">
@@ -298,7 +417,7 @@ function CounterPanel({ heroes, hero }: { heroes: Hero[]; hero: Hero }) {
                         {fmt(Math.abs(p.weapon_pct), 0)}% / {fmt(Math.abs(100 - p.weapon_pct), 0)}%
                       </td>
                       <td className="left">{p.heals.join(", ") || "–"}</td>
-                      <td className="left">{p.mobility.join(", ") || "–"}</td>
+                      <td className="left">{[...p.mobility, ...p.flying].join(", ") || "–"}</td>
                       <td className="left">{p.lockdown.join(", ") || "–"}</td>
                     </tr>
                   );
