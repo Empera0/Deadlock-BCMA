@@ -448,6 +448,50 @@ fn put_together(data: &GameData, start: &BuildInput, budget: u32, stages_souls: 
     })
 }
 
+/// What one candidate item adds to a build for a playstyle.
+#[derive(Debug, Clone)]
+pub struct Gain {
+    pub item: String,
+    /// How much the playstyle's value grows, as a share of the build's (0.05 = 5% more).
+    pub gain: f64,
+    /// What it really costs on top of the build: less when it upgrades an item already owned.
+    pub paid: u32,
+}
+
+/// What each candidate adds to the build (its purchases, at its souls) for a playstyle, worked out side by side.
+/// Candidates the build cannot afford or has no slot for are left out.
+pub fn gains(data: &GameData, b: &BuildInput, style: &str, candidates: &[String]) -> Vec<Gain> {
+    let Some(style) = PLAYSTYLES.iter().find(|p| p.0 == style).or(PLAYSTYLES.first()) else { return vec![] };
+    let (windows, durable) = (style.3, style.4);
+    let Some(now) = measure(data, b, windows) else { return vec![] };
+    let before = value(&now, windows, durable).max(1e-9);
+    let threads = std::thread::available_parallelism().map(|n| n.get()).unwrap_or(4).max(1);
+    let chunk = candidates.len().div_ceil(threads).max(1);
+    std::thread::scope(|scope| {
+        let handles: Vec<_> = candidates
+            .chunks(chunk)
+            .map(|part| {
+                let now = &now;
+                scope.spawn(move || {
+                    part.iter()
+                        .filter_map(|class| {
+                            let mut trial = b.clone();
+                            trial.purchases.push(class.clone());
+                            let then = measure(data, &trial, windows)?;
+                            let paid = then.spent.saturating_sub(now.spent);
+                            if !then.fits || paid == 0 || then.slots_used > then.slot_limit {
+                                return None;
+                            }
+                            Some(Gain { item: class.clone(), gain: (value(&then, windows, durable) - before) / before, paid })
+                        })
+                        .collect::<Vec<_>>()
+                })
+            })
+            .collect();
+        handles.into_iter().flat_map(|h| h.join().unwrap_or_default()).collect()
+    })
+}
+
 /// The playstyles builds can be put together for.
 pub fn playstyles() -> Vec<Playstyle> {
     PLAYSTYLES.iter().map(|p| Playstyle { key: p.0.into(), name: p.1.into(), goal: p.2.into() }).collect()

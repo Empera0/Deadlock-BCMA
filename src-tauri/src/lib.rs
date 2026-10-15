@@ -1,4 +1,4 @@
-use engine::{build::BuildInput, calc, combo, data::GameData, matches, popular, raw};
+use engine::{build::BuildInput, calc, combo, data::GameData, master, matches, popular, raw};
 use std::{
     fs,
     io::Read,
@@ -174,7 +174,8 @@ fn rank_name(badge: u32) -> &'static str {
 }
 
 #[derive(serde::Serialize)]
-struct CounterReport {
+struct MasterReport {
+    master: master::MasterBuild,
     /// What each enemy usually builds.
     builds: Vec<popular::PopularBuild>,
     plan: popular::CounterPlan,
@@ -202,23 +203,32 @@ async fn popular_build(app: AppHandle, state: State<'_, AppState>, hero_id: u64)
     .map_err(|e| e.to_string())?
 }
 
-/// Items to buy against a team of enemies, for a hero of the player's choice or for anyone.
+/// Matches this long are long ones, and this short short ones, when telling which heroes grow strong late.
+const LONG_MATCH_S: u32 = 35 * 60;
+const SHORT_MATCH_S: u32 = 25 * 60;
+/// A hero needs this many long and short matches for the comparison.
+const ENOUGH_SCALING_MATCHES: u64 = 200;
+
+/// A full build for the player's hero against an enemy team and alongside the player's own team.
 #[tauri::command]
-async fn counter_advice(
+#[allow(clippy::too_many_arguments)]
+async fn master_build(
     app: AppHandle,
     state: State<'_, AppState>,
-    my_hero: Option<String>,
+    my_hero: String,
     allies: Vec<u64>,
     enemies: Vec<u64>,
     lane: Vec<u64>,
-) -> Result<CounterReport, String> {
+    focus: String,
+    damage: String,
+) -> Result<MasterReport, String> {
     let data = state.data.read().unwrap().clone();
     let cache = data_dir(&app)?.join("analytics");
     tauri::async_runtime::spawn_blocking(move || {
-        let my_id = my_hero.as_deref().and_then(|h| data.hero(h)).map(|h| h.id);
+        let my_id = data.hero(&my_hero).map(|h| h.id).ok_or("Unknown hero")?;
         // The same hero cannot be on both teams.
-        let enemies: Vec<u64> = enemies.into_iter().filter(|id| Some(*id) != my_id && !allies.contains(id)).collect();
-        let allies: Vec<u64> = allies.into_iter().filter(|id| Some(*id) != my_id).collect();
+        let enemies: Vec<u64> = enemies.into_iter().filter(|id| *id != my_id && !allies.contains(id)).collect();
+        let allies: Vec<u64> = allies.into_iter().filter(|id| *id != my_id).collect();
         let ally_builds: Vec<popular::PopularBuild> = allies.iter().map(|id| popular_for(&data, &cache, *id).map(|b| b.0)).collect::<Result<_, _>>()?;
         let ally_team: Vec<popular::Ally> = allies.iter().zip(&ally_builds).map(|(id, build)| popular::Ally { hero_id: *id, build }).collect();
         // What everybody buys against an enemy: one hero's own sample at the top ranks is too small to read.
@@ -244,18 +254,48 @@ async fn counter_advice(
         }
         let team: Vec<popular::Enemy> =
             enemies.iter().zip(&builds).zip(&lifts).map(|((id, build), lifts)| popular::Enemy { hero_id: *id, build, lifts }).collect();
-        // Which resist reduction is worth it depends on the damage the player's own hero deals.
-        let mine = match my_id {
-            Some(id) => Some(popular_for(&data, &cache, id)?.0),
-            None => None,
+
+        // The player's hero: its usual build, and what its top players buy by their souls at the time.
+        let (mine, badge) = popular_for(&data, &cache, my_id)?;
+        lowest = lowest.min(badge);
+        let my_spirit = Some(popular::deals_spirit(&data, &mine));
+        let my_core: Vec<String> = mine.core.iter().map(|c| c.item.clone()).collect();
+        // Purchases by souls are spread over many phases: Eternus alone has too few late ones, so these come from
+        // Ascendant and up.
+        let heroes: Vec<popular::HeroStat> = parse(&analytics(&cache, "hero-stats", "", ASCENDANT)?)?;
+        let hero_matches = heroes.iter().find(|h| h.hero_id == my_id).map(|h| h.matches).unwrap_or(0);
+        let phase_stats: Vec<popular::ItemStat> =
+            parse(&analytics(&cache, "item-stats", &format!("hero_id={my_id}&bucket=net_worth_by_1000"), ASCENDANT)?)?;
+
+        // Which heroes grow strong late: their win rate in long matches against short ones.
+        let long: Vec<popular::HeroStat> = parse(&analytics(&cache, "hero-stats", &format!("min_duration_s={LONG_MATCH_S}"), ASCENDANT)?)?;
+        let short: Vec<popular::HeroStat> = parse(&analytics(&cache, "hero-stats", &format!("max_duration_s={SHORT_MATCH_S}"), ASCENDANT)?)?;
+        let rate = |rows: &[popular::HeroStat], id: u64| {
+            rows.iter().find(|h| h.hero_id == id).filter(|h| h.matches >= ENOUGH_SCALING_MATCHES).map(|h| h.wins as f64 / h.matches as f64 * 100.0)
         };
-        let my_spirit = mine.as_ref().map(|b| popular::deals_spirit(&data, b));
-        let my_core: Vec<String> = mine.as_ref().map(|b| b.core.iter().map(|c| c.item.clone()).collect()).unwrap_or_default();
-        let plan = popular::counter_plan(
-            &data,
-            &popular::Matchup { my_hero: my_hero.as_deref(), my_spirit, my_core: &my_core, allies: &ally_team, enemies: &team, lane: &lane },
-        );
-        Ok(CounterReport { builds: builds.clone(), plan, days: ANALYTICS_DAYS, rank: rank_name(lowest).into() })
+        let scaling: master::Scaling = data.heroes.iter().filter_map(|h| Some((h.id, rate(&long, h.id)? - rate(&short, h.id)?))).collect();
+
+        let input = master::MasterInput {
+            matchup: popular::Matchup {
+                my_hero: Some(&my_hero),
+                my_spirit,
+                my_core: &my_core,
+                allies: &ally_team,
+                enemies: &team,
+                lane: &lane,
+                ranged: !(focus == "frontline" || damage == "melee"),
+            },
+            hero_id: my_id,
+            phase_stats: &phase_stats,
+            hero_matches,
+            own_build: &mine,
+            focus: &focus,
+            damage: &damage,
+            scaling: &scaling,
+        };
+        let master = master::master_build(&data, &input)?;
+        let plan = master.counter.clone();
+        Ok(MasterReport { master, plan, builds: builds.clone(), days: ANALYTICS_DAYS, rank: rank_name(lowest).into() })
     })
     .await
     .map_err(|e| e.to_string())?
@@ -536,7 +576,7 @@ pub fn run() {
             suggest_builds,
             rift_comeback,
             popular_build,
-            counter_advice,
+            master_build,
             simulate_combo,
             refresh_data,
             save_build,

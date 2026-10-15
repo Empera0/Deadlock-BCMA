@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { api, Build, CounterReport, fmt, Hero, PopularItem, PopularReport } from "../api";
+import { api, Build, fmt, Hero, MasterReport, PopularItem, PopularReport } from "../api";
 import SuggestPanel from "./SuggestPanel";
 
 interface Props {
@@ -73,7 +73,7 @@ function PopularPanel({ hero, onUse }: { hero: Hero; onUse: Props["onUse"] }) {
         <h3>Counter slot</h3>
         <p className="muted">
           Bought in a fair share of matches but not most: the item players change depending on the enemy. Pick one to add it to the
-          build; the Counters tab says which ones a given enemy team calls for.
+          build; the Master builder tab works out which ones a given match calls for.
         </p>
         <div className="gen-tiles">
           {b.situational.map((item) => (
@@ -96,11 +96,29 @@ function PopularPanel({ hero, onUse }: { hero: Hero; onUse: Props["onUse"] }) {
   );
 }
 
-/** Up to six enemy heroes, and what to buy against them. */
+/** The roles and damage the master builder can build for. */
+const FOCUSES: [string, string, string][] = [
+  ["auto", "Auto", "Picked from the teams: tempo when a teammate carries late, carry otherwise"],
+  ["carry", "Carry", "Your own damage first: bigger items that scale into the late game"],
+  ["tempo", "Tempo", "Power early in the mid game, to fight before their carries come online"],
+  ["support", "Support", "Items that answer their team and help yours"],
+  ["frontline", "Frontline", "Staying alive at the front while your carries deal the damage"],
+];
+const DAMAGES: [string, string][] = [
+  ["auto", "Auto"],
+  ["gun", "Gun"],
+  ["spirit", "Spirit"],
+  ["hybrid", "Hybrid"],
+  ["melee", "Melee"],
+];
+
+/** Both teams, the lane and the role: a full build for the player's hero, phase by phase. */
 /** The stage of the game an item's price fits. */
 const stageOf = (cost: number) => (cost <= 1600 ? "lane" : cost <= 3200 ? "mid game" : "late game");
 
-function CounterPanel({ heroes, hero }: { heroes: Hero[]; hero: Hero }) {
+function MasterPanel({ heroes, hero, onUse }: { heroes: Hero[]; hero: Hero; onUse: Props["onUse"] }) {
+  const [focus, setFocus] = useState("auto");
+  const [damage, setDamage] = useState("auto");
   const [enemies, setEnemies] = useState<number[]>([]);
   const [mine, setMine] = useState(hero.class_name);
   useEffect(() => setMine(hero.class_name), [hero.class_name]);
@@ -113,7 +131,7 @@ function CounterPanel({ heroes, hero }: { heroes: Hero[]; hero: Hero }) {
     setAllies((on) => on.filter((id) => id !== me.id));
   }, [me.id]);
   useEffect(() => setLane((on) => on.filter((id) => enemies.includes(id))), [enemies]);
-  const [report, setReport] = useState<CounterReport | null>(null);
+  const [report, setReport] = useState<MasterReport | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   // Click: enemy team. Right-click: your team. A hero moves from one team to the other.
@@ -138,7 +156,7 @@ function CounterPanel({ heroes, hero }: { heroes: Hero[]; hero: Hero }) {
     setBusy(true);
     setError("");
     api
-      .counterAdvice(mine, allies, enemies, lane)
+      .masterBuild(mine, allies, enemies, lane, focus, damage)
       .then(setReport)
       .catch((e) => setError(String(e)))
       .finally(() => setBusy(false));
@@ -147,10 +165,10 @@ function CounterPanel({ heroes, hero }: { heroes: Hero[]; hero: Hero }) {
   return (
     <>
       <p className="muted">
-        Click a hero for the enemy team, right-click one for your team. Below, mark the enemies in your lane and pick which teammate you
-        play. Out of twelve slots, two go to counters: for each stage of the game the engine picks the two items that answer the most. The
-        lane counters answer your lane opponents only; the mid and late game answer their whole team, taking into account what your
-        teammates usually bring.
+        Click a hero for the enemy team, right-click one for your team, mark the enemies in your lane and pick your role. Everyone else is
+        taken to build what top players build. Your build is put together phase by phase by souls (lane to 6k, first rift to 15k, second
+        rift to 25k, all boons to 40k), weighing for every item how many top players of your hero buy it then, what it adds to your own
+        numbers, and what it answers on their team, less what your teammates already bring.
       </p>
       <div className="enemy-grid">
         {heroes.map((h) => (
@@ -217,9 +235,25 @@ function CounterPanel({ heroes, hero }: { heroes: Hero[]; hero: Hero }) {
             lane.length === 0 && <small className="muted">click the enemies in your lane</small>
           )}
         </div>
+        <div className="team-row">
+          <span className="team-label">Your role</span>
+          {FOCUSES.map(([key, name, goal]) => (
+            <button key={key} className={"choice" + (focus === key ? " on" : "")} title={goal} onClick={() => setFocus(key)}>
+              {name}
+            </button>
+          ))}
+        </div>
+        <div className="team-row">
+          <span className="team-label">Damage</span>
+          {DAMAGES.map(([key, name]) => (
+            <button key={key} className={"choice" + (damage === key ? " on" : "")} onClick={() => setDamage(key)}>
+              {name}
+            </button>
+          ))}
+        </div>
         <div className="gen-actions">
-          <button disabled={busy || enemies.length === 0} onClick={find}>
-            {busy ? "Working…" : `Find counters against ${enemies.length || "the"} enem${enemies.length === 1 ? "y" : "ies"}`}
+          <button disabled={busy} onClick={find}>
+            {busy ? "Working…" : `Build for ${me.name}`}
           </button>
         </div>
       </div>
@@ -227,6 +261,68 @@ function CounterPanel({ heroes, hero }: { heroes: Hero[]; hero: Hero }) {
 
       {report && (
         <>
+          <div className="group master">
+            <h3>
+              {report.master.hero_name} as {report.master.focus_name} <small className="muted">· {report.master.focus_goal} · {report.master.style} damage</small>
+            </h3>
+            {report.master.notes.map((n) => (
+              <p key={n} className="muted team-note">
+                {n}.
+              </p>
+            ))}
+            {report.master.phases.map((phase, i) => (
+              <div key={phase.key} className="master-phase">
+                <div className="master-phase-head">
+                  <b>{phase.title}</b>
+                  <small>
+                    {fmt(phase.souls_from)}–{fmt(phase.souls_to)} souls
+                  </small>
+                  {phase.sold.length > 0 && <small className="muted">sells {phase.sold.join(", ")}</small>}
+                </div>
+                <div className="master-items">
+                  {report.master.items
+                    .filter((x) => x.phase === i)
+                    .map((x) => (
+                      <div
+                        key={x.item}
+                        className={"master-item " + x.category + (x.sold || x.upgraded ? " sold" : "")}
+                        title={`${x.name} · ${fmt(x.cost)} souls${x.paid < x.cost ? ` (${fmt(x.paid)} as an upgrade)` : ""}\n\n${x.description}${x.notes.length ? "\n\n" + x.notes.join("\n") : ""}`}
+                      >
+                        <img src={x.icon} alt="" loading="lazy" />
+                        <div>
+                          <b>{x.name}</b>
+                          <small>
+                            {fmt(x.cost)}
+                            {x.upgrades ? ` · ${fmt(x.paid)} on top of ${x.upgrades}` : ""}
+                            {x.active ? " · active" : ""}
+                            {x.sold ? " · sold later" : ""}
+                            {x.upgraded ? " · upgraded later" : ""}
+                          </small>
+                          <span className="master-why">
+                            {x.popular_pct >= 0.5 && <i className="why-pop">{fmt(x.popular_pct, 0)}% of top players</i>}
+                            {x.engine_pct >= 1 && <i className="why-engine">+{fmt(x.engine_pct, 0)}% {report.master.style}</i>}
+                            {x.notes.some((n) => n.startsWith("Your team has it")) && <i className="why-team">team has it</i>}
+                            {x.jobs.map((j) => (
+                              <i key={j} className="why-job">
+                                {j}
+                              </i>
+                            ))}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            ))}
+            <button
+              onClick={() => onUse(report.master.purchases, `Loaded the master build for ${report.master.hero_name} as ${report.master.focus_name}`)}
+            >
+              Use this build
+            </button>
+          </div>
+
+          <details className="counter-details">
+            <summary>Counter picks only: two per stage</summary>
           {report.plan.stages.map((stage) => (
             <div key={stage.key} className="group stage-group">
               <h3>
@@ -270,6 +366,8 @@ function CounterPanel({ heroes, hero }: { heroes: Hero[]; hero: Hero }) {
               )}
             </div>
           ))}
+
+          </details>
 
           <div className="group">
             <h3>Hero by hero</h3>
@@ -463,9 +561,9 @@ function CounterPanel({ heroes, hero }: { heroes: Hero[]; hero: Hero }) {
   );
 }
 
-/** Builds put together for the hero: by the calculator, from what players build, and against an enemy team. */
+/** Builds put together for the hero: by the calculator, from what players build, and for a match by the master builder. */
 export default function GeneratorView({ heroes, hero, build, souls, onUse }: Props) {
-  const [tab, setTab] = useState<"calculated" | "popular" | "counters">("calculated");
+  const [tab, setTab] = useState<"calculated" | "popular" | "master">("calculated");
   return (
     <div className="generator-view">
       <div className="side-tabs gen-tabs">
@@ -475,14 +573,14 @@ export default function GeneratorView({ heroes, hero, build, souls, onUse }: Pro
         <button className={tab === "popular" ? "on" : ""} onClick={() => setTab("popular")}>
           Popular
         </button>
-        <button className={tab === "counters" ? "on" : ""} onClick={() => setTab("counters")}>
-          Counters
+        <button className={tab === "master" ? "on" : ""} onClick={() => setTab("master")}>
+          Master builder
         </button>
       </div>
       <div className="gen-body">
         {tab === "calculated" && <SuggestPanel hero={hero} build={build} souls={souls} onUse={(p) => onUse(p, "Loaded a build the calculator put together")} />}
         {tab === "popular" && <PopularPanel hero={hero} onUse={onUse} />}
-        {tab === "counters" && <CounterPanel heroes={heroes} hero={hero} />}
+        {tab === "master" && <MasterPanel heroes={heroes} hero={hero} onUse={onUse} />}
       </div>
     </div>
   );

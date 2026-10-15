@@ -40,9 +40,9 @@ Open it from the sidebar on the left.
 
 - **Calculated**: pick a playstyle (full kit, gun, spirit, melee or frontline) and the app builds it from scratch, the way a match goes: cheap items in the lane, bigger ones in the mid and late game, selling the cheapest once the slots are full. Every pick is the item that helps that playstyle the most per soul, using the hero's own abilities.
 - **Popular**: the core build top players use on a hero, read from the last two weeks of Eternus lobbies, with the situational items they add.
-- **Counters**: click the enemy team, right-click your own team and mark the enemies in your lane. The app picks two counter items each for the lane (against your lane opponents), the mid game and the late game (against their whole team). It takes into account what your teammates usually buy, how easily and for how long each item works, and it lists every enemy with the item that answers it.
+- **Master builder**: pick both teams, mark your lane opponents and choose your role. The app builds your hero phase by phase by souls (lane, first rift, second rift, all boons) from what top players of your hero buy at each point, what each item adds to your own numbers, and what it answers on the enemy team, leaving out what your team already does.
 
-![Counters](docs/images/counters.png)
+![Master builder](docs/images/master-builder.png)
 
 ## Match analysis
 

@@ -3484,3 +3484,107 @@ header.match {
 .team-note {
   margin: 2px 0;
 }
+
+/* ---- Master builder */
+.choice {
+  padding: 3px 10px;
+  font-size: 12px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  color: var(--muted);
+}
+
+.choice.on {
+  color: var(--text);
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 16%, var(--panel));
+}
+
+.master-phase {
+  margin: 8px 0 12px;
+}
+
+.master-phase-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+
+.master-phase-head b {
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 12px;
+}
+
+.master-items {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 6px;
+}
+
+.master-item {
+  display: flex;
+  gap: 8px;
+  padding: 6px 8px;
+  background: color-mix(in srgb, var(--cat) 8%, var(--panel));
+  border: 1px solid color-mix(in srgb, var(--cat) 40%, var(--border));
+  border-radius: 3px;
+  cursor: help;
+}
+
+.master-item.sold {
+  opacity: 0.55;
+}
+
+.master-item img {
+  width: 40px;
+  height: 40px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.master-item > div {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.master-item small {
+  color: var(--muted);
+}
+
+.master-why {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  margin-top: 2px;
+}
+
+.master-why i {
+  font-style: normal;
+  font-size: 10px;
+  padding: 0 5px;
+  border-radius: 2px;
+  background: var(--bg);
+  color: var(--muted);
+}
+
+.master-why .why-pop {
+  color: var(--accent);
+}
+
+.master-why .why-engine {
+  color: var(--souls);
+}
+
+.master-why .why-job {
+  color: #e0736f;
+}
+
+.master-why .why-team {
+  color: #6fa8e0;
+}

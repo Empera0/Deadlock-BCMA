@@ -2,6 +2,40 @@
 
 All notable changes to Deadlock BCMA are listed here. Versions follow [semantic versioning](https://semver.org).
 
+## [0.2.24] – 2026-10-15
+
+This release replaces the Counters tab with the **Master builder**. It puts together a full build for your hero against the enemy team and alongside your own team, phase by phase. It contains 11 changes.
+
+### Added
+
+1. **Master builder.** A full build for your hero, in four phases by souls:
+   - the lane (to 6,000);
+   - the first rift (to 15,000);
+   - the second rift (to 25,000);
+   - all boons (to 40,000).
+
+   Everyone else is assumed to build what top players usually build.
+2. **What top players buy, by souls.** For each phase, the items your hero's top players buy at that point of the match, read from their net worth at the time of purchase (Ascendant and above, last 14 days). These are the backbone of the build.
+3. **The engine's view.** Each item is also weighed by how much it adds to your hero's own numbers for your role and damage type, worked out by the calculator.
+4. **Role and damage.** Choose your role (Auto, Carry, Tempo, Support, Frontline) and damage type (Auto, Gun, Spirit, Hybrid, Melee). Each role weighs popularity, your own numbers and the enemy team differently:
+   - **Carry** builds bigger items that scale.
+   - **Tempo** buys power sooner in the mid game.
+   - **Support** values team items and answers to the enemy.
+   - **Frontline** builds to stay alive.
+5. **Late-game carries.** Heroes that win clearly more of the long matches (over 35 minutes) than of the short ones (under 25 minutes) are recognised as late-game carries. On Auto, a teammate who carries late makes your build a Tempo build. Late-game carries on the enemy team are pointed out.
+6. **Your team already has it.** An item counts for less when your team already does what it does, through your own kit, your teammates' kits or their usual builds. This covers slows, stuns, silences, disarms, healing reduction, resist reduction, fire-rate and spirit-power reduction, grounding flyers and team healing:
+   - One source is enough for healing reduction, disarms, grounding and fire-rate or spirit-power reduction.
+   - Slows, stuns, silences and resist reduction count for a little less with every source.
+   - Such items are tagged "team has it", with who does it and how.
+7. **Upgrades and selling.** The build shows when an item is bought on top of one you own, and marks the smaller item as upgraded later. When the slots are full, cheap items are sold for better ones, more readily as the match goes on.
+8. **Use this build.** Loads the master build into the builder.
+
+### Changed
+
+9. **Counter picks.** The two-per-stage counter picks are now folded under the master build. The hero-by-hero table and the other counter items stay below it.
+10. **Teammates' slows and grounding.** Slows and ways to ground flyers in teammates' usual builds now lower those jobs too, like healing reduction already did.
+11. **Close-range items on ranged heroes.** Passive items that only work close by (within 20 m, such as Hunter's Aura) count for half on a hero who fights from range.
+
 ## [0.2.13] – 2026-10-15
 
 This release makes the counter planner team-aware and lane-aware, and has it account for how long each item's effect actually lasts. It contains 13 changes.
@@ -92,6 +126,7 @@ This release adds the **Build generator**, with builds read from top-ranked matc
   - trends across your last matches.
 - Windows installer with a desktop shortcut and automatic updates from GitHub releases.
 
+[0.2.24]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.13...v0.2.24
 [0.2.13]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.0...v0.2.13
 [0.2.0]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/Empera0/Deadlock-BCMA/releases/tag/v0.1.0

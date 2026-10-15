@@ -1300,7 +1300,7 @@ fn rows(matrix: &Value) -> Vec<Row> {
 }
 
 /// Items that mainly help the whole team.
-const TEAM_ITEMS: [&str; 9] = [
+pub(crate) const TEAM_ITEMS: [&str; 9] = [
     "Heroic Aura",
     "Healing Nova",
     "Rescue Beam",

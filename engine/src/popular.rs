@@ -28,6 +28,9 @@ pub struct ItemStat {
     pub avg_buy_time_s: f64,
     #[serde(default)]
     pub sold: u64,
+    /// With a bucketed query: the start of the bucket, e.g. the net worth when the item was bought.
+    #[serde(default)]
+    pub bucket: Option<u64>,
 }
 
 /// One row of the API's hero statistics.
@@ -36,6 +39,8 @@ pub struct HeroStat {
     pub hero_id: u64,
     #[serde(default)]
     pub matches: u64,
+    #[serde(default)]
+    pub wins: u64,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -203,6 +208,9 @@ pub struct CounterStage {
     pub note: String,
     pub picks: Vec<CounterPick>,
     pub alternatives: Vec<CounterPick>,
+    /// Every item that answers something at this stage, whatever its price: (item, score, jobs, notes).
+    #[serde(skip)]
+    pub scored: Vec<(String, f64, Vec<String>, Vec<String>)>,
 }
 
 /// An item for a counter slot, with every job it does against this team.
@@ -557,6 +565,29 @@ pub struct Matchup<'a> {
     pub enemies: &'a [Enemy<'a>],
     /// The enemies in the player's lane (hero ids). The lane counters answer them alone; empty means the whole team.
     pub lane: &'a [u64],
+    /// The player's hero fights from range: items that only work close by count for less.
+    pub ranged: bool,
+}
+
+/// Jobs a teammate's items do for the whole team: healing reduction does not stack, and one slow or one way to
+/// bring flyers down is often enough. Defence against damage and crowd control is everyone's own.
+const SHARED_JOBS: [Role; 3] = [Role::Healing, Role::Mobility, Role::Flight];
+/// A passive that works on enemies within this many meters only helps heroes who fight close.
+const CLOSE_RANGE_M: f64 = 20.0;
+
+/// The range of a passive item that only works on enemies close by, if it is one.
+pub(crate) fn close_range(item: &Item) -> Option<f64> {
+    if item.active {
+        return None;
+    }
+    let radius = item.props.iter().find(|p| p.key == "Radius").map(|p| p.value).unwrap_or(0.0);
+    if radius > 0.0 && radius <= CLOSE_RANGE_M {
+        Some(radius)
+    } else if item.description.to_lowercase().contains("close range") {
+        Some(CLOSE_RANGE_M)
+    } else {
+        None
+    }
 }
 
 /// One enemy hero: what it threatens and which of the planned items answer it, stage by stage.
@@ -628,19 +659,22 @@ pub fn counter_plan(data: &GameData, m: &Matchup) -> CounterPlan {
         .unwrap_or_default();
     let escape = !own_escape.is_empty();
     let shred = shred_weights(my_spirit, &allies);
-    let ally_heal_cut: Vec<String> = m
+    // What teammates' usual builds already do to the enemies for the whole team.
+    let ally_covers: Vec<(Role, String)> = m
         .allies
         .iter()
         .zip(&allies)
         .flat_map(|(a, p)| {
-            a.build
-                .core
-                .iter()
-                .filter_map(|c| data.item(&c.item))
-                .filter(|i| reduces_healing(i) && heal_cut_of(i) > 0.0)
-                .map(move |i| format!("{} usually buys {}", p.hero_name, i.name))
+            a.build.core.iter().filter_map(|c| data.item(&c.item)).flat_map(move |i| {
+                let easy = ease(i, None).0;
+                roles_of(i, shred)
+                    .into_iter()
+                    .filter(move |r| SHARED_JOBS.contains(&r.0) && r.1 * easy >= RELIABLE)
+                    .map(move |r| (r.0, format!("{} usually buys {}", p.hero_name, i.name)))
+            })
         })
         .collect();
+    let covered_by = |role: Role| -> Vec<String> { ally_covers.iter().filter(|c| c.0 == role).map(|c| c.1.clone()).collect() };
     let mut team = vec![];
     if !allies.is_empty() {
         let names: Vec<&str> = allies.iter().map(|a| a.hero_name.as_str()).collect();
@@ -651,8 +685,11 @@ pub fn counter_plan(data: &GameData, m: &Matchup) -> CounterPlan {
             shred.1 / (shred.0 + shred.1).max(0.01) * 100.0
         ));
     }
-    if !ally_heal_cut.is_empty() {
-        team.push(format!("{}, so healing reduction counts for less from the mid game", ally_heal_cut.join("; ")));
+    for (role, _, title) in JOBS.iter().filter(|j| SHARED_JOBS.contains(&j.0)) {
+        let by = covered_by(*role);
+        if !by.is_empty() {
+            team.push(format!("{}: \"{}\" counts for less from the mid game", by.join("; "), title));
+        }
     }
     let in_lane: Vec<bool> = enemies.iter().map(|e| m.lane.contains(&e.hero_id)).collect();
     let everyone = vec![true; enemies.len()];
@@ -667,7 +704,7 @@ pub fn counter_plan(data: &GameData, m: &Matchup) -> CounterPlan {
                 if weight <= 0.0 {
                     return None;
                 }
-                if with_allies && *role == Role::Healing && !ally_heal_cut.is_empty() {
+                if with_allies && ally_covers.iter().any(|c| c.0 == *role) {
                     weight *= ALLY_COVERED;
                 }
                 Some((*role, *key, *title, weight, needs))
@@ -752,8 +789,9 @@ pub fn counter_plan(data: &GameData, m: &Matchup) -> CounterPlan {
         picked.extend(leaned);
         picked.sort_by_key(|i| i.cost);
         let mut need_text = needs.iter().filter(|n| n.0 > 0.0).map(|n| n.1.clone()).collect::<Vec<_>>().join("; ");
-        if *role == Role::Healing && !ally_heal_cut.is_empty() {
-            need_text = format!("{need_text}; {}", ally_heal_cut.join("; "));
+        let by = covered_by(*role);
+        if !by.is_empty() {
+            need_text = format!("{need_text}; {}", by.join("; "));
         }
         roles.push(RoleAdvice { key: key.to_string(), title: title.to_string(), need: need_text, weight: *weight, items: picked });
     }
@@ -767,7 +805,11 @@ pub fn counter_plan(data: &GameData, m: &Matchup) -> CounterPlan {
         if my_core.contains(&item.class_name) {
             return None;
         }
-        let (easy, notes) = ease(item, my_spirit);
+        let (mut easy, mut notes) = ease(item, my_spirit);
+        if let Some(radius) = close_range(item).filter(|_| m.ranged) {
+            easy *= 0.5;
+            notes.insert(0, format!("Harder to use: works within {radius:.0}m, and this hero fights from range"));
+        }
         let mut score = 0.0;
         let mut done: Vec<(f64, &str, String)> = vec![];
         let mut reliable: Vec<(Role, f64)> = vec![];
@@ -895,8 +937,12 @@ pub fn counter_plan(data: &GameData, m: &Matchup) -> CounterPlan {
                 note.to_string()
             };
             carried = picks_roles(&picks);
+            let scored = best(0, u32::MAX, &jobs, included, &[], &[])
+                .into_iter()
+                .map(|(score, p, _)| (p.advice.item.clone(), score, p.jobs.clone(), p.advice.reasons.clone()))
+                .collect();
             stage_jobs.push(jobs);
-            CounterStage { key: key.to_string(), title: title.to_string(), note, picks, alternatives }
+            CounterStage { key: key.to_string(), title: title.to_string(), note, picks, alternatives, scored }
         })
         .collect();
     let picked: Vec<String> = stages.iter().flat_map(|s| s.picks.iter().map(|p| p.advice.item.clone())).collect();

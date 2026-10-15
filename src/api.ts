@@ -249,8 +249,8 @@ export const api = {
   refreshData: () => invoke<GameData>("refresh_data"),
   compute: (build: Build) => invoke<Sheet>("compute", { build }),
   popularBuild: (heroId: number) => invoke<PopularReport>("popular_build", { heroId }),
-  counterAdvice: (myHero: string | null, allies: number[], enemies: number[], lane: number[]) =>
-    invoke<CounterReport>("counter_advice", { myHero, allies, enemies, lane }),
+  masterBuild: (myHero: string, allies: number[], enemies: number[], lane: number[], focus: string, damage: string) =>
+    invoke<MasterReport>("master_build", { myHero, allies, enemies, lane, focus, damage }),
   riftComeback: (minute: number, ownSouls: number, enemySouls: number) =>
     invoke<RiftComeback>("rift_comeback", { minute, ownSouls, enemySouls }),
   suggestBuilds: (build: Build, styles: string[]) => invoke<Suggestions>("suggest_builds", { build, styles }),
@@ -751,7 +751,50 @@ export interface CounterStage {
   alternatives: CounterPick[];
 }
 
-export interface CounterReport {
+/** An item of the master build, with the three things it was weighed on. */
+export interface MasterItem {
+  item: string;
+  name: string;
+  icon: string;
+  category: Category;
+  cost: number;
+  active: boolean;
+  description: string;
+  phase: number;
+  paid: number;
+  score: number;
+  popular_pct: number;
+  engine_pct: number;
+  jobs: string[];
+  notes: string[];
+  sold: boolean;
+  upgrades: string | null;
+  upgraded: boolean;
+}
+
+export interface MasterPhase {
+  key: string;
+  title: string;
+  souls_from: number;
+  souls_to: number;
+  sold: string[];
+}
+
+export interface MasterBuild {
+  hero: string;
+  hero_name: string;
+  focus: string;
+  focus_name: string;
+  focus_goal: string;
+  style: string;
+  phases: MasterPhase[];
+  items: MasterItem[];
+  purchases: string[];
+  notes: string[];
+}
+
+export interface MasterReport {
+  master: MasterBuild;
   builds: PopularBuild[];
   plan: { enemies: EnemyProfile[]; roles: RoleAdvice[]; own_escape: string[];
     stages: CounterStage[];
