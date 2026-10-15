@@ -9,5 +9,6 @@ pub mod fights;
 pub mod kit;
 pub mod matches;
 pub mod misc;
+pub mod popular;
 pub mod raw;
 pub mod suggest;

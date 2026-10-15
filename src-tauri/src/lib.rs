@@ -1,4 +1,4 @@
-use engine::{build::BuildInput, calc, combo, data::GameData, matches, raw};
+use engine::{build::BuildInput, calc, combo, data::GameData, matches, popular, raw};
 use std::{
     fs,
     io::Read,
@@ -107,6 +107,142 @@ async fn suggest_builds(app: AppHandle, state: State<'_, AppState>, build: Build
             })
             .unwrap_or_default();
         engine::suggest::suggest(&data, &build, &styles, engine::suggest::stage_souls(&matches))
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+/// What players build is read from this many days of matches at the top of the ladder: Eternus lobbies (average
+/// badge 111 and up) when there are enough of them, Ascendant and up (101) otherwise.
+const ANALYTICS_DAYS: u64 = 14;
+const ETERNUS: u32 = 111;
+const ASCENDANT: u32 = 101;
+/// A hero needs this many matches at a rank for its build, and an enemy this many for what is bought against it.
+const ENOUGH_HERO_MATCHES: u64 = 400;
+const ENOUGH_ITEM_MATCHES: u64 = 1_500;
+/// Answers of the analytics endpoints are kept this long; the API itself refreshes them every few hours.
+const ANALYTICS_CACHE_S: u64 = 6 * 3600;
+
+/// An analytics endpoint with the shared filters, read from the cache when it is fresh enough.
+fn analytics(cache: &PathBuf, endpoint: &str, query: &str, badge: u32) -> Result<String, String> {
+    // The window starts at a whole day, so the same question is the same request all day long.
+    let day = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0) / 86_400;
+    let from = (day - ANALYTICS_DAYS) * 86_400;
+    let filters = format!("min_unix_timestamp={from}&min_average_badge={badge}");
+    let query = if query.is_empty() { filters } else { format!("{query}&{filters}") };
+    let name: String = format!("{endpoint}-{query}").chars().map(|c| if c.is_ascii_alphanumeric() { c } else { '_' }).collect();
+    let path = cache.join(format!("{name}.json"));
+    let fresh = fs::metadata(&path)
+        .and_then(|m| m.modified())
+        .ok()
+        .and_then(|t| t.elapsed().ok())
+        .is_some_and(|age| age.as_secs() < ANALYTICS_CACHE_S);
+    if fresh {
+        if let Ok(json) = fs::read_to_string(&path) {
+            return Ok(json);
+        }
+    }
+    let json = get(&format!("{MATCH_API}/analytics/{endpoint}?{query}"), "The statistics service has no data for this.")?;
+    let _ = fs::create_dir_all(cache);
+    let _ = fs::write(&path, &json);
+    Ok(json)
+}
+
+fn parse<T: serde::de::DeserializeOwned>(json: &str) -> Result<T, String> {
+    serde_json::from_str(json).map_err(|e| format!("The statistics service answered in an unexpected form: {e}"))
+}
+
+/// A hero's popular build: what top players bought and kept over the last two weeks, and the rank it was read at.
+fn popular_for(data: &GameData, cache: &PathBuf, hero_id: u64) -> Result<(popular::PopularBuild, u32), String> {
+    for badge in [ETERNUS, ASCENDANT] {
+        let heroes: Vec<popular::HeroStat> = parse(&analytics(cache, "hero-stats", "", badge)?)?;
+        let matches = heroes.iter().find(|h| h.hero_id == hero_id).map(|h| h.matches).unwrap_or(0);
+        if matches < ENOUGH_HERO_MATCHES && badge == ETERNUS {
+            continue;
+        }
+        if matches == 0 {
+            return Err("No recent matches of this hero at the top ranks.".into());
+        }
+        let stats: Vec<popular::ItemStat> = parse(&analytics(cache, "item-stats", &format!("hero_id={hero_id}"), badge)?)?;
+        return popular::popular_build(data, hero_id, matches, &stats).map(|b| (b, badge)).ok_or_else(|| "Unknown hero.".to_string());
+    }
+    Err("No recent matches of this hero at the top ranks.".into())
+}
+
+fn rank_name(badge: u32) -> &'static str {
+    if badge >= ETERNUS { "Eternus" } else { "Ascendant and above" }
+}
+
+#[derive(serde::Serialize)]
+struct CounterReport {
+    /// What each enemy usually builds.
+    builds: Vec<popular::PopularBuild>,
+    plan: popular::CounterPlan,
+    days: u64,
+    /// The rank the enemy builds and what is bought against them were read at.
+    rank: String,
+}
+
+#[derive(serde::Serialize)]
+struct PopularReport {
+    build: popular::PopularBuild,
+    days: u64,
+    rank: String,
+}
+
+#[tauri::command]
+async fn popular_build(app: AppHandle, state: State<'_, AppState>, hero_id: u64) -> Result<PopularReport, String> {
+    let data = state.data.read().unwrap().clone();
+    let cache = data_dir(&app)?.join("analytics");
+    tauri::async_runtime::spawn_blocking(move || {
+        let (build, badge) = popular_for(&data, &cache, hero_id)?;
+        Ok(PopularReport { build, days: ANALYTICS_DAYS, rank: rank_name(badge).into() })
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+/// Items to buy against a team of enemies, for a hero of the player's choice or for anyone.
+#[tauri::command]
+async fn counter_advice(app: AppHandle, state: State<'_, AppState>, my_hero: Option<String>, enemies: Vec<u64>) -> Result<CounterReport, String> {
+    let data = state.data.read().unwrap().clone();
+    let cache = data_dir(&app)?.join("analytics");
+    tauri::async_runtime::spawn_blocking(move || {
+        let my_id = my_hero.as_deref().and_then(|h| data.hero(h)).map(|h| h.id);
+        // The same hero cannot be on both teams.
+        let enemies: Vec<u64> = enemies.into_iter().filter(|id| Some(*id) != my_id).collect();
+        // What everybody buys against an enemy: one hero's own sample at the top ranks is too small to read.
+        let mut lowest = ETERNUS;
+        let mut builds = vec![];
+        let mut lifts = vec![];
+        for id in &enemies {
+            let (build, badge) = popular_for(&data, &cache, *id)?;
+            lowest = lowest.min(badge);
+            builds.push(build);
+            let mut found = vec![];
+            for badge in [ETERNUS, ASCENDANT] {
+                let general: Vec<popular::ItemStat> = parse(&analytics(&cache, "item-stats", "", badge)?)?;
+                let against: Vec<popular::ItemStat> = parse(&analytics(&cache, "item-stats", &format!("enemy_hero_ids={id}"), badge)?)?;
+                let sample = against.iter().map(|r| r.matches).max().unwrap_or(0);
+                found = popular::lifts(&general, &against);
+                if sample >= ENOUGH_ITEM_MATCHES || badge == ASCENDANT {
+                    lowest = lowest.min(badge);
+                    break;
+                }
+            }
+            lifts.push(found);
+        }
+        let team: Vec<popular::Enemy> =
+            enemies.iter().zip(&builds).zip(&lifts).map(|((id, build), lifts)| popular::Enemy { hero_id: *id, build, lifts }).collect();
+        // Which resist reduction is worth it depends on the damage the player's own hero deals.
+        let mine = match my_id {
+            Some(id) => Some(popular_for(&data, &cache, id)?.0),
+            None => None,
+        };
+        let my_spirit = mine.as_ref().map(|b| popular::deals_spirit(&data, b));
+        let my_core: Vec<String> = mine.as_ref().map(|b| b.core.iter().map(|c| c.item.clone()).collect()).unwrap_or_default();
+        let plan = popular::counter_plan(&data, my_hero.as_deref(), my_spirit, &my_core, &team);
+        Ok(CounterReport { builds: builds.clone(), plan, days: ANALYTICS_DAYS, rank: rank_name(lowest).into() })
     })
     .await
     .map_err(|e| e.to_string())?
@@ -386,6 +522,8 @@ pub fn run() {
             rank_next,
             suggest_builds,
             rift_comeback,
+            popular_build,
+            counter_advice,
             simulate_combo,
             refresh_data,
             save_build,

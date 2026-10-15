@@ -248,6 +248,8 @@ export const api = {
   getData: () => invoke<GameData>("get_data"),
   refreshData: () => invoke<GameData>("refresh_data"),
   compute: (build: Build) => invoke<Sheet>("compute", { build }),
+  popularBuild: (heroId: number) => invoke<PopularReport>("popular_build", { heroId }),
+  counterAdvice: (myHero: string | null, enemies: number[]) => invoke<CounterReport>("counter_advice", { myHero, enemies }),
   riftComeback: (minute: number, ownSouls: number, enemySouls: number) =>
     invoke<RiftComeback>("rift_comeback", { minute, ownSouls, enemySouls }),
   suggestBuilds: (build: Build, styles: string[]) => invoke<Suggestions>("suggest_builds", { build, styles }),
@@ -655,4 +657,92 @@ export interface RiftComeback {
   capture_leading: number;
   troopers_if_trailing_wins: number;
   own_team_trails: boolean;
+}
+
+/** An item as players build it: how often it is bought and kept, and when. */
+export interface PopularItem {
+  item: string;
+  name: string;
+  icon: string;
+  category: Category;
+  cost: number;
+  active: boolean;
+  description: string;
+  bought_pct: number;
+  kept_pct: number;
+  win_pct: number;
+  buy_minute: number;
+}
+
+export interface PopularBuild {
+  hero: string;
+  hero_name: string;
+  matches: number;
+  core: PopularItem[];
+  situational: PopularItem[];
+}
+
+export interface PopularReport {
+  build: PopularBuild;
+  days: number;
+  /** The rank the numbers come from, e.g. Eternus. */
+  rank: string;
+}
+
+export interface CounterAdvice {
+  item: string;
+  name: string;
+  icon: string;
+  category: Category;
+  cost: number;
+  active: boolean;
+  description: string;
+  /** What it does for its job, e.g. -35% healing on whoever it hits. */
+  effect: string;
+  score: number;
+  reasons: string[];
+  when: string;
+  against: string[];
+}
+
+/** What an enemy hero brings, from its kit and its usual build. */
+export interface EnemyProfile {
+  hero: string;
+  hero_name: string;
+  weapon_pct: number;
+  heals: string[];
+  mobility: string[];
+  lockdown: string[];
+  resists: string[];
+}
+
+/** A job items do against the enemy team: why the team calls for it, and the best items for it by price. */
+export interface RoleAdvice {
+  key: string;
+  title: string;
+  need: string;
+  weight: number;
+  items: CounterAdvice[];
+}
+
+/** An item for a counter slot, with every job it does against the team. */
+export interface CounterPick {
+  advice: CounterAdvice;
+  jobs: string[];
+}
+
+/** The two counter items for one stage of the game. */
+export interface CounterStage {
+  key: string;
+  title: string;
+  note: string;
+  picks: CounterPick[];
+  alternatives: CounterPick[];
+}
+
+export interface CounterReport {
+  builds: PopularBuild[];
+  plan: { enemies: EnemyProfile[]; roles: RoleAdvice[]; own_escape: string[]; stages: CounterStage[]; others: CounterPick[] };
+  days: number;
+  rank: string;
 }

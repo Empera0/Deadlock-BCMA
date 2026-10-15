@@ -1312,21 +1312,22 @@ const TEAM_ITEMS: [&str; 9] = [
     "Knockdown",
 ];
 
-fn has_modifier(item: &Item, part: &str, negative: bool) -> bool {
+pub(crate) fn has_modifier(item: &Item, part: &str, negative: bool) -> bool {
     item.props.iter().any(|p| p.modifier.as_deref().is_some_and(|m| m.contains(part)) && (p.value < 0.0) == negative && p.value != 0.0)
 }
 
-fn reduces_healing(item: &Item) -> bool {
-    has_modifier(item, "HEAL_AMP_RECEIVE_PERCENT", true)
+pub(crate) fn reduces_healing(item: &Item) -> bool {
+    // Cheat Death cuts its owner's own healing while it saves them; that is no healing reduction on enemies.
+    has_modifier(item, "HEAL_AMP_RECEIVE_PERCENT", true) && !item.props.iter().any(|p| p.key.starts_with("DeathImmunity"))
 }
 
-fn shreds_spirit(item: &Item) -> bool {
+pub(crate) fn shreds_spirit(item: &Item) -> bool {
     item.props.iter().any(|p| {
         p.modifier.as_deref().is_some_and(|m| m.contains("TECH_RESIST_REDUCTION")) || matches!(p.key.as_str(), "TechArmorDamageReduction" | "MagicResistReduction")
     })
 }
 
-fn shreds_bullet(item: &Item) -> bool {
+pub(crate) fn shreds_bullet(item: &Item) -> bool {
     item.props.iter().any(|p| {
         p.modifier.as_deref().is_some_and(|m| m.contains("BULLET_AND_MELEE_RESIST_REDUCTION")) || matches!(p.key.as_str(), "BulletArmorReduction" | "BulletResistReduction")
     })
@@ -1633,12 +1634,12 @@ fn prop_value(item: &Item, test: impl Fn(&crate::data::Prop) -> bool) -> f64 {
     item.props.iter().filter(|p| test(p)).map(|p| p.value.abs()).fold(0.0, f64::max)
 }
 
-fn resist_of(item: &Item, spirit: bool) -> f64 {
+pub(crate) fn resist_of(item: &Item, spirit: bool) -> f64 {
     let modifier = if spirit { "MODIFIER_VALUE_TECH_RESIST" } else { "MODIFIER_VALUE_BULLET_ARMOR_DAMAGE_RESIST" };
     prop_value(item, |p| p.modifier.as_deref() == Some(modifier) && p.section != "active" && !p.key.ends_with("Gain"))
 }
 
-fn shred_of(item: &Item, spirit: bool) -> f64 {
+pub(crate) fn shred_of(item: &Item, spirit: bool) -> f64 {
     if spirit {
         prop_value(item, |p| p.modifier.as_deref().is_some_and(|m| m.contains("TECH_RESIST_REDUCTION")) || matches!(p.key.as_str(), "TechArmorDamageReduction" | "MagicResistReduction"))
     } else {
@@ -1648,7 +1649,7 @@ fn shred_of(item: &Item, spirit: bool) -> f64 {
     }
 }
 
-fn heal_cut_of(item: &Item) -> f64 {
+pub(crate) fn heal_cut_of(item: &Item) -> f64 {
     prop_value(item, |p| p.modifier.as_deref().is_some_and(|m| m.contains("HEAL_AMP_RECEIVE_PERCENT")) && p.value < 0.0)
 }
 
@@ -1678,7 +1679,7 @@ const ENEMY_RESIST: f64 = 20.0;
 const SPIKE_EARLY_S: u32 = 60;
 const SPIKE_LATE_S: u32 = 120;
 
-fn gives_resist(item: &Item, spirit: bool) -> bool {
+pub(crate) fn gives_resist(item: &Item, spirit: bool) -> bool {
     let modifier = if spirit { "MODIFIER_VALUE_TECH_RESIST" } else { "MODIFIER_VALUE_BULLET_ARMOR_DAMAGE_RESIST" };
     // Resist the item is bought for, not what an active grants for a moment or a hit steals.
     item.props.iter().any(|p| p.modifier.as_deref() == Some(modifier) && p.value >= REAL_RESIST && p.section != "active" && !p.key.ends_with("Gain"))

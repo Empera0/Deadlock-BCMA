@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { api, Build, Combo, ComboResult, fmt, GameData, Ranked, Sheet } from "./api";
 import BuildBar from "./components/BuildBar";
 import ComboPanel from "./components/ComboPanel";
-import SuggestPanel from "./components/SuggestPanel";
+import GeneratorView from "./components/GeneratorView";
 import MiscPanel from "./components/MiscPanel";
 import HeroPicker from "./components/HeroPicker";
 import MatchView from "./components/MatchView";
@@ -55,8 +55,24 @@ export default function App() {
   const [saved, setSaved] = useState<string[]>([]);
   const [name, setName] = useState("");
   const [status, setStatus] = useState("");
-  const [tab, setTab] = useState<"stats" | "combo" | "builds" | "misc">("stats");
-  const [mode, setMode] = useState<"build" | "match">("build");
+  const [tab, setTab] = useState<"stats" | "combo" | "misc">("stats");
+  const [mode, setMode] = useState<"build" | "generator" | "match">("build");
+  const [navOpen, setNavOpen] = useState(() => {
+    try {
+      return localStorage.getItem("nav-open") !== "0";
+    } catch {
+      return true;
+    }
+  });
+  const toggleNav = () =>
+    setNavOpen((open) => {
+      try {
+        localStorage.setItem("nav-open", open ? "0" : "1");
+      } catch {
+        /* a convenience only */
+      }
+      return !open;
+    });
   const [combo, setCombo] = useState<Combo>(restoreCombo);
   const [comboResult, setComboResult] = useState<ComboResult | null>(null);
 
@@ -163,16 +179,40 @@ export default function App() {
   const souls = Math.max(build.souls ?? 0, sheet?.spent ?? 0);
 
   return (
-    <div className="app">
-      <header className={mode}>
-        <div className="mode-tabs">
-          <button className={mode === "build" ? "on" : ""} onClick={() => setMode("build")}>
-            Builder
+    <div className={"app" + (navOpen ? " nav-open" : "")}>
+      <nav className="sidebar">
+        <button className="nav-toggle" onClick={toggleNav} title={navOpen ? "Collapse" : "Expand"}>
+          <svg viewBox="0 0 24 24" width="20" height="20">
+            <path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+          </svg>
+          <b>Deadlock BCMA</b>
+        </button>
+        {(
+          [
+            ["build", "Build maker", "M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.5-.5-.5-2.5z"],
+            ["generator", "Build generator", "M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9zM19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"],
+            ["match", "Match analysis", "M4 20V10M10 20V4M16 20v-7M22 20H2"],
+          ] as const
+        ).map(([key, label, icon]) => (
+          <button key={key} className={"nav-item" + (mode === key ? " on" : "")} onClick={() => setMode(key)} title={label}>
+            <svg viewBox="0 0 24 24" width="20" height="20">
+              <path d={icon} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" strokeLinecap="round" />
+            </svg>
+            <span>{label}</span>
           </button>
-          <button className={mode === "match" ? "on" : ""} onClick={() => setMode("match")}>
-            Match analysis
+        ))}
+        <div className="nav-foot">
+          <UpdateBanner />
+          <small>
+            Game {data.client_version ?? "?"} · {new Date(data.fetched_at * 1000).toLocaleDateString("en-US")}
+          </small>
+          <button className="ghost" onClick={refresh}>
+            Update data
           </button>
         </div>
+      </nav>
+      <div className="page">
+      <header className={mode}>
         <button className="hero-button" onClick={() => setPicking(true)}>
           <img src={hero.icon} alt="" />
           <span>
@@ -215,7 +255,7 @@ export default function App() {
             </>
           )}
         </label>
-        <div className="saves">
+        <div className="saves" style={mode === "build" ? undefined : { display: "none" }}>
           <input placeholder="Build name" value={name} onChange={(e) => setName(e.target.value)} />
           <button onClick={save} disabled={!name.trim()}>
             Save
@@ -230,16 +270,7 @@ export default function App() {
             Delete
           </button>
         </div>
-        <div className="data-info">
-          <UpdateBanner />
-          <small>
-            Game version {data.client_version ?? "?"} · {new Date(data.fetched_at * 1000).toLocaleDateString("en-US")}
-          </small>
-          <button className="ghost" onClick={refresh}>
-            Update data
-          </button>
-          {status && <small className="status">{status}</small>}
-        </div>
+        <div className="data-info">{status && <small className="status">{status}</small>}</div>
       </header>
 
       {/* Kept mounted while the builder is shown so a loaded match stays loaded. */}
@@ -254,6 +285,20 @@ export default function App() {
         />
       </div>
 
+      {mode === "generator" && sheet && (
+        <GeneratorView
+          heroes={data.heroes}
+          hero={hero}
+          build={build}
+          souls={sheet.souls}
+          onUse={(purchases, what) => {
+            patch({ purchases, active: purchases, upto: null, imbues: {} });
+            setMode("build");
+            setStatus(what);
+          }}
+        />
+      )}
+
       {mode === "build" && <BuildBar build={build} sheet={sheet} items={items} onChange={patch} />}
 
       <main style={{ display: mode === "build" ? undefined : "none" }}>
@@ -266,9 +311,6 @@ export default function App() {
               </button>
               <button className={tab === "combo" ? "on" : ""} onClick={() => setTab("combo")}>
                 Combo
-              </button>
-              <button className={tab === "builds" ? "on" : ""} onClick={() => setTab("builds")}>
-                Builds
               </button>
               <button className={tab === "misc" ? "on" : ""} onClick={() => setTab("misc")}>
                 Misc
@@ -290,18 +332,8 @@ export default function App() {
               />
             ) : tab === "combo" ? (
               <ComboPanel sheet={sheet} combo={combo} result={comboResult} onChange={setCombo} />
-            ) : tab === "misc" ? (
-              <MiscPanel sheet={sheet} />
             ) : (
-              <SuggestPanel
-                hero={hero}
-                build={build}
-                souls={sheet.souls}
-                onUse={(purchases) => {
-                  patch({ purchases, active: purchases, upto: null, imbues: {} });
-                  setStatus("Loaded a build the calculator put together");
-                }}
-              />
+              <MiscPanel sheet={sheet} />
             )}
           </div>
         )}
@@ -322,6 +354,7 @@ export default function App() {
         Click a stat to see its formula and contributions.
         {sheet && ` · ${fmt(sheet.souls)} souls`}
       </footer>
+      </div>
     </div>
   );
 }

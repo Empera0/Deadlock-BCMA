@@ -32,11 +32,17 @@ The app updates itself: when a new version is out, an **Update** button appears 
 - **Combo**: put abilities, shots, melee and items in order and see the damage, the time to kill and the healing.
 - **Misc**: match mechanics worth knowing, such as the Unstable Rift's comeback resist for the team that is behind.
 
-### Builds the app puts together itself
+## Build generator
+
+Open it from the sidebar on the left.
 
 ![Suggested builds](docs/images/builds.png)
 
-Pick a playstyle (full kit, gun, spirit, melee or frontline) and the app builds it from scratch, the way a match goes: cheap items in the lane, bigger ones in the mid and late game, selling the cheapest once the slots are full. Every pick is the item that helps that playstyle the most per soul, using the hero's own abilities. No builds are copied from anywhere.
+- **Calculated**: pick a playstyle (full kit, gun, spirit, melee or frontline) and the app builds it from scratch, the way a match goes: cheap items in the lane, bigger ones in the mid and late game, selling the cheapest once the slots are full. Every pick is the item that helps that playstyle the most per soul, using the hero's own abilities.
+- **Popular**: the core build top players use on a hero, read from the last two weeks of Eternus lobbies, with the situational items they add.
+- **Counters**: click up to six enemy heroes and right-click your own. The app picks two counter items each for the lane, the mid game and the late game. They answer what that team does and land easily for your hero, and a team of healers always gets its healing cut.
+
+![Counters](docs/images/counters.png)
 
 ## Match analysis
 
@@ -76,4 +82,4 @@ npm install
 npm run tauri dev
 ```
 
-Pushing a `v*` tag builds, signs and publishes a release through GitHub Actions.
+Pushing a `v*` tag builds, signs and publishes a release through GitHub Actions. See the [changelog](CHANGELOG.md) for what changed in each version.

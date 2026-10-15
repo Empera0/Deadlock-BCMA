@@ -2705,3 +2705,687 @@ header,
   color: #0b0b0d;
   font-weight: 600;
 }
+
+/* ================================================================== Third pass: sidebar, compact shop, generator */
+.app {
+  flex-direction: row;
+}
+
+.page {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.sidebar {
+  width: 52px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 6px;
+  background: #050506;
+  border-right: 1px solid var(--border);
+  transition: width 0.15s;
+  overflow: hidden;
+}
+
+.app.nav-open .sidebar {
+  width: 196px;
+}
+
+.sidebar button {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 9px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--muted);
+  white-space: nowrap;
+  text-align: left;
+}
+
+.sidebar button svg {
+  flex-shrink: 0;
+}
+
+.sidebar button span,
+.sidebar .nav-toggle b,
+.sidebar .nav-foot small,
+.sidebar .nav-foot .app-version,
+.sidebar .nav-foot button {
+  opacity: 0;
+  transition: opacity 0.1s;
+}
+
+.app.nav-open .sidebar button span,
+.app.nav-open .sidebar .nav-toggle b,
+.app.nav-open .sidebar .nav-foot small,
+.app.nav-open .sidebar .nav-foot .app-version,
+.app.nav-open .sidebar .nav-foot button {
+  opacity: 1;
+}
+
+.sidebar .nav-toggle {
+  margin-bottom: 10px;
+  color: var(--text);
+}
+
+.sidebar .nav-toggle b {
+  color: var(--accent);
+  letter-spacing: 0.06em;
+  font-size: 13px;
+}
+
+.sidebar .nav-item:hover {
+  background: var(--panel-2);
+  color: var(--text);
+}
+
+.sidebar .nav-item.on {
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  color: var(--accent);
+}
+
+.nav-foot {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 0 4px;
+}
+
+.nav-foot .app-version {
+  flex-wrap: wrap;
+}
+
+.nav-foot button.ghost {
+  justify-content: center;
+  border: 1px solid var(--line);
+}
+
+.nav-foot .update-button {
+  opacity: 1 !important;
+}
+
+header {
+  gap: 14px;
+  padding: 6px 12px;
+}
+
+header.match {
+  display: none;
+}
+
+.data-info {
+  margin-left: auto;
+}
+
+/* ---- Compact shop: small tiles like the game's */
+.shop-head {
+  padding: 6px 10px 0;
+}
+
+.shop-head .tab {
+  padding: 6px 18px;
+  font-size: 11px;
+}
+
+.shop-head input {
+  width: 220px;
+  margin-bottom: 4px;
+}
+
+.shop-body {
+  padding: 8px 10px 20px;
+}
+
+.tier {
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.tier-label {
+  width: 50px;
+  padding: 4px 2px;
+}
+
+.tier-label b {
+  font-size: 12px;
+}
+
+.tier-label small {
+  font-size: 9px;
+}
+
+.tier-items {
+  grid-template-columns: repeat(auto-fill, 74px);
+  gap: 4px;
+}
+
+.item {
+  font-size: 10px;
+  border-radius: 3px;
+}
+
+.item-art {
+  aspect-ratio: auto;
+  height: 54px;
+}
+
+.item-name {
+  min-height: 26px;
+  padding: 2px 3px;
+  line-height: 1.05;
+  font-weight: 500;
+}
+
+.item .item-art em {
+  font-size: 7.5px;
+  letter-spacing: 0.1em;
+}
+
+.item-check {
+  width: 14px;
+  height: 14px;
+  font-size: 9px;
+}
+
+.buildbar {
+  padding: 6px 10px;
+}
+
+.chips {
+  gap: 4px;
+  min-height: 30px;
+}
+
+.chip {
+  gap: 4px;
+  font-size: 11.5px;
+}
+
+.chip img {
+  width: 28px;
+  height: 28px;
+}
+
+.chip-text small {
+  font-size: 10px;
+}
+
+.chip-btn {
+  padding: 0 3px;
+  font-size: 13px;
+}
+
+.hero-button img {
+  width: 32px;
+  height: 32px;
+}
+
+.hero-button strong {
+  font-size: 14px;
+}
+
+/* ---- Build generator */
+.generator-view {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.gen-tabs {
+  max-width: 560px;
+}
+
+.gen-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 10px 16px 30px;
+  max-width: 1200px;
+}
+
+.gen-body > .panel {
+  overflow: visible;
+  padding: 0;
+  background: transparent;
+  border: none;
+}
+
+.gen-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, 86px);
+  gap: 5px;
+  margin: 4px 0 8px;
+}
+
+.gen-tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--cat) 45%, #000);
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--cat) 26%, #0d0d10);
+  text-align: center;
+  font-size: 10px;
+  line-height: 1.1;
+}
+
+.gen-tile img {
+  width: 100%;
+  height: 60px;
+  object-fit: cover;
+}
+
+.gen-tile em {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: rgba(8, 8, 10, 0.78);
+  color: #f1f1f3;
+  font-style: normal;
+  font-size: 7.5px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.gen-tile span {
+  min-height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 3px;
+  color: color-mix(in srgb, var(--cat) 30%, #fff);
+}
+
+.gen-tile small {
+  padding-bottom: 3px;
+  color: var(--souls);
+  font-size: 9.5px;
+}
+
+.gen-tile.picked {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent), 0 0 10px color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+.gen-desc {
+  color: var(--muted);
+  margin: 0 0 8px;
+}
+
+.enemy-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, 64px);
+  gap: 4px;
+  margin: 6px 0 8px;
+}
+
+.enemy-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 3px 2px;
+  font-size: 9.5px;
+  line-height: 1.1;
+  background: var(--panel);
+  opacity: 0.7;
+}
+
+.enemy-cell img {
+  width: 40px;
+  height: 40px;
+  object-fit: cover;
+  border-radius: 3px;
+}
+
+.enemy-cell.on {
+  opacity: 1;
+  border-color: #e0736f;
+  background: color-mix(in srgb, #e0736f 18%, var(--panel));
+}
+
+.gen-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.enemy-build {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 2px 0;
+}
+
+.enemy-build b {
+  min-width: 110px;
+}
+
+.enemy-build-items {
+  display: flex;
+  gap: 3px;
+}
+
+.enemy-build-items img {
+  width: 30px;
+  height: 30px;
+  border-radius: 3px;
+  object-fit: cover;
+}
+
+.counter-card {
+  display: flex;
+  gap: 10px;
+  padding: 8px 10px;
+  margin-bottom: 4px;
+  background: var(--panel);
+  border-left: 3px solid var(--cat);
+  border-radius: 0 3px 3px 0;
+}
+
+.counter-card > img {
+  width: 54px;
+  height: 54px;
+  border-radius: 3px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.counter-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+}
+
+.counter-head b {
+  color: color-mix(in srgb, var(--cat) 35%, #fff);
+}
+
+.counter-head small {
+  color: var(--muted);
+}
+
+.counter-head .counter-against {
+  color: #e0736f;
+}
+
+.counter-what {
+  margin: 3px 0;
+  color: var(--text);
+  line-height: 1.35;
+}
+
+.counter-card ul {
+  margin: 2px 0;
+  padding-left: 16px;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.counter-when {
+  color: var(--accent);
+}
+
+.tag-active {
+  color: var(--accent);
+}
+
+/* The header keeps its own height on every page; the page body takes the rest. */
+.page > header,
+.page > .buildbar,
+.page > footer {
+  flex: none;
+}
+
+.page > main,
+.page > .generator-view {
+  flex: 1;
+  min-height: 0;
+}
+
+/* ---- Counters by job */
+.enemy-table td {
+  vertical-align: middle;
+}
+
+.role-need {
+  margin: 2px 0 6px;
+  color: var(--muted);
+}
+
+.counter-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 6px;
+}
+
+.counter-row .counter-card {
+  margin-bottom: 0;
+}
+
+.counter-row .counter-card > img {
+  width: 46px;
+  height: 46px;
+}
+
+.counter-effect {
+  color: var(--souls);
+  font-weight: 600;
+  margin-top: 1px;
+}
+
+.counter-row .counter-what {
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+.counter-lift {
+  display: block;
+  color: var(--accent);
+}
+
+.counter-row .counter-when {
+  display: block;
+  color: var(--muted);
+  font-style: italic;
+}
+
+/* ---- The two counter picks */
+.you-play {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pick-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+  gap: 8px;
+}
+
+.pick-card {
+  position: relative;
+  display: flex;
+  gap: 12px;
+  padding: 12px 14px;
+  background: color-mix(in srgb, var(--cat) 8%, var(--panel));
+  border: 1px solid color-mix(in srgb, var(--cat) 45%, var(--border));
+  border-radius: 4px;
+}
+
+.pick-card > img {
+  width: 72px;
+  height: 72px;
+  border-radius: 4px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.pick-rank {
+  position: absolute;
+  top: 6px;
+  right: 10px;
+  color: var(--accent);
+  font-size: 22px;
+  font-weight: 700;
+  opacity: 0.6;
+}
+
+.pick-card .counter-head b {
+  font-size: 15px;
+}
+
+.pick-jobs {
+  color: var(--accent);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin: 2px 0;
+}
+
+.pick-card ul {
+  margin: 4px 0 0;
+  padding-left: 16px;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.pick-card li.lift {
+  color: var(--accent);
+}
+
+.pick-alts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  margin-top: 8px;
+  color: var(--muted);
+}
+
+.pick-alt {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px 2px 2px;
+  background: var(--panel);
+  border-radius: 3px;
+  color: var(--text);
+  cursor: help;
+}
+
+.pick-alt img {
+  width: 24px;
+  height: 24px;
+  border-radius: 3px;
+}
+
+.counter-details {
+  margin-top: 14px;
+}
+
+.counter-details > summary {
+  cursor: pointer;
+  color: var(--muted);
+  padding: 6px 0;
+}
+
+.counter-details > summary:hover {
+  color: var(--text);
+}
+
+/* ---- Counters by stage */
+.stage-group h3 small {
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.pick-card li.hard {
+  color: var(--bad, #d9776b);
+}
+
+.enemy-cell:disabled {
+  opacity: 0.25;
+  cursor: not-allowed;
+}
+
+/* ---- Other counter items */
+.other-counters td {
+  vertical-align: top;
+  padding-top: 6px;
+  padding-bottom: 6px;
+}
+
+.other-item {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  min-width: 170px;
+}
+
+.other-item img {
+  width: 34px;
+  height: 34px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.other-item > span {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.other-what {
+  color: var(--muted);
+  max-width: 420px;
+}
+
+.other-what small {
+  display: block;
+  margin-top: 2px;
+}
+
+.other-what small.hard {
+  color: var(--bad, #d9776b);
+}
+
+.other-what small.lift {
+  color: var(--accent);
+}
+
+.other-against {
+  color: var(--muted);
+  max-width: 180px;
+}
+
+/* ---- Own hero, chosen by right-click */
+.enemy-cell.mine {
+  opacity: 1;
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 18%, var(--panel));
+  cursor: default;
+}
+
+.you-play img {
+  width: 24px;
+  height: 24px;
+  border-radius: 3px;
+  object-fit: cover;
+}
