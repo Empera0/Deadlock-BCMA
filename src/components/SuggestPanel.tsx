@@ -49,13 +49,11 @@ export default function SuggestPanel({ hero, build, souls, onUse }: Props) {
     <aside className="panel">
       <div className="group">
         <h3>Builds for {hero.name}</h3>
-        <p className="muted">
-          Put together by the calculator itself, not taken from a build list made by somebody else, for the playstyles picked below and
-          in the order a match goes: the souls of the laning phase with items up to 1,600, then the mid game (up to 3,200), the late
-          game and the full build, each stage keeping what came before. At every step it buys the item that improves the playstyle's
-          goal the most per soul. Active items are used once; an effect that needs a condition counts for half; once the slots are full,
-          cheap items are sold for better ones.
-        </p>
+        <div className="calc-warning">
+          <b>These are not builds to play in a match.</b> They are the items that push the hero's main stats as high as they can go,
+          picked by the numbers alone. Please do not play these builds as they are. They can point you to items worth having in the builds
+          you make, and for a newly released hero they give a general idea of what to buy for the late game.
+        </div>
         <div className="style-picker">
           {STYLES.map(([key, name, what]) => (
             <button key={key} className={styles.includes(key) ? "on" : ""} title={what} onClick={() => toggle(key)}>

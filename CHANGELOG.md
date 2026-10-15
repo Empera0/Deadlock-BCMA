@@ -2,6 +2,19 @@
 
 All notable changes to Deadlock BCMA are listed here. Versions follow [semantic versioning](https://semver.org).
 
+## [0.2.25] – 2026-10-15
+
+This release makes clear what the calculated builds are for. It contains 1 change.
+
+### Changed
+
+1. **Calculated builds: not for play.** The Calculated tab now opens with a notice:
+   - These builds are not meant to be played in a match. They are the items that push the hero's main stats as high as they can go, picked by the numbers alone.
+   - They can still point to items worth having in your own builds.
+   - For a newly released hero, they give a general idea of what to buy for the late game.
+
+   The previous explanation of how the builds are put together has been removed.
+
 ## [0.2.24] – 2026-10-15
 
 This release replaces the Counters tab with the **Master builder**. It puts together a full build for your hero against the enemy team and alongside your own team, phase by phase. It contains 11 changes.
@@ -126,6 +139,7 @@ This release adds the **Build generator**, with builds read from top-ranked matc
   - trends across your last matches.
 - Windows installer with a desktop shortcut and automatic updates from GitHub releases.
 
+[0.2.25]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.24...v0.2.25
 [0.2.24]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.13...v0.2.24
 [0.2.13]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.0...v0.2.13
 [0.2.0]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.1.0...v0.2.0

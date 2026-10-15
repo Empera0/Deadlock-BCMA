@@ -3588,3 +3588,19 @@ header.match {
 .master-why .why-team {
   color: #6fa8e0;
 }
+
+/* ---- Calculated builds: not for play */
+.calc-warning {
+  margin: 4px 0 8px;
+  padding: 8px 10px;
+  border: 1px solid color-mix(in srgb, #e0736f 55%, var(--border));
+  border-left-width: 3px;
+  border-radius: 3px;
+  background: color-mix(in srgb, #e0736f 10%, var(--panel));
+  color: var(--text);
+  line-height: 1.45;
+}
+
+.calc-warning b {
+  color: #e0736f;
+}
