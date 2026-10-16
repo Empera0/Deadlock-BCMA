@@ -104,6 +104,44 @@ const CLOSE_RANGE_FACTOR: f64 = 0.5;
 const TEAM_ITEM_BONUS: f64 = 0.25;
 /// Below this score an item is not worth a slot.
 const MIN_SCORE: f64 = 0.12;
+
+/// Pushing the lane: an item that clears the trooper wave faster puts pressure on the lane opponent (they lose
+/// souls or have to give up the tower) and frees time to fight or take the other lanes. Its weight in each phase,
+/// most in the lane and less in the first rift, nothing after.
+const PUSH_WEIGHT: [f64; 4] = [0.35, 0.15, 0.0, 0.0];
+/// A wave cleared this much faster is the full push credit; from it the item is in the running in those phases.
+const PUSH_FULL: f64 = 0.3;
+
+/// How fast the build clears a trooper wave: its sustained gun damage against troopers, with the weapon damage
+/// that only works on them (Monster Rounds, Cultist Sacrifice), and longer for the bullet resist against them that
+/// lets it stand in the wave (by the square root of the damage taken, as staying power is only half of clearing).
+fn wave_clear(data: &GameData, b: &BuildInput) -> Option<f64> {
+    let sheet = calc::compute(data, b).ok()?;
+    let stat = |key: &str| sheet.stat(key).unwrap_or(0.0);
+    let owned = || sheet.owned.iter().filter_map(|c| data.item(c)).flat_map(|i| i.props.iter());
+    let npc_power: f64 = owned().filter(|p| p.key == "NonPlayerBonusWeaponPower").map(|p| p.value).sum();
+    let npc_resist: f64 = owned().filter(|p| p.key == "NonPlayerBulletResist").map(|p| p.value).fold(0.0, f64::max);
+    let weapon = stat("weapon_damage_pct");
+    let dps = stat("dps_sustained") * (1.0 + (weapon + npc_power) / 100.0) / (1.0 + weapon / 100.0).max(0.01);
+    Some(dps / (1.0 - npc_resist.min(90.0) / 100.0).sqrt())
+}
+
+/// How much faster the wave is cleared with the item, in the phases where pushing counts.
+fn push_gain(data: &GameData, b: &BuildInput, class: &str, phase: usize) -> f64 {
+    if PUSH_WEIGHT[phase] <= 0.0 {
+        return 0.0;
+    }
+    let mut trial = b.clone();
+    trial.purchases.push(class.to_string());
+    match (wave_clear(data, b), wave_clear(data, &trial)) {
+        (Some(before), Some(after)) if before > 0.0 => (after / before - 1.0).max(0.0),
+        _ => 0.0,
+    }
+}
+
+fn push_note(push: f64) -> Option<String> {
+    (push >= 0.1).then(|| format!("Clears the wave {:.0}% faster: pressure on the lane", push * 100.0))
+}
 /// A win rate this many points higher in long matches than in short ones makes a hero a late-game carry.
 pub const LATE_SCALER_PP: f64 = 4.0;
 /// When the slots are full, a cheap item is sold for a new one that scores at least this share of what the cheap
@@ -406,10 +444,11 @@ pub fn master_build(data: &GameData, input: &MasterInput) -> Result<MasterBuild,
             let (wr, n) = phase_win(input.phase_stats, item.id, *from, *to);
             (wr, if n > 0.0 { popular::shrunk(wr - base, n) } else { 0.0 })
         };
-        let score = |item: &Item, pop: f64, gain: f64, ctr: f64| -> f64 {
+        let score = |item: &Item, pop: f64, gain: f64, ctr: f64, push: f64| -> f64 {
             // Off-style, a damage item that does nothing for the chosen damage is not helped by being popular.
             let pop_credit = if off_style && item.category != "vitality" { (gain.max(0.0) / OFF_STYLE_GAIN).min(1.0) } else { 1.0 };
             let mut s = w_pop * pop / pop_top * pop_credit + w_engine * (gain.max(0.0) / ENGINE_FULL).min(1.0) + w_counter * ctr;
+            s += PUSH_WEIGHT[index] * (push / PUSH_FULL).min(1.0);
             s *= 1.0 + (win(item).1 * WIN_WEIGHT).clamp(-WIN_CAP, WIN_CAP);
             if focus.0 == "support" && TEAM_ITEMS.contains(&item.name.as_str()) {
                 s += TEAM_ITEM_BONUS;
@@ -419,7 +458,9 @@ pub fn master_build(data: &GameData, input: &MasterInput) -> Result<MasterBuild,
             }
             s * team.redundancy(item).0
         };
-        let eligible = |pop: f64, ctr: f64, gain: f64| pop / pop_top >= POPULAR_FROM || ctr >= STRONG_COUNTER || (off_style && gain >= OFF_STYLE_GAIN);
+        let eligible = |pop: f64, ctr: f64, gain: f64, push: f64| {
+            pop / pop_top >= POPULAR_FROM || ctr >= STRONG_COUNTER || (off_style && gain >= OFF_STYLE_GAIN) || (PUSH_WEIGHT[index] > 0.0 && push >= PUSH_FULL)
+        };
         let mut sold_here: Vec<String> = vec![];
         let mut considered: Vec<Considered> = vec![];
         let mut first = true;
@@ -438,6 +479,7 @@ pub fn master_build(data: &GameData, input: &MasterInput) -> Result<MasterBuild,
                 .map(|i| i.class_name.clone())
                 .collect();
             let gains = suggest::gains(data, &b, gains_style, &candidates);
+            let push_of = |class: &str| push_gain(data, &b, class, index);
             // The item's answer to the enemy team, with the stuns it lands: its own (Crushing Fists, Knockdown) or a
             // second cast of a stunning ability it resets (Echo Shard on Stone Form).
             let answer_of = |class: &str, imbue: Option<usize>| -> (f64, Vec<String>, Vec<String>, f64) {
@@ -469,12 +511,14 @@ pub fn master_build(data: &GameData, input: &MasterInput) -> Result<MasterBuild,
             let score_of = |g: &suggest::Gain| -> Option<(f64, f64, Vec<String>, Vec<String>, f64)> {
                 let item = data.item(&g.item)?;
                 let pop = popular(item);
-                let (ctr, jobs, why, stun) = answer_of(&g.item, g.imbue);
+                let (ctr, jobs, mut why, stun) = answer_of(&g.item, g.imbue);
                 let gain = g.gain + stun;
-                if !eligible(pop, ctr, gain) {
+                let push = push_of(&g.item);
+                if !eligible(pop, ctr, gain, push) {
                     return None;
                 }
-                Some((score(item, pop, gain, ctr), pop, jobs, why, gain))
+                why.extend(push_note(push));
+                Some((score(item, pop, gain, ctr, push), pop, jobs, why, gain))
             };
             // The best item the souls left pay for, by its score with price held against it as the role says.
             if first {
@@ -486,17 +530,19 @@ pub fn master_build(data: &GameData, input: &MasterInput) -> Result<MasterBuild,
                         continue;
                     }
                     let pop = popular(item);
-                    let (ctr, jobs, why, stun) = answer_of(&g.item, g.imbue);
+                    let (ctr, jobs, mut why, stun) = answer_of(&g.item, g.imbue);
                     let gain = g.gain + stun;
+                    let push = push_of(&g.item);
+                    why.extend(push_note(push));
                     let mut notes: Vec<String> = team.redundancy(item).1.into_iter().collect();
-                    notes.extend(why.into_iter().filter(|w| ["Takes", "Harder", "Timing", "Top players", "Stuns"].iter().any(|p| w.starts_with(p))));
+                    notes.extend(why.into_iter().filter(|w| ["Takes", "Harder", "Timing", "Top players", "Stuns", "Clears"].iter().any(|p| w.starts_with(p))));
                     considered.push(Considered {
                         item: g.item.clone(),
                         name: item.name.clone(),
                         icon: item.icon.clone(),
                         category: item.category.clone(),
                         cost: item.cost,
-                        score: score(item, pop, gain, ctr),
+                        score: score(item, pop, gain, ctr, push),
                         popular_pct: pop * 100.0,
                         win_pct: win(item).0,
                         win_pp: win(item).1,
@@ -504,7 +550,7 @@ pub fn master_build(data: &GameData, input: &MasterInput) -> Result<MasterBuild,
                         counter_pct: ctr * 100.0,
                         jobs,
                         notes,
-                        left_out: !eligible(pop, ctr, gain),
+                        left_out: !eligible(pop, ctr, gain, push),
                     });
                 }
                 considered.sort_by(|a, b| b.score.total_cmp(&a.score));
@@ -547,7 +593,7 @@ pub fn master_build(data: &GameData, input: &MasterInput) -> Result<MasterBuild,
                         .redundancy(item)
                         .1
                         .into_iter()
-                        .chain(why.into_iter().filter(|w| ["Takes", "Harder", "Timing", "Top players", "Stuns"].iter().any(|p| w.starts_with(p))))
+                        .chain(why.into_iter().filter(|w| ["Takes", "Harder", "Timing", "Top players", "Stuns", "Clears"].iter().any(|p| w.starts_with(p))))
                         .collect(),
                     sold: false,
                     upgrades: upgrades.and_then(|c| data.item(&c)).map(|i| i.name.clone()),
@@ -582,8 +628,9 @@ pub fn master_build(data: &GameData, input: &MasterInput) -> Result<MasterBuild,
                     let (ctr, _, _, stun) = answer_of(&g.item, g.imbue);
                     let gain = g.gain + stun;
                     let pop = popular(item);
-                    let score = score(item, pop, gain, ctr);
-                    (eligible(pop, ctr, gain) && score >= weakest.1 * SELL_FOR[index] && score >= MIN_SCORE).then_some(score)
+                    let push = push_gain(data, &without, &g.item, index);
+                    let score = score(item, pop, gain, ctr, push);
+                    (eligible(pop, ctr, gain, push) && score >= weakest.1 * SELL_FOR[index] && score >= MIN_SCORE).then_some(score)
                 })
                 .next()
                 .is_some();
