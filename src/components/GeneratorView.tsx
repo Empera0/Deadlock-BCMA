@@ -464,7 +464,7 @@ function MasterPanel({ heroes, hero, preset, onUse }: { heroes: Hero[]; hero: He
                     ))}
                 </div>
                 {phase.considered.length > 0 && (
-                  <details className="considered">
+                  <details className="considered" open>
                     <summary>Why not something else? The best items not bought here</summary>
                     <table className="match-table compare">
                       <thead>
