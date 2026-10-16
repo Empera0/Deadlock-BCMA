@@ -93,3 +93,18 @@ fn an_item_whose_job_the_team_already_does_is_worth_less() {
     println!("Suppressor with Lash: {f:.2} {why:?}");
     assert!(f > 0.85, "{why:?}");
 }
+
+#[test]
+fn a_stun_is_worth_its_share_of_a_fight() {
+    let d = data();
+    let item = |name: &str| d.items.iter().find(|i| i.name == name).unwrap();
+    // Crushing Fists: 0.75s, twice a 12s fight for a melee build, half as often landed otherwise.
+    let (melee, casts) = master::stun_gain(item("Crushing Fists"), 0.75, "melee", false);
+    assert_eq!(casts, 2.0);
+    assert!((melee - 0.125 / 0.875).abs() < 1e-6, "{melee}");
+    let (gun, _) = master::stun_gain(item("Crushing Fists"), 0.75, "gun", false);
+    assert!((gun - melee / 2.0).abs() < 1e-6);
+    // Lightning Scroll comes with the ultimate and Knockdown has a long cooldown: once a fight each.
+    assert_eq!(master::stun_gain(item("Lightning Scroll"), 0.75, "spirit", false).1, 1.0);
+    assert_eq!(master::stun_gain(item("Knockdown"), 0.5, "spirit", false).1, 1.0);
+}

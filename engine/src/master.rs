@@ -45,6 +45,34 @@ const STUN_FULL: f64 = 1.5;
 /// How much of the answer part a stun can be at most.
 const STUN_WEIGHT: f64 = 0.6;
 
+/// The fights the engine measures last about this long, seconds: a stun is worth its share of one.
+const STUN_FIGHT_S: f64 = 12.0;
+/// A heavy melee takes about this long, seconds: the time to build up a melee stun (Crushing Fists).
+const HEAVY_MELEE_S: f64 = 1.0;
+/// A stun is counted as at most this share of a fight.
+const STUN_SHARE_CAP: f64 = 0.5;
+
+/// What an item's stuns are worth to the player's own fight, as a share like the engine's gains: while the enemy
+/// is stunned it deals nothing back, so stunning it a share X of the fight is as good as X / (1 - X) more of
+/// everything the player does. Counted for how many times it lands in a fight and how easily: a stun that comes
+/// with melee hits lands fully for a melee build and half as often otherwise.
+pub fn stun_gain(item: &Item, stun: f64, style: &str, again: bool) -> (f64, f64) {
+    let get = |key: &str| item.props.iter().find(|p| p.key == key).map(|p| p.value.abs()).unwrap_or(0.0);
+    let melee = item.description.to_lowercase().contains("melee");
+    // Echo Shard's second cast lands once a fight, and so does a stun with no cooldown of its own (Lightning Scroll
+    // comes with the ultimate); an item's own stun lands after its delay or build-up, then every cooldown.
+    let cooldown = get("AbilityCooldown");
+    let casts = if again || cooldown <= 0.0 {
+        1.0
+    } else {
+        let setup = get("StunDelay") + get("DelayBeforeStun") + if melee { get("MaxStacks") / 2.0 * HEAVY_MELEE_S } else { 0.0 };
+        1.0 + ((STUN_FIGHT_S - setup).max(0.0) / cooldown.max(setup).max(1.0)).floor()
+    };
+    let share = (casts * stun / STUN_FIGHT_S).min(STUN_SHARE_CAP);
+    let lands = if melee && !again && style != "melee" { 0.5 } else { 1.0 };
+    (lands * share / (1.0 - share), casts)
+}
+
 /// A counter score this high (an item that takes about a third off two enemies' damage, or answers a job the
 /// whole team calls for) is the full answer part.
 const COUNTER_FULL: f64 = 2.0;
@@ -409,13 +437,13 @@ pub fn master_build(data: &GameData, input: &MasterInput) -> Result<MasterBuild,
             let gains = suggest::gains(data, &b, &style, &candidates);
             // The item's answer to the enemy team, with the stuns it lands: its own (Crushing Fists, Knockdown) or a
             // second cast of a stunning ability it resets (Echo Shard on Stone Form).
-            let answer_of = |class: &str, imbue: Option<usize>| -> (f64, Vec<String>, Vec<String>) {
+            let answer_of = |class: &str, imbue: Option<usize>| -> (f64, Vec<String>, Vec<String>, f64) {
                 let (ctr, jobs, mut why) = counter_scores
                     .iter()
                     .find(|c| c.0 == class)
                     .map(|c| (answer(c), c.2.clone(), c.3.clone()))
                     .unwrap_or((0.0, vec![], vec![]));
-                let Some(item) = data.item(class) else { return (ctr, jobs, why) };
+                let Some(item) = data.item(class) else { return (ctr, jobs, why, 0.0) };
                 let mut stun = crate::team::item_lockdown_seconds(item);
                 let mut by = String::new();
                 if item.name == "Echo Shard" {
@@ -428,19 +456,22 @@ pub fn master_build(data: &GameData, input: &MasterInput) -> Result<MasterBuild,
                     }
                 }
                 if stun <= 0.0 {
-                    return (ctr, jobs, why);
+                    return (ctr, jobs, why, 0.0);
                 }
-                why.insert(0, format!("Stuns{by} for {stun:.2}s: the enemy cannot fight back meanwhile"));
-                ((ctr + STUN_WEIGHT * (stun / STUN_FULL).min(1.0)).min(1.0), jobs, why)
+                let (worth, casts) = stun_gain(item, stun, &style, !by.is_empty());
+                let times = if casts > 1.0 { format!(", {casts:.0} times a fight") } else { String::new() };
+                why.insert(0, format!("Stuns{by} for {stun:.2}s{times}: the enemy cannot fight back meanwhile, worth +{:.0}% to your fight", worth * 100.0));
+                ((ctr + STUN_WEIGHT * (stun / STUN_FULL).min(1.0)).min(1.0), jobs, why, worth)
             };
-            let score_of = |g: &suggest::Gain| -> Option<(f64, f64, Vec<String>, Vec<String>)> {
+            let score_of = |g: &suggest::Gain| -> Option<(f64, f64, Vec<String>, Vec<String>, f64)> {
                 let item = data.item(&g.item)?;
                 let pop = popular(item);
-                let (ctr, jobs, why) = answer_of(&g.item, g.imbue);
-                if !eligible(pop, ctr, g.gain) {
+                let (ctr, jobs, why, stun) = answer_of(&g.item, g.imbue);
+                let gain = g.gain + stun;
+                if !eligible(pop, ctr, gain) {
                     return None;
                 }
-                Some((score(item, pop, g.gain, ctr), pop, jobs, why))
+                Some((score(item, pop, gain, ctr), pop, jobs, why, gain))
             };
             // The best item the souls left pay for, by its score with price held against it as the role says.
             if first {
@@ -452,7 +483,8 @@ pub fn master_build(data: &GameData, input: &MasterInput) -> Result<MasterBuild,
                         continue;
                     }
                     let pop = popular(item);
-                    let (ctr, jobs, why) = answer_of(&g.item, g.imbue);
+                    let (ctr, jobs, why, stun) = answer_of(&g.item, g.imbue);
+                    let gain = g.gain + stun;
                     let mut notes: Vec<String> = team.redundancy(item).1.into_iter().collect();
                     notes.extend(why.into_iter().filter(|w| ["Takes", "Harder", "Timing", "Top players", "Stuns"].iter().any(|p| w.starts_with(p))));
                     considered.push(Considered {
@@ -461,15 +493,15 @@ pub fn master_build(data: &GameData, input: &MasterInput) -> Result<MasterBuild,
                         icon: item.icon.clone(),
                         category: item.category.clone(),
                         cost: item.cost,
-                        score: score(item, pop, g.gain, ctr),
+                        score: score(item, pop, gain, ctr),
                         popular_pct: pop * 100.0,
                         win_pct: win(item).0,
                         win_pp: win(item).1,
-                        engine_pct: g.gain.max(0.0) * 100.0,
+                        engine_pct: gain.max(0.0) * 100.0,
                         counter_pct: ctr * 100.0,
                         jobs,
                         notes,
-                        left_out: !eligible(pop, ctr, g.gain),
+                        left_out: !eligible(pop, ctr, gain),
                     });
                 }
                 considered.sort_by(|a, b| b.score.total_cmp(&a.score));
@@ -481,7 +513,7 @@ pub fn master_build(data: &GameData, input: &MasterInput) -> Result<MasterBuild,
                 .filter_map(|g| score_of(g).map(|s| (s.0 / (g.paid as f64 / 3_200.0).max(0.25).powf(price_weight), s, g)))
                 .filter(|(_, s, _)| s.0 >= MIN_SCORE)
                 .max_by(|a, b| a.0.total_cmp(&b.0));
-            if let Some((_, (score, pop, jobs, why), g)) = best {
+            if let Some((_, (score, pop, jobs, why, gain), g)) = best {
                 let item = data.item(&g.item).ok_or("Unknown item")?;
                 let upgrades = item.components.iter().find(|c| b.purchases.contains(c)).cloned();
                 if let Some(x) = upgrades.as_ref().and_then(|c| items.iter_mut().find(|x| &x.item == c)) {
@@ -506,7 +538,7 @@ pub fn master_build(data: &GameData, input: &MasterInput) -> Result<MasterBuild,
                     popular_pct: pop * 100.0,
                     win_pct: win(item).0,
                     win_pp: win(item).1,
-                    engine_pct: g.gain.max(0.0) * 100.0,
+                    engine_pct: gain.max(0.0) * 100.0,
                     jobs,
                     notes: team
                         .redundancy(item)
@@ -544,10 +576,11 @@ pub fn master_build(data: &GameData, input: &MasterInput) -> Result<MasterBuild,
                 .filter(|g| data.item(&g.item).is_some_and(|i| i.cost >= MIN_COST[index] || g.paid < i.cost))
                 .filter_map(|g| {
                     let item = data.item(&g.item)?;
-                    let ctr = answer_of(&g.item, g.imbue).0;
+                    let (ctr, _, _, stun) = answer_of(&g.item, g.imbue);
+                    let gain = g.gain + stun;
                     let pop = popular(item);
-                    let score = score(item, pop, g.gain, ctr);
-                    (eligible(pop, ctr, g.gain) && score >= weakest.1 * SELL_FOR[index] && score >= MIN_SCORE).then_some(score)
+                    let score = score(item, pop, gain, ctr);
+                    (eligible(pop, ctr, gain) && score >= weakest.1 * SELL_FOR[index] && score >= MIN_SCORE).then_some(score)
                 })
                 .next()
                 .is_some();

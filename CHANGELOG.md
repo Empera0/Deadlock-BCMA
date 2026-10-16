@@ -2,6 +2,22 @@
 
 All notable changes to Deadlock BCMA are listed here. Versions follow [semantic versioning](https://semver.org).
 
+## [0.2.29] – 2026-10-16
+
+This release makes the Master builder value stuns by how much of a fight they take away from the enemy, the same way for every hero.
+
+### Changed
+
+1. **Stuns are worth their share of a fight.** While an enemy is stunned it deals nothing back, so an item's stuns now add to what it does for your own fight, not only to its answer to the enemy team. Stunning an enemy for part of a 12-second fight counts as much as doing that much more of everything else. The builder counts:
+   - how many times the stun lands in a fight, from its delay, its build-up and its cooldown;
+   - how easily it lands: a stun that comes with melee hits (Crushing Fists) counts in full for a melee build and at half for the others.
+
+   For example, Crushing Fists is worth +14% to a melee fight and +7% to a gun or spirit fight, Arctic Blast +9%, Knockdown +4%, and Echo Shard on Ivy's Stone Form +14%. With this, melee Ivy now buys Crushing Fists. The cards show what each stun is worth, for example "Stuns for 0.75s, 2 times a fight: ... worth +14% to your fight".
+
+### Fixed
+
+2. **Stuns with no cooldown of their own.** A stun that comes with something else, such as Lightning Scroll with the ultimate, counts once a fight.
+
 ## [0.2.28] – 2026-10-16
 
 This release makes the Master builder build properly for a playstyle a hero's top players do not use, such as melee Ivy, and counts the stuns your own items land.
@@ -237,6 +253,7 @@ This release adds the **Build generator**, with builds read from top-ranked matc
   - trends across your last matches.
 - Windows installer with a desktop shortcut and automatic updates from GitHub releases.
 
+[0.2.29]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.28...v0.2.29
 [0.2.28]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.27...v0.2.28
 [0.2.27]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.26...v0.2.27
 [0.2.26]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.25...v0.2.26
