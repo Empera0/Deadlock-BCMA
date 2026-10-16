@@ -2,6 +2,25 @@
 
 All notable changes to Deadlock BCMA are listed here. Versions follow [semantic versioning](https://semver.org).
 
+## [0.2.30] – 2026-10-16
+
+This release lets the combo run against a real enemy hero with its items and the map around the fight, and makes the Master builder count the gun on spirit heroes and the lane push in the laning phase.
+
+### Added
+
+1. **An enemy hero as the combo target.** The combo can now run against an enemy hero: pick the hero, its souls and its items, and its health and resists come from that build. Its active items (Metal Skin, shields and the like) are assumed unused, and the target section says so. "Manual target" goes back to the health and resists set in the Stats tab.
+2. **Where the fight happens.** The combo target section has three switches:
+   - **Inside the Unstable Rift:** with the minute and both teams' souls, the trailing team's comeback resist is added to the target when the enemy team is behind. When your team is behind, the resist protects you, not the target, and a note says so.
+   - **Target near its own Walker:** the Walker's aura gives it 15% bullet and spirit resist (within 28 m).
+   - **Target near your Walker:** the Walker's fireballs take 10% bullet and spirit resist from it. The Walker's own damage is not counted.
+
+   Resists from the rift and the Walker stack with the target's own, each letting through a share of what is left.
+3. **Lane push in the Master builder.** Clearing the trooper wave faster puts pressure on your lane opponent, so in the lane, and less in the first rift, items now score for how much faster the build clears a wave. This counts the gun's sustained damage, weapon damage that only works on troopers (Monster Rounds, Cultist Sacrifice) and bullet resist against troopers, which lets you stand in the wave. An item that clears a wave 30% faster is considered even if few players buy it, and its card says how much faster it clears, for example "Clears the wave 55% faster: pressure on the lane".
+
+### Fixed
+
+4. **Gun items on spirit heroes.** The Master builder measured spirit builds over the abilities alone, so no gun item could add anything, and spirit heroes such as Seven got builds without a single weapon item. Spirit builds are now measured over the abilities plus a fight with shooting between casts: spirit items still lead, and gun items earn their place by what they add.
+
 ## [0.2.29] – 2026-10-16
 
 This release makes the Master builder value stuns by how much of a fight they take away from the enemy, the same way for every hero.
@@ -253,6 +272,7 @@ This release adds the **Build generator**, with builds read from top-ranked matc
   - trends across your last matches.
 - Windows installer with a desktop shortcut and automatic updates from GitHub releases.
 
+[0.2.30]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.29...v0.2.30
 [0.2.29]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.28...v0.2.29
 [0.2.28]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.27...v0.2.28
 [0.2.27]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.26...v0.2.27
