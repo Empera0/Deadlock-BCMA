@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { api, Build, Combo, ComboResult, fmt, GameData, Ranked, Sheet, MatchPreset } from "./api";
+import { api, Build, Combo, ComboResult, EMPTY_ZONE, fmt, GameData, Ranked, Sheet, MatchPreset } from "./api";
 import BuildBar from "./components/BuildBar";
 import ComboPanel from "./components/ComboPanel";
 import GeneratorView from "./components/GeneratorView";
@@ -14,10 +14,12 @@ const STORAGE_KEY = "current-build";
 const COMBO_KEY = "current-combo";
 
 function restoreCombo(): Combo {
-  const empty: Combo = { actions: [], headshot_rate: 0, own_health: 50 };
+  const empty: Combo = { actions: [], headshot_rate: 0, own_health: 50, enemy: null, zone: EMPTY_ZONE };
   try {
     const raw = localStorage.getItem(COMBO_KEY);
-    return raw ? { ...empty, ...JSON.parse(raw) } : empty;
+    if (!raw) return empty;
+    const saved = JSON.parse(raw);
+    return { ...empty, ...saved, zone: { ...EMPTY_ZONE, ...saved.zone } };
   } catch {
     return empty;
   }
@@ -343,7 +345,7 @@ export default function App() {
                 onBuy={toggleItem}
               />
             ) : tab === "combo" ? (
-              <ComboPanel sheet={sheet} combo={combo} result={comboResult} onChange={setCombo} />
+              <ComboPanel heroes={data.heroes} items={data.items} sheet={sheet} combo={combo} result={comboResult} onChange={setCombo} />
             ) : (
               <MiscPanel sheet={sheet} />
             )}

@@ -55,6 +55,37 @@ pub struct ComboInput {
     pub headshot_rate: f64,
     /// The hero's own health when the combo starts, 0-100 % of max. Missing-health heals depend on it.
     pub own_health: Option<f64>,
+    /// An enemy hero with its items as the target. Its health and resists replace the build's target.
+    pub enemy: Option<BuildInput>,
+    /// Where the fight happens: map objects that change the target's resists.
+    pub zone: Zone,
+}
+
+/// Map objects around the fight.
+#[derive(Debug, Clone, Default, Deserialize)]
+#[serde(default)]
+pub struct Zone {
+    /// The fight is inside the Unstable Rift; the comeback bonus follows from the minute and the teams' souls.
+    pub rift: bool,
+    pub minute: f64,
+    pub own_souls: f64,
+    pub enemy_souls: f64,
+    /// The target is near its own Walker and gets its resist aura.
+    pub enemy_walker: bool,
+    /// The target is near the hero's Walker, whose fireballs reduce its resists.
+    pub own_walker: bool,
+}
+
+/// The target the combo runs against, after the enemy's build and the zone.
+#[derive(Debug, Clone, Serialize)]
+pub struct TargetInfo {
+    pub health: f64,
+    pub bullet_resist: f64,
+    pub spirit_resist: f64,
+    /// Name of the enemy hero, when the target is one.
+    pub hero: Option<String>,
+    /// How each part of the target came about.
+    pub notes: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -111,6 +142,7 @@ pub struct ComboResult {
     pub full_duration: f64,
     pub dps: f64,
     pub target_health: f64,
+    pub target: TargetInfo,
     pub kill_time: Option<f64>,
     pub sources: Vec<SourceTotal>,
     pub events: Vec<Event>,
@@ -2093,10 +2125,83 @@ fn use_item(sim: &mut Sim, actives: &mut [Active], item: &str) {
     sim.trigger_heals(On::Use, Some(&name), 1.0);
 }
 
+/// The target the combo runs against: the enemy hero's build when one is set, else the build's own target,
+/// then the resists the zone adds.
+pub fn resolve_target(data: &GameData, b: &BuildInput, combo: &ComboInput) -> Result<TargetInfo, String> {
+    let mut t = TargetInfo {
+        health: b.target.health,
+        bullet_resist: b.target.bullet_resist,
+        spirit_resist: b.target.spirit_resist,
+        hero: None,
+        notes: vec![],
+    };
+    if let Some(enemy) = combo.enemy.as_ref().filter(|e| !e.hero.is_empty()) {
+        let hero = data.hero(&enemy.hero).ok_or_else(|| format!("Unknown enemy hero: {}", enemy.hero))?;
+        let sheet = calc::compute(data, enemy)?;
+        let stat = |key: &str| sheet.stat(key).unwrap_or(0.0);
+        t.health = stat("max_health").max(1.0);
+        t.bullet_resist = stat("bullet_resist");
+        t.spirit_resist = stat("spirit_resist");
+        t.hero = Some(hero.name.clone());
+        let items = sheet.owned.iter().filter_map(|c| data.item(c)).map(|i| i.name.as_str()).collect::<Vec<_>>();
+        t.notes.push(format!(
+            "{} at {} souls with {}: {} health, {}% bullet resist, {}% spirit resist",
+            hero.name,
+            n(enemy.souls.unwrap_or(0).max(sheet.spent) as f64),
+            if items.is_empty() { "no items".to_string() } else { items.join(", ") },
+            n(t.health.round()),
+            n(t.bullet_resist),
+            n(t.spirit_resist)
+        ));
+        let actives = sheet.owned.iter().filter_map(|c| data.item(c)).filter(|i| i.active).map(|i| i.name.as_str()).collect::<Vec<_>>();
+        if !actives.is_empty() {
+            t.notes.push(format!("The enemy's active items are assumed unused: {}", actives.join(", ")));
+        }
+    }
+    let z = &combo.zone;
+    if z.rift {
+        let rift = crate::misc::rift_comeback(z.minute, z.own_souls, z.enemy_souls);
+        if rift.resist <= 0.0 {
+            t.notes.push("Inside the rift: the teams are even, so neither gets the comeback resist".into());
+        } else if rift.own_team_trails {
+            t.notes.push(format!(
+                "Inside the rift: your team is {}% behind and gets {}% bullet, spirit and debuff resist; it protects you, not the target",
+                n(rift.behind_pct),
+                n(rift.resist)
+            ));
+        } else {
+            t.bullet_resist = crate::misc::stack_resist(t.bullet_resist, rift.resist);
+            t.spirit_resist = crate::misc::stack_resist(t.spirit_resist, rift.resist);
+            t.notes.push(format!(
+                "Inside the rift: the enemy team is {}% behind at minute {}, so the target gets {}% bullet and spirit resist (stacked with its own)",
+                n(rift.behind_pct),
+                n(z.minute),
+                n(rift.resist)
+            ));
+        }
+    }
+    if z.enemy_walker {
+        let aura = crate::misc::WALKER_AURA_RESIST;
+        t.bullet_resist = crate::misc::stack_resist(t.bullet_resist, aura);
+        t.spirit_resist = crate::misc::stack_resist(t.spirit_resist, aura);
+        t.notes.push(format!(
+            "Near its own Walker: {}% bullet and spirit resist within {} m (stacked with its own)",
+            n(aura),
+            n(crate::misc::WALKER_AURA_RADIUS_M)
+        ));
+    }
+    Ok(t)
+}
+
 pub fn simulate(data: &GameData, b: &BuildInput, combo: &ComboInput) -> Result<ComboResult, String> {
+    let target = resolve_target(data, b, combo)?;
     // Conditional item effects are driven by the combo itself (events and condition actions),
     // so the switches set on the build are ignored here.
-    let b = &BuildInput { active: vec![], ..b.clone() };
+    let b = &BuildInput {
+        active: vec![],
+        target: crate::build::Target { health: target.health, bullet_resist: target.bullet_resist, spirit_resist: target.spirit_resist },
+        ..b.clone()
+    };
     let sheet = calc::compute(data, b)?;
     let hero = data.hero(&b.hero).ok_or_else(|| format!("Unknown hero: {}", b.hero))?;
     let stat = |key: &str| sheet.stat(key).unwrap_or(0.0);
@@ -2283,6 +2388,19 @@ pub fn simulate(data: &GameData, b: &BuildInput, combo: &ComboInput) -> Result<C
             passives.push(format!("Hunter's Aura: -{}% bullet resist on the target while it is near (doubled: it is the only enemy)", n(shred)));
         }
     }
+    if combo.zone.own_walker {
+        let shred = crate::misc::WALKER_FIREBALL_SHRED;
+        sim.debuffs.push(Debuff {
+            source: "Walker fireballs".into(),
+            per_stack: Effect { bullet: shred, spirit: shred, ..Default::default() },
+            stacks: 1,
+            end: f64::INFINITY,
+        });
+        passives.push(format!(
+            "Your Walker: its fireballs keep the target at -{}% bullet and spirit resist (assumed to hit it the whole fight); the Walker's own damage is not counted",
+            n(shred)
+        ));
+    }
     if sim.outgoing != 0.0 {
         passives.push(format!("Outgoing damage: {}{}% to all damage dealt", if sim.outgoing > 0.0 { "+" } else { "" }, n(sim.outgoing)));
     }
@@ -2435,6 +2553,7 @@ pub fn simulate(data: &GameData, b: &BuildInput, combo: &ComboInput) -> Result<C
         full_duration: sim.t,
         dps: if sim.t > 0.0 { sim.dealt / sim.t } else { 0.0 },
         target_health: sim.health,
+        target,
         kill_time: sim.kill_time,
         sources: sim.sources,
         events: sim.events,

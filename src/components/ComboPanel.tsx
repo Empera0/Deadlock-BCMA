@@ -1,6 +1,9 @@
-import { Action, Combo, ComboResult, fmt, Sheet } from "../api";
+import { Action, Combo, ComboResult, fmt, Hero, Item, Sheet } from "../api";
+import ComboTarget from "./ComboTarget";
 
 interface Props {
+  heroes: Hero[];
+  items: Item[];
   sheet: Sheet;
   combo: Combo;
   result: ComboResult | null;
@@ -26,7 +29,7 @@ function label(action: Action, sheet: Sheet, result: ComboResult | null): string
   }
 }
 
-export default function ComboPanel({ sheet, combo, result, onChange }: Props) {
+export default function ComboPanel({ heroes, items, sheet, combo, result, onChange }: Props) {
   const add = (action: Action) => onChange({ ...combo, actions: [...combo.actions, action] });
   const update = (index: number, action: Action) =>
     onChange({ ...combo, actions: combo.actions.map((a, i) => (i === index ? action : a)) });
@@ -46,6 +49,8 @@ export default function ComboPanel({ sheet, combo, result, onChange }: Props) {
 
   return (
     <aside className="panel">
+      <ComboTarget heroes={heroes} items={items} combo={combo} result={result} onChange={onChange} />
+
       <div className="group">
         <h3>Add action</h3>
         <div className="combo-add">

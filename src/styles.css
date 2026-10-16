@@ -3721,3 +3721,95 @@ header.match {
 .master-why .why-lose {
   color: #e0736f;
 }
+
+/* Combo target: enemy hero, its items and the zone */
+.enemy-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 6px 0;
+}
+
+.enemy-hero {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px 4px 4px;
+}
+
+.enemy-hero img,
+.enemy-empty {
+  width: 32px;
+  height: 32px;
+  border-radius: 4px;
+  object-fit: cover;
+}
+
+.enemy-empty {
+  display: grid;
+  place-items: center;
+  background: var(--line);
+  color: var(--muted);
+}
+
+.enemy-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.enemy-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px 2px 2px;
+  font-size: 12px;
+  border-left: 3px solid var(--cat, var(--line));
+}
+
+.enemy-item img {
+  width: 20px;
+  height: 20px;
+}
+
+.enemy-item:hover {
+  text-decoration: line-through;
+}
+
+.zone {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 6px 0 8px;
+}
+
+.zone > label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.enemy-shop {
+  display: flex;
+  flex-direction: column;
+  width: min(1100px, 94vw);
+  height: 86vh;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.enemy-shop-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.enemy-shop-head button {
+  margin-left: auto;
+}

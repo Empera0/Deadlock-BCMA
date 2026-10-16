@@ -53,3 +53,14 @@ pub fn rift_comeback(minute: f64, own_souls: f64, enemy_souls: f64) -> RiftComeb
         own_team_trails: own_souls < enemy_souls,
     }
 }
+
+/// A Walker's aura (deadlock.wiki, Walker, current as of the 22 May 2026 update): allied heroes within 28 m get
+/// bullet and spirit resist. Its fireballs reduce the bullet and spirit resist of the enemies they hit.
+pub const WALKER_AURA_RESIST: f64 = 15.0;
+pub const WALKER_AURA_RADIUS_M: f64 = 28.0;
+pub const WALKER_FIREBALL_SHRED: f64 = 10.0;
+
+/// Resists from different sources stack by what each lets through: 1 − (1 − a)(1 − b).
+pub fn stack_resist(a: f64, b: f64) -> f64 {
+    100.0 - (100.0 - a) * (100.0 - b) / 100.0
+}

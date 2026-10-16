@@ -220,7 +220,22 @@ export interface Combo {
   headshot_rate: number;
   /** Own health at the start of the combo, % of max. */
   own_health: number;
+  /** An enemy hero with its items as the target; null uses the build's target. */
+  enemy: Build | null;
+  zone: Zone;
 }
+
+/** Map objects around a combo's fight. */
+export interface Zone {
+  rift: boolean;
+  minute: number;
+  own_souls: number;
+  enemy_souls: number;
+  enemy_walker: boolean;
+  own_walker: boolean;
+}
+
+export const EMPTY_ZONE: Zone = { rift: false, minute: 25, own_souls: 100_000, enemy_souls: 90_000, enemy_walker: false, own_walker: false };
 
 export type DamageKind = "bullet" | "spirit" | "melee" | "pure";
 
@@ -230,6 +245,7 @@ export interface ComboResult {
   full_duration: number;
   dps: number;
   target_health: number;
+  target: { health: number; bullet_resist: number; spirit_resist: number; hero: string | null; notes: string[] };
   kill_time: number | null;
   sources: { source: string; kind: DamageKind; damage: number }[];
   events: { time: number; source: string; detail: string; damage: number | null; heal: number | null }[];

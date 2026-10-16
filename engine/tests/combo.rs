@@ -508,3 +508,41 @@ fn deadman_danny_s_kit_deals_its_damage() {
     assert!(r.total > ability_value(&sheet, index("Chimera Mk1"), "ExplosionDamage"));
     assert!(r.healing > 0.0);
 }
+
+#[test]
+fn an_enemy_build_is_the_target() {
+    let d = data();
+    let armor = class_of(&d, "Battle Vest");
+    let enemy = build_for("hero_haze", &[&armor]);
+    let sheet = calc::compute(&d, &enemy).unwrap();
+    let combo = ComboInput { actions: vec![Action::Shoot { seconds: 1.0 }], enemy: Some(enemy), ..Default::default() };
+    let r = combo::simulate(&d, &build(&[]), &combo).unwrap();
+    assert!(close(r.target.health, sheet.stat("max_health").unwrap()));
+    assert!(r.target.bullet_resist > 0.0 && close(r.target.bullet_resist, sheet.stat("bullet_resist").unwrap()));
+    assert_eq!(r.target.hero.as_deref(), Some("Haze"));
+    // The armor takes its share of every bullet.
+    let plain = combo::simulate(&d, &build(&[]), &ComboInput { actions: vec![Action::Shoot { seconds: 1.0 }], ..Default::default() }).unwrap();
+    assert!(close(r.total, plain.total * (1.0 - r.target.bullet_resist / 100.0)), "{} vs {}", r.total, plain.total);
+}
+
+#[test]
+fn the_zone_changes_the_targets_resists() {
+    let d = data();
+    let b = build(&[]);
+    let shoot = vec![Action::Shoot { seconds: 1.0 }];
+    let plain = combo::simulate(&d, &b, &ComboInput { actions: shoot.clone(), ..Default::default() }).unwrap();
+    let zone = |zone: combo::Zone| combo::simulate(&d, &b, &ComboInput { actions: shoot.clone(), zone, ..Default::default() }).unwrap();
+
+    let walker = zone(combo::Zone { enemy_walker: true, ..Default::default() });
+    assert!(close(walker.target.bullet_resist, engine::misc::WALKER_AURA_RESIST));
+    assert!(close(walker.total, plain.total * (1.0 - engine::misc::WALKER_AURA_RESIST / 100.0)));
+
+    let fireballs = zone(combo::Zone { own_walker: true, ..Default::default() });
+    assert!(close(fireballs.total, plain.total * (1.0 + engine::misc::WALKER_FIREBALL_SHRED / 100.0)));
+
+    // 15% behind at minute 30: the full 40% for the trailing enemy, nothing when the own team trails.
+    let behind = zone(combo::Zone { rift: true, minute: 30.0, own_souls: 100_000.0, enemy_souls: 85_000.0, ..Default::default() });
+    assert!(close(behind.target.spirit_resist, 40.0));
+    let ahead = zone(combo::Zone { rift: true, minute: 30.0, own_souls: 85_000.0, enemy_souls: 100_000.0, ..Default::default() });
+    assert!(close(ahead.total, plain.total));
+}
