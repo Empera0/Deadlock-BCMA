@@ -2,6 +2,15 @@
 
 All notable changes to Deadlock BCMA are listed here. Versions follow [semantic versioning](https://semver.org).
 
+## [0.2.31] – 2026-10-16
+
+This release keeps the lane push from crowding out other lane items on spirit heroes and shows why each item was or was not bought without an extra click.
+
+### Changed
+
+1. **Lane push follows how the hero clears waves.** Lane push is measured with the gun, so it now counts by how much of their souls the hero's top players put into weapon items: in full from 60%, never less than a fifth, and always in full when Gun is chosen as the damage type. On spirit heroes such as Seven, Cultist Sacrifice no longer takes the lane souls only for its wave clear, which leaves room for answers to the lane opponents such as Suppressor. Gun heroes are not affected.
+2. **The items not bought are shown open.** Under each phase of a master build, "Why not something else?" now opens by itself, so the best items left out and the reasons are visible at once.
+
 ## [0.2.30] – 2026-10-16
 
 This release lets the combo run against a real enemy hero with its items and the map around the fight, and makes the Master builder count the gun on spirit heroes and the lane push in the laning phase.
@@ -272,6 +281,7 @@ This release adds the **Build generator**, with builds read from top-ranked matc
   - trends across your last matches.
 - Windows installer with a desktop shortcut and automatic updates from GitHub releases.
 
+[0.2.31]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.30...v0.2.31
 [0.2.30]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.29...v0.2.30
 [0.2.29]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.28...v0.2.29
 [0.2.28]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.27...v0.2.28
