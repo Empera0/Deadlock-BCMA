@@ -65,3 +65,12 @@ fn items_are_read_by_what_their_own_text_says() {
     assert!(!effects("Knockdown").contains(&Effect::TeamHeal));
     assert!(effects("Arctic Blast").contains(&Effect::Lockdown), "it freezes");
 }
+
+#[test]
+fn stuns_are_timed_for_items_and_abilities() {
+    let d = data();
+    assert!((team::item_lockdown_seconds(item(&d, "Crushing Fists")) - 0.75).abs() < 0.01);
+    assert_eq!(team::item_lockdown_seconds(item(&d, "Extra Health")), 0.0);
+    // Ivy's Stone Form stuns 0.75s, 1.5s with its third upgrade.
+    assert!((team::ability_lockdown_seconds(ability(&d, "Ivy", "Stone Form")) - 1.5).abs() < 0.01);
+}

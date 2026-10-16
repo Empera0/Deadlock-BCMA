@@ -9,7 +9,8 @@ interface Props {
   souls: number;
   /** A match player handed over from the match analysis. */
   preset: MatchPreset | null;
-  onUse: (purchases: string[], what: string) => void;
+  /** Loads a build into the builder, with the abilities imbued items go into, for a hero when it is not the builder's. */
+  onUse: (purchases: string[], what: string, imbues?: Record<string, number>, hero?: string) => void;
 }
 
 const minute = (m: number) => `${Math.floor(m)}:${String(Math.round((m % 1) * 60)).padStart(2, "0")}`;
@@ -437,6 +438,7 @@ function MasterPanel({ heroes, hero, preset, onUse }: { heroes: Hero[]; hero: He
                           <small>
                             {fmt(x.cost)}
                             {x.upgrades ? ` · ${fmt(x.paid)} on top of ${x.upgrades}` : ""}
+                            {x.imbued ? ` · on ${x.imbued}` : ""}
                             {x.active ? " · active" : ""}
                             {x.sold ? " · sold later" : ""}
                             {x.upgraded ? " · upgraded later" : ""}
@@ -508,7 +510,9 @@ function MasterPanel({ heroes, hero, preset, onUse }: { heroes: Hero[]; hero: He
               </div>
             ))}
             <button
-              onClick={() => onUse(report.master.purchases, `Loaded the master build for ${report.master.hero_name} as ${report.master.focus_name}`)}
+              onClick={() =>
+                onUse(report.master.purchases, `Loaded the master build for ${report.master.hero_name} as ${report.master.focus_name}`, report.master.imbues, report.master.hero)
+              }
             >
               Use this build
             </button>

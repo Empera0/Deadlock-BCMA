@@ -2,6 +2,27 @@
 
 All notable changes to Deadlock BCMA are listed here. Versions follow [semantic versioning](https://semver.org).
 
+## [0.2.28] – 2026-10-16
+
+This release makes the Master builder build properly for a playstyle a hero's top players do not use, such as melee Ivy, and counts the stuns your own items land.
+
+### Added
+
+1. **Your own stuns count.** An item that stuns, freezes or immobilizes enemies (Crushing Fists, Knockdown, Arctic Blast) now adds to its answer to the enemy team for as long as the stun lasts: a stunned enemy cannot fight back. This also counts the second cast of a stunning ability that Echo Shard resets, such as Ivy's Stone Form. The cards say so, for example "Stuns with a second Stone Form for 1.50s".
+2. **Imbued items go into their best ability.** Items that are imbued into an ability (Echo Shard, Duration Extender, Compress Cooldown and the like) are tried in each ability they can go into and placed where they do the most. The card shows it, for example "on Stone Form".
+3. **Echo Shard in fights.** The calculator now casts the ability Echo Shard resets a second time in a fight (Stone Form, Echo Shard, Stone Form).
+
+### Changed
+
+4. **Playstyles top players do not use.** When you choose a damage type your hero's top players do not usually build for (melee Ivy, for example):
+   - The build follows what items add to that damage more than what is popular.
+   - Weapon and spirit items that do nothing for it get no credit for being popular.
+   - Items that clearly add to it are considered even if few players buy them.
+
+   A note above the build says when this applies.
+5. **Melee fights.** A melee fight is now twelve hits instead of six, long enough for stacking melee items to pay off. Melee hits and melee-triggered items count in full, the rest of the damage at half, so a hero's ability damage no longer drowns out what melee items add.
+6. **Use this build.** Loading a master build now switches the builder to that hero, and keeps the abilities its imbued items go into.
+
 ## [0.2.27] – 2026-10-16
 
 This release makes the builders calculate what counter items do instead of estimating it. It also checks every hero ability against the Deadlock wiki and every item against its own in-game text.
@@ -216,6 +237,7 @@ This release adds the **Build generator**, with builds read from top-ranked matc
   - trends across your last matches.
 - Windows installer with a desktop shortcut and automatic updates from GitHub releases.
 
+[0.2.28]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.27...v0.2.28
 [0.2.27]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.26...v0.2.27
 [0.2.26]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.25...v0.2.26
 [0.2.25]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.24...v0.2.25

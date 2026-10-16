@@ -39,6 +39,12 @@ const FOCUS: [(&str, &str, &str, [f64; 3]); 4] = [
     ("frontline", "Frontline", "Staying alive at the front while your carries deal the damage", [0.50, 0.30, 0.20]),
 ];
 
+/// A stun of this long counts as a full answer to the enemy team: a stunned enemy deals no damage meanwhile, and
+/// the player gets free hits in.
+const STUN_FULL: f64 = 1.5;
+/// How much of the answer part a stun can be at most.
+const STUN_WEIGHT: f64 = 0.6;
+
 /// A counter score this high (an item that takes about a third off two enemies' damage, or answers a job the
 /// whole team calls for) is the full answer part.
 const COUNTER_FULL: f64 = 2.0;
@@ -50,6 +56,12 @@ const ENGINE_FULL: f64 = 0.25;
 const PRICE_WEIGHT: [f64; 4] = [0.5, 0.4, 0.25, 0.05];
 /// A tempo player wants power sooner, so price counts this much more in the first and second rift.
 const TEMPO_PRICE: f64 = 0.15;
+/// The weights of (popularity, own numbers, the enemy team) for a damage type the hero's top players do not play.
+const OFF_STYLE_WEIGHTS: [f64; 3] = [0.2, 0.6, 0.2];
+/// For such a damage type, an item that adds this much to it is in the running however few players buy it, and a
+/// damage item gets full credit for its popularity only from this much.
+const OFF_STYLE_GAIN: f64 = 0.04;
+
 /// The popular builds are the backbone: an item comes in when top players of the hero buy it at that point at
 /// least this often (against the most bought item), or when it is a strong answer to the enemy team.
 const POPULAR_FROM: f64 = 0.05;
@@ -152,6 +164,8 @@ pub struct MasterItem {
     pub upgrades: Option<String>,
     /// Bought into a bigger item later.
     pub upgraded: bool,
+    /// The ability it is imbued into, for an item that goes into one.
+    pub imbued: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -201,8 +215,9 @@ pub struct MasterBuild {
     pub style: String,
     pub phases: Vec<MasterPhase>,
     pub items: Vec<MasterItem>,
-    /// What is owned at the end, in buying order, for the builder.
+    /// What is owned at the end, in buying order, for the builder, and the abilities imbued items go into.
     pub purchases: Vec<String>,
+    pub imbues: std::collections::BTreeMap<String, usize>,
     /// How the teams shaped the build.
     pub notes: Vec<String>,
     /// What the player bought in the match, judged.
@@ -303,16 +318,32 @@ pub fn master_build(data: &GameData, input: &MasterInput) -> Result<MasterBuild,
         let souls = |category: &str| core.iter().filter(|i| i.category == category).map(|i| i.cost as f64).sum::<f64>();
         souls("weapon") / (souls("weapon") + souls("spirit")).max(1.0)
     });
+    let usual = if gun_share >= 0.6 {
+        "gun"
+    } else if gun_share <= 0.4 {
+        "spirit"
+    } else {
+        "hybrid"
+    };
     let style = if focus.0 == "frontline" {
         "frontline".to_string()
     } else {
         match input.damage {
             "gun" | "spirit" | "hybrid" | "melee" => input.damage.to_string(),
-            _ if gun_share >= 0.6 => "gun".into(),
-            _ if gun_share <= 0.4 => "spirit".into(),
-            _ => "hybrid".into(),
+            _ => usual.into(),
         }
     };
+    // A damage type the hero's top players do not build for (melee Ivy): what they buy says little about it, so
+    // the engine leads and items that do nothing for it get no credit for being popular.
+    let off_style = matches!(input.damage, "gun" | "spirit" | "hybrid" | "melee") && input.damage != usual && focus.0 != "frontline";
+    if off_style {
+        notes.push(format!(
+            "Built for {} damage, which {}'s top players do not usually play: the build follows what the items add to your own numbers more than what is popular",
+            input.damage,
+            hero.name
+        ));
+    }
+    let [w_pop, w_engine, w_counter] = if off_style { OFF_STYLE_WEIGHTS } else { [w_pop, w_engine, w_counter] };
 
     let counter = popular::counter_plan(data, m);
     // What the team already does: the player's own kit, and the teammates' kits and usual builds.
@@ -345,7 +376,9 @@ pub fn master_build(data: &GameData, input: &MasterInput) -> Result<MasterBuild,
             (wr, if n > 0.0 { popular::shrunk(wr - base, n) } else { 0.0 })
         };
         let score = |item: &Item, pop: f64, gain: f64, ctr: f64| -> f64 {
-            let mut s = w_pop * pop / pop_top + w_engine * (gain.max(0.0) / ENGINE_FULL).min(1.0) + w_counter * ctr;
+            // Off-style, a damage item that does nothing for the chosen damage is not helped by being popular.
+            let pop_credit = if off_style && item.category != "vitality" { (gain.max(0.0) / OFF_STYLE_GAIN).min(1.0) } else { 1.0 };
+            let mut s = w_pop * pop / pop_top * pop_credit + w_engine * (gain.max(0.0) / ENGINE_FULL).min(1.0) + w_counter * ctr;
             s *= 1.0 + (win(item).1 * WIN_WEIGHT).clamp(-WIN_CAP, WIN_CAP);
             if focus.0 == "support" && TEAM_ITEMS.contains(&item.name.as_str()) {
                 s += TEAM_ITEM_BONUS;
@@ -355,7 +388,7 @@ pub fn master_build(data: &GameData, input: &MasterInput) -> Result<MasterBuild,
             }
             s * team.redundancy(item).0
         };
-        let eligible = |pop: f64, ctr: f64| pop / pop_top >= POPULAR_FROM || ctr >= STRONG_COUNTER;
+        let eligible = |pop: f64, ctr: f64, gain: f64| pop / pop_top >= POPULAR_FROM || ctr >= STRONG_COUNTER || (off_style && gain >= OFF_STYLE_GAIN);
         let mut sold_here: Vec<String> = vec![];
         let mut considered: Vec<Considered> = vec![];
         let mut first = true;
@@ -374,18 +407,40 @@ pub fn master_build(data: &GameData, input: &MasterInput) -> Result<MasterBuild,
                 .map(|i| i.class_name.clone())
                 .collect();
             let gains = suggest::gains(data, &b, &style, &candidates);
-            let score_of = |class: &str, gain: f64| -> Option<(f64, f64, Vec<String>, Vec<String>)> {
-                let item = data.item(class)?;
-                let pop = popular(item);
-                let (ctr, jobs, why) = counter_scores
+            // The item's answer to the enemy team, with the stuns it lands: its own (Crushing Fists, Knockdown) or a
+            // second cast of a stunning ability it resets (Echo Shard on Stone Form).
+            let answer_of = |class: &str, imbue: Option<usize>| -> (f64, Vec<String>, Vec<String>) {
+                let (ctr, jobs, mut why) = counter_scores
                     .iter()
                     .find(|c| c.0 == class)
                     .map(|c| (answer(c), c.2.clone(), c.3.clone()))
                     .unwrap_or((0.0, vec![], vec![]));
-                if !eligible(pop, ctr) {
+                let Some(item) = data.item(class) else { return (ctr, jobs, why) };
+                let mut stun = crate::team::item_lockdown_seconds(item);
+                let mut by = String::new();
+                if item.name == "Echo Shard" {
+                    if let Some(a) = imbue.and_then(|i| hero.abilities.get(i)) {
+                        let again = crate::team::ability_lockdown_seconds(a);
+                        if again > 0.0 {
+                            stun = stun.max(again);
+                            by = format!(" with a second {}", a.name);
+                        }
+                    }
+                }
+                if stun <= 0.0 {
+                    return (ctr, jobs, why);
+                }
+                why.insert(0, format!("Stuns{by} for {stun:.2}s: the enemy cannot fight back meanwhile"));
+                ((ctr + STUN_WEIGHT * (stun / STUN_FULL).min(1.0)).min(1.0), jobs, why)
+            };
+            let score_of = |g: &suggest::Gain| -> Option<(f64, f64, Vec<String>, Vec<String>)> {
+                let item = data.item(&g.item)?;
+                let pop = popular(item);
+                let (ctr, jobs, why) = answer_of(&g.item, g.imbue);
+                if !eligible(pop, ctr, g.gain) {
                     return None;
                 }
-                Some((score(item, pop, gain, ctr), pop, jobs, why))
+                Some((score(item, pop, g.gain, ctr), pop, jobs, why))
             };
             // The best item the souls left pay for, by its score with price held against it as the role says.
             if first {
@@ -397,13 +452,9 @@ pub fn master_build(data: &GameData, input: &MasterInput) -> Result<MasterBuild,
                         continue;
                     }
                     let pop = popular(item);
-                    let (ctr, jobs, why) = counter_scores
-                        .iter()
-                        .find(|c| c.0 == g.item)
-                        .map(|c| (answer(c), c.2.clone(), c.3.clone()))
-                        .unwrap_or((0.0, vec![], vec![]));
+                    let (ctr, jobs, why) = answer_of(&g.item, g.imbue);
                     let mut notes: Vec<String> = team.redundancy(item).1.into_iter().collect();
-                    notes.extend(why.into_iter().filter(|w| ["Takes", "Harder", "Timing", "Top players"].iter().any(|p| w.starts_with(p))));
+                    notes.extend(why.into_iter().filter(|w| ["Takes", "Harder", "Timing", "Top players", "Stuns"].iter().any(|p| w.starts_with(p))));
                     considered.push(Considered {
                         item: g.item.clone(),
                         name: item.name.clone(),
@@ -418,7 +469,7 @@ pub fn master_build(data: &GameData, input: &MasterInput) -> Result<MasterBuild,
                         counter_pct: ctr * 100.0,
                         jobs,
                         notes,
-                        left_out: !eligible(pop, ctr),
+                        left_out: !eligible(pop, ctr, g.gain),
                     });
                 }
                 considered.sort_by(|a, b| b.score.total_cmp(&a.score));
@@ -427,7 +478,7 @@ pub fn master_build(data: &GameData, input: &MasterInput) -> Result<MasterBuild,
                 .iter()
                 .filter(|g| g.paid <= left)
                 .filter(|g| data.item(&g.item).is_some_and(|i| i.cost >= MIN_COST[index] || g.paid < i.cost))
-                .filter_map(|g| score_of(&g.item, g.gain).map(|s| (s.0 / (g.paid as f64 / 3_200.0).max(0.25).powf(price_weight), s, g)))
+                .filter_map(|g| score_of(g).map(|s| (s.0 / (g.paid as f64 / 3_200.0).max(0.25).powf(price_weight), s, g)))
                 .filter(|(_, s, _)| s.0 >= MIN_SCORE)
                 .max_by(|a, b| a.0.total_cmp(&b.0));
             if let Some((_, (score, pop, jobs, why), g)) = best {
@@ -437,6 +488,9 @@ pub fn master_build(data: &GameData, input: &MasterInput) -> Result<MasterBuild,
                     x.upgraded = true;
                 }
                 b.purchases.push(g.item.clone());
+                if let Some(i) = g.imbue {
+                    b.imbues.insert(g.item.clone(), i);
+                }
                 paid_total += g.paid;
                 items.push(MasterItem {
                     item: g.item.clone(),
@@ -458,11 +512,12 @@ pub fn master_build(data: &GameData, input: &MasterInput) -> Result<MasterBuild,
                         .redundancy(item)
                         .1
                         .into_iter()
-                        .chain(why.into_iter().filter(|w| ["Takes", "Harder", "Timing", "Top players"].iter().any(|p| w.starts_with(p))))
+                        .chain(why.into_iter().filter(|w| ["Takes", "Harder", "Timing", "Top players", "Stuns"].iter().any(|p| w.starts_with(p))))
                         .collect(),
                     sold: false,
                     upgrades: upgrades.and_then(|c| data.item(&c)).map(|i| i.name.clone()),
                     upgraded: false,
+                    imbued: g.imbue.and_then(|i| hero.abilities.get(i)).map(|a| a.name.clone()),
                 });
                 continue;
             }
@@ -489,10 +544,10 @@ pub fn master_build(data: &GameData, input: &MasterInput) -> Result<MasterBuild,
                 .filter(|g| data.item(&g.item).is_some_and(|i| i.cost >= MIN_COST[index] || g.paid < i.cost))
                 .filter_map(|g| {
                     let item = data.item(&g.item)?;
-                    let ctr = counter_scores.iter().find(|c| c.0 == g.item).map(|c| answer(c)).unwrap_or(0.0);
+                    let ctr = answer_of(&g.item, g.imbue).0;
                     let pop = popular(item);
                     let score = score(item, pop, g.gain, ctr);
-                    (eligible(pop, ctr) && score >= weakest.1 * SELL_FOR[index] && score >= MIN_SCORE).then_some(score)
+                    (eligible(pop, ctr, g.gain) && score >= weakest.1 * SELL_FOR[index] && score >= MIN_SCORE).then_some(score)
                 })
                 .next()
                 .is_some();
@@ -500,6 +555,7 @@ pub fn master_build(data: &GameData, input: &MasterInput) -> Result<MasterBuild,
                 break;
             }
             b.purchases.retain(|c| c != &weakest.0);
+            b.imbues.remove(&weakest.0);
             paid_total = paid_total.saturating_sub(refund);
             if let Some(x) = items.iter_mut().find(|x| x.item == weakest.0) {
                 x.sold = true;
@@ -562,6 +618,7 @@ pub fn master_build(data: &GameData, input: &MasterInput) -> Result<MasterBuild,
         style,
         phases,
         items,
+        imbues: b.imbues.iter().filter(|(c, _)| purchases.contains(c)).map(|(c, i)| (c.clone(), *i)).collect(),
         purchases,
         notes,
         judged,

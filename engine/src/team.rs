@@ -394,14 +394,34 @@ pub fn ability_effects_timed(a: &Ability) -> Vec<(Effect, f64)> {
     ability_effects(a)
         .into_iter()
         .map(|e| {
-            let fixed = ABILITY_FIXES.iter().find(|f| f.0 == a.class_name).and_then(|f| f.1.iter().find(|x| x.0 == e)).map(|x| x.1);
-            let seconds = match fixed {
-                Some(key) => all.iter().find(|x| x.0 == key).map(|x| x.1).unwrap_or(3.0),
-                None => effect_seconds(e, &all),
-            };
+            let seconds = ability_effect_seconds(a, e, &all);
             (e, if cooldown > 0.0 { (seconds / cooldown).clamp(0.02, 1.0) } else { 1.0 })
         })
         .collect()
+}
+
+fn ability_effect_seconds(a: &Ability, e: Effect, all: &[(&str, f64)]) -> f64 {
+    let fixed = ABILITY_FIXES.iter().find(|f| f.0 == a.class_name).and_then(|f| f.1.iter().find(|x| x.0 == e)).map(|x| x.1);
+    match fixed {
+        Some(key) => all.iter().find(|x| x.0 == key).map(|x| x.1).unwrap_or(3.0),
+        None => effect_seconds(e, all),
+    }
+}
+
+/// How long one cast of an ability stuns or locks enemies down, seconds (0 when it does not), upgrades counted.
+pub fn ability_lockdown_seconds(a: &Ability) -> f64 {
+    if !ability_effects(a).contains(&Effect::Lockdown) {
+        return 0.0;
+    }
+    ability_effect_seconds(a, Effect::Lockdown, &upgraded(a))
+}
+
+/// How long an item stuns, freezes or immobilizes an enemy, seconds (0 when it does not).
+pub fn item_lockdown_seconds(item: &Item) -> f64 {
+    if !item_effects(item).contains(&Effect::Lockdown) {
+        return 0.0;
+    }
+    item.props.iter().filter(|p| LOCKDOWN_KEYS.contains(&p.key.as_str())).map(|p| p.value).fold(0.0, f64::max)
 }
 
 /// An ability does its effect to the one or few enemies it hits, an item's passive to everyone its owner hits:

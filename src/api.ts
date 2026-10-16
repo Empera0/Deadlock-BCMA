@@ -774,6 +774,8 @@ export interface MasterItem {
   sold: boolean;
   upgrades: string | null;
   upgraded: boolean;
+  /** The ability it is imbued into. */
+  imbued: string | null;
 }
 
 /** An item weighed in a phase and not bought. */
@@ -849,6 +851,7 @@ export interface MasterBuild {
   phases: MasterPhase[];
   items: MasterItem[];
   purchases: string[];
+  imbues: Record<string, number>;
   notes: string[];
   judged: JudgedItem[];
 }

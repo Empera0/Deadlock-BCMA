@@ -131,14 +131,15 @@ fn window_index(w: Window) -> usize {
 /// Seconds of shooting in the hybrid rotation and in the gun window, and the melee string.
 const SHOOT_SECONDS: f64 = 6.0;
 const GUN_SECONDS: f64 = 8.0;
-const MELEE_STRING: [bool; 6] = [true, false, true, false, true, false];
+/// A melee fight: six heavy and six light hits in turn, long enough for stacking melee items (Crushing Fists) to pay off.
+const MELEE_STRING: [bool; 12] = [true, false, true, false, true, false, true, false, true, false, true, false];
 
 /// The playstyles: (key, name, goal, the windows it needs, whether effective health counts).
 const PLAYSTYLES: [(&str, &str, &str, &[Window], bool); 5] = [
     ("hybrid", "Full kit", "The most damage from every ability and active item once and six seconds of shooting", &[Window::Hybrid], false),
     ("gun", "Gun carry", "The most damage from eight seconds of shooting", &[Window::Gun], false),
     ("spirit", "Spirit burst", "The most damage from every ability and active item once, without the gun", &[Window::Spirit], false),
-    ("melee", "Melee brawler", "The most damage from every ability and active item once followed by three heavy and three light melee hits", &[Window::Melee], false),
+    ("melee", "Melee brawler", "The most damage from every ability and active item once followed by six heavy and six light melee hits", &[Window::Melee], false),
     (
         "frontline",
         "Frontline",
@@ -230,6 +231,14 @@ fn window_input(data: &GameData, b: &BuildInput, abilities: usize, window: Windo
         actions.extend((0..abilities).map(|index| Action::Ability { index, duration: None, hits: None }));
     }
     actions.extend(actives(data, b));
+    // Echo Shard resets its imbued ability: cast it again (Stone Form, Echo Shard, Stone Form).
+    if window != Window::Gun {
+        for (class, index) in &b.imbues {
+            if data.item(class).is_some_and(|i| i.name == "Echo Shard") && *index < abilities {
+                actions.push(Action::Ability { index: *index, duration: None, hits: None });
+            }
+        }
+    }
     match window {
         Window::Hybrid => actions.push(Action::Shoot { seconds: SHOOT_SECONDS }),
         Window::Gun => actions.push(Action::Shoot { seconds: GUN_SECONDS }),
@@ -249,6 +258,20 @@ struct Measured {
     fits: bool,
 }
 
+/// In a melee fight, the rest of the damage (abilities, actives) counts this much against the melee hits.
+const MELEE_OTHER: f64 = 0.5;
+
+/// A melee fight's damage as a melee build values it: melee hits and what melee-triggered items add (Spirit
+/// Strike, Crushing Fists) in full, the rest at half. Otherwise a hero's ability damage drowns out what melee items add.
+fn melee_weighted(data: &GameData, b: &BuildInput, r: &combo::ComboResult) -> f64 {
+    let melee_items: Vec<&str> =
+        b.purchases.iter().filter_map(|c| data.item(c)).filter(|i| i.description.to_lowercase().contains("melee")).map(|i| i.name.as_str()).collect();
+    r.sources
+        .iter()
+        .map(|s| if s.kind == combo::Kind::Melee || melee_items.contains(&s.source.as_str()) { s.damage } else { s.damage * MELEE_OTHER })
+        .sum()
+}
+
 /// The numbers of a build with its conditional effects switched on or off, for the windows asked for.
 fn measure_with(data: &GameData, b: &BuildInput, conditions: bool, windows: &[Window]) -> Option<Measured> {
     let mut b = b.clone();
@@ -260,7 +283,9 @@ fn measure_with(data: &GameData, b: &BuildInput, conditions: bool, windows: &[Wi
         .iter()
         .map(|(w, _)| {
             if windows.contains(w) {
-                combo::simulate(data, &b, &window_input(data, &b, sheet.abilities.len(), *w)).map(|r| r.total).unwrap_or(0.0)
+                combo::simulate(data, &b, &window_input(data, &b, sheet.abilities.len(), *w))
+                    .map(|r| if *w == Window::Melee { melee_weighted(data, &b, &r) } else { r.total })
+                    .unwrap_or(0.0)
             } else {
                 0.0
             }
@@ -484,6 +509,8 @@ pub struct Gain {
     pub gain: f64,
     /// What it really costs on top of the build: less when it upgrades an item already owned.
     pub paid: u32,
+    /// For an item imbued into an ability, the ability it does the most in.
+    pub imbue: Option<usize>,
 }
 
 /// What each candidate adds to the build (its purchases, at its souls) for a playstyle, worked out side by side.
@@ -503,14 +530,29 @@ pub fn gains(data: &GameData, b: &BuildInput, style: &str, candidates: &[String]
                 scope.spawn(move || {
                     part.iter()
                         .filter_map(|class| {
-                            let mut trial = b.clone();
-                            trial.purchases.push(class.clone());
-                            let then = measure(data, &trial, windows)?;
-                            let paid = then.spent.saturating_sub(now.spent);
-                            if !then.fits || paid == 0 || then.slots_used > then.slot_limit {
-                                return None;
-                            }
-                            Some(Gain { item: class.clone(), gain: (value(&then, windows, durable) - before) / before, paid })
+                            // An item imbued into an ability is tried in each one it can go into.
+                            let imbue = data.item(class).map(|i| i.imbue.as_str()).unwrap_or("");
+                            let targets: Vec<Option<usize>> = match imbue {
+                                "" => vec![None],
+                                "imbue_active_non_ult" => (0..3).map(Some).collect(),
+                                _ => (0..4).map(Some).collect(),
+                            };
+                            targets
+                                .into_iter()
+                                .filter_map(|target| {
+                                    let mut trial = b.clone();
+                                    trial.purchases.push(class.clone());
+                                    if let Some(i) = target {
+                                        trial.imbues.insert(class.clone(), i);
+                                    }
+                                    let then = measure(data, &trial, windows)?;
+                                    let paid = then.spent.saturating_sub(now.spent);
+                                    if !then.fits || paid == 0 || then.slots_used > then.slot_limit {
+                                        return None;
+                                    }
+                                    Some(Gain { item: class.clone(), gain: (value(&then, windows, durable) - before) / before, paid, imbue: target })
+                                })
+                                .max_by(|a, b| a.gain.total_cmp(&b.gain))
                         })
                         .collect::<Vec<_>>()
                 })

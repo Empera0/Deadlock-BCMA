@@ -298,8 +298,13 @@ export default function App() {
           build={build}
           souls={sheet.souls}
           preset={masterPreset}
-          onUse={(purchases, what) => {
-            patch({ purchases, active: purchases, upto: null, imbues: {} });
+          onUse={(purchases, what, imbues, heroClass) => {
+            // A build for another hero (the master builder's) switches the builder to that hero.
+            if (heroClass && heroClass !== build.hero) {
+              setBuild({ ...emptyBuild(heroClass), target: build.target, purchases, active: purchases, imbues: imbues ?? {} });
+            } else {
+              patch({ purchases, active: purchases, upto: null, imbues: imbues ?? {} });
+            }
             setMode("build");
             setStatus(what);
           }}
