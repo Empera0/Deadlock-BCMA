@@ -361,6 +361,9 @@ pub fn master_build(data: &GameData, input: &MasterInput) -> Result<MasterBuild,
             _ => usual.into(),
         }
     };
+    // A spirit hero still shoots between casts: its items are measured over the abilities and that shooting, or
+    // no gun item would ever add anything.
+    let gains_style = if style == "spirit" { "spirit_fight" } else { style.as_str() };
     // A damage type the hero's top players do not build for (melee Ivy): what they buy says little about it, so
     // the engine leads and items that do nothing for it get no credit for being popular.
     let off_style = matches!(input.damage, "gun" | "spirit" | "hybrid" | "melee") && input.damage != usual && focus.0 != "frontline";
@@ -434,7 +437,7 @@ pub fn master_build(data: &GameData, input: &MasterInput) -> Result<MasterBuild,
                 .filter(|i| i.cost <= left.max(1) * 2 && !b.purchases.contains(&i.class_name) && !items.iter().any(|x| x.item == i.class_name))
                 .map(|i| i.class_name.clone())
                 .collect();
-            let gains = suggest::gains(data, &b, &style, &candidates);
+            let gains = suggest::gains(data, &b, gains_style, &candidates);
             // The item's answer to the enemy team, with the stuns it lands: its own (Crushing Fists, Knockdown) or a
             // second cast of a stunning ability it resets (Echo Shard on Stone Form).
             let answer_of = |class: &str, imbue: Option<usize>| -> (f64, Vec<String>, Vec<String>, f64) {
@@ -569,7 +572,7 @@ pub fn master_build(data: &GameData, input: &MasterInput) -> Result<MasterBuild,
             let mut without = b.clone();
             without.purchases.retain(|c| c != &weakest.0);
             let refund = (weakest.2 as f64 * SELL_BACK) as u32;
-            let gains = suggest::gains(data, &without, &style, &candidates);
+            let gains = suggest::gains(data, &without, gains_style, &candidates);
             let better = gains
                 .iter()
                 .filter(|g| g.paid <= left + refund)

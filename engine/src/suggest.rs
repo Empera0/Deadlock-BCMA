@@ -149,6 +149,12 @@ const PLAYSTYLES: [(&str, &str, &str, &[Window], bool); 5] = [
     ),
 ];
 
+/// A spirit hero in a real fight: the abilities count twice, once alone and once with the shooting between casts,
+/// so gun items still earn their place but count for less than spirit items. Used by the master builder, whose
+/// spirit builds are for whole matches rather than a single burst.
+const SPIRIT_FIGHT: (&str, &str, &str, &[Window], bool) =
+    ("spirit_fight", "Spirit fight", "Abilities first, with the shooting between casts", &[Window::Spirit, Window::Hybrid], false);
+
 /// Souls assumed when the build has none set.
 const DEFAULT_BUDGET: u32 = 30_000;
 /// Souls at the end of each stage when there are no matches to read them from.
@@ -516,7 +522,7 @@ pub struct Gain {
 /// What each candidate adds to the build (its purchases, at its souls) for a playstyle, worked out side by side.
 /// Candidates the build cannot afford or has no slot for are left out.
 pub fn gains(data: &GameData, b: &BuildInput, style: &str, candidates: &[String]) -> Vec<Gain> {
-    let Some(style) = PLAYSTYLES.iter().find(|p| p.0 == style).or(PLAYSTYLES.first()) else { return vec![] };
+    let Some(style) = PLAYSTYLES.iter().chain([&SPIRIT_FIGHT]).find(|p| p.0 == style).or(PLAYSTYLES.first()) else { return vec![] };
     let (windows, durable) = (style.3, style.4);
     let Some(now) = measure(data, b, windows) else { return vec![] };
     let before = value(&now, windows, durable).max(1e-9);
