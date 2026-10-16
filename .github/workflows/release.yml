@@ -1,4 +1,5 @@
-# Builds the Windows installer and publishes it as a GitHub release when a version tag (v0.2.0 ...) is pushed.
+# Builds the Windows installer and publishes it as a GitHub release when a version tag (v0.2.0 ...) is pushed,
+# or when the workflow is run by hand on a branch, under the app's version.
 # The release also carries latest.json, which the app's updater reads to offer the new version.
 name: Release
 
@@ -39,8 +40,10 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
-          tagName: ${{ github.ref_name }}
-          releaseName: Deadlock BCMA ${{ github.ref_name }}
+          # A tag push names the release after the tag; a manual run names it after the app's version and
+          # creates that tag on the commit it builds.
+          tagName: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'v__VERSION__' }}
+          releaseName: Deadlock BCMA ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'v__VERSION__' }}
           releaseBody: Download the setup file below, run it, and the app opens when it is done. Installed copies update themselves.
           releaseDraft: false
           prerelease: false
