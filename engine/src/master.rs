@@ -111,6 +111,10 @@ const MIN_SCORE: f64 = 0.12;
 const PUSH_WEIGHT: [f64; 4] = [0.35, 0.15, 0.0, 0.0];
 /// A wave cleared this much faster is the full push credit; from it the item is in the running in those phases.
 const PUSH_FULL: f64 = 0.3;
+/// Push counts in full for a hero whose top players put this share of their souls into weapon items, and never
+/// for less than this share of it.
+const PUSH_GUN_FULL: f64 = 0.6;
+const PUSH_SHARE_MIN: f64 = 0.2;
 
 /// How fast the build clears a trooper wave: its sustained gun damage against troopers, with the weapon damage
 /// that only works on them (Monster Rounds, Cultist Sacrifice), and longer for the bullet resist against them that
@@ -401,6 +405,9 @@ pub fn master_build(data: &GameData, input: &MasterInput) -> Result<MasterBuild,
     };
     // A spirit hero still shoots between casts: its items are measured over the abilities and that shooting, or
     // no gun item would ever add anything.
+    // Lane push is measured with the gun, so it counts in full for a hero who clears waves with the gun and less for
+    // one who clears them with abilities: by the share of souls its top players put into weapon items.
+    let push_share = if style == "gun" { 1.0 } else { (gun_share / PUSH_GUN_FULL).clamp(PUSH_SHARE_MIN, 1.0) };
     let gains_style = if style == "spirit" { "spirit_fight" } else { style.as_str() };
     // A damage type the hero's top players do not build for (melee Ivy): what they buy says little about it, so
     // the engine leads and items that do nothing for it get no credit for being popular.
@@ -448,7 +455,7 @@ pub fn master_build(data: &GameData, input: &MasterInput) -> Result<MasterBuild,
             // Off-style, a damage item that does nothing for the chosen damage is not helped by being popular.
             let pop_credit = if off_style && item.category != "vitality" { (gain.max(0.0) / OFF_STYLE_GAIN).min(1.0) } else { 1.0 };
             let mut s = w_pop * pop / pop_top * pop_credit + w_engine * (gain.max(0.0) / ENGINE_FULL).min(1.0) + w_counter * ctr;
-            s += PUSH_WEIGHT[index] * (push / PUSH_FULL).min(1.0);
+            s += PUSH_WEIGHT[index] * (push * push_share / PUSH_FULL).min(1.0);
             s *= 1.0 + (win(item).1 * WIN_WEIGHT).clamp(-WIN_CAP, WIN_CAP);
             if focus.0 == "support" && TEAM_ITEMS.contains(&item.name.as_str()) {
                 s += TEAM_ITEM_BONUS;
@@ -459,7 +466,7 @@ pub fn master_build(data: &GameData, input: &MasterInput) -> Result<MasterBuild,
             s * team.redundancy(item).0
         };
         let eligible = |pop: f64, ctr: f64, gain: f64, push: f64| {
-            pop / pop_top >= POPULAR_FROM || ctr >= STRONG_COUNTER || (off_style && gain >= OFF_STYLE_GAIN) || (PUSH_WEIGHT[index] > 0.0 && push >= PUSH_FULL)
+            pop / pop_top >= POPULAR_FROM || ctr >= STRONG_COUNTER || (off_style && gain >= OFF_STYLE_GAIN) || (PUSH_WEIGHT[index] > 0.0 && push * push_share >= PUSH_FULL)
         };
         let mut sold_here: Vec<String> = vec![];
         let mut considered: Vec<Considered> = vec![];
