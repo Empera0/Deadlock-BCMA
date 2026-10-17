@@ -2,6 +2,15 @@
 
 All notable changes to Deadlock BCMA are listed here. Versions follow [semantic versioning](https://semver.org).
 
+## [0.2.41] – 2026-10-17
+
+This release explains why each item was not bought and lists the counters at the end of each phase.
+
+### Changed
+
+1. **Why not something else.** Every item in the list of items not bought now has a sentence saying what it lost to and why: the weakest item the phase chose on its score, and the parts it fell short on, such as how many top players buy it at that point, what it adds to your own numbers, how much of the enemy team it answers, what it does for its price, a job an item bought by then already does, fewer wins when bought there, and anything that makes it harder to use. Items that were never in the running say which bar they missed.
+2. **Counters at the end of each phase.** Counter items are still paid for first, but are listed after the rest of the phase's purchases, so each phase reads as the build first and its counters after.
+
 ## [0.2.40] – 2026-10-17
 
 This release puts the counter items into the master build itself and removes several picks that made no sense for the hero.
@@ -417,6 +426,7 @@ This release adds the **Build generator**, with builds read from top-ranked matc
   - trends across your last matches.
 - Windows installer with a desktop shortcut and automatic updates from GitHub releases.
 
+[0.2.41]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.40...v0.2.41
 [0.2.40]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.39...v0.2.40
 [0.2.39]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.38...v0.2.39
 [0.2.38]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.37...v0.2.38
