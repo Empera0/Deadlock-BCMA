@@ -2,6 +2,14 @@
 
 All notable changes to Deadlock BCMA are listed here. Versions follow [semantic versioning](https://semver.org).
 
+## [0.2.36] – 2026-10-17
+
+This release makes the shop look the same on every screen.
+
+### Fixed
+
+1. **Shop layout on different screens.** Shop tiles had a fixed width, so each screen size and Windows display scaling fit a different number of items per row. Every tier now shows eight items a row, scaled to the shop's width up to a cap, so the shop looks the same on every computer.
+
 ## [0.2.35] – 2026-10-17
 
 This release explains each death in a match, advises what to buy, upgrade or sell next, and lets builds be shared as a code.
@@ -359,6 +367,7 @@ This release adds the **Build generator**, with builds read from top-ranked matc
   - trends across your last matches.
 - Windows installer with a desktop shortcut and automatic updates from GitHub releases.
 
+[0.2.36]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.35...v0.2.36
 [0.2.35]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.34...v0.2.35
 [0.2.34]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.33...v0.2.34
 [0.2.33]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.32...v0.2.33
