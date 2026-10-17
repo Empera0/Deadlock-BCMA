@@ -291,6 +291,74 @@ export interface ComboResult {
   own_health_end: number;
 }
 
+export interface AdviceMove {
+  kind: "buy" | "upgrade" | "swap";
+  sell: string | null;
+  sell_name: string | null;
+  sell_icon: string | null;
+  refund: number;
+  removes: string[];
+  buy: string;
+  buy_name: string;
+  buy_icon: string;
+  paid: number;
+  net_cost: number;
+  gain: number;
+  imbue: number | null;
+}
+
+export interface Advice {
+  style: string;
+  free_souls: number;
+  slots_used: number;
+  slot_limit: number;
+  buys: AdviceMove[];
+  upgrades: AdviceMove[];
+  swaps: AdviceMove[];
+  worth: { item: string; name: string; icon: string; cost: number; loss: number }[];
+}
+
+/** A change to the player's build and what the killer's fight does to it then. */
+export interface DeathFix {
+  item: string;
+  name: string;
+  icon: string;
+  cost: number;
+  owned: boolean;
+  health_taken: number;
+  kill_time: number | null;
+}
+
+export interface DeathStudy {
+  time: number;
+  killer_slot: number;
+  killer_hero: string;
+  time_to_kill: number;
+  my_items: string[];
+  killer_items: string[];
+  window_from: number;
+  window_to: number;
+  taken: { name: string; amount: number }[];
+  bullet_share: number;
+  fight_damage: number;
+  my_health: number;
+  health_taken: number;
+  kill_time: number | null;
+  fight_bullet_share: number;
+  fixes: DeathFix[];
+  verdict: string;
+}
+
+export interface DeathAnalysis {
+  slot: number;
+  hero: string;
+  deaths: DeathStudy[];
+  bullet_share: number;
+  killers: [string, number][];
+  fixes: [DeathFix, number][];
+  summary: string;
+}
+
 export const api = {
   getData: () => invoke<GameData>("get_data"),
   refreshData: () => invoke<GameData>("refresh_data"),
@@ -305,12 +373,14 @@ export const api = {
   suggestBuilds: (build: Build, styles: string[]) => invoke<Suggestions>("suggest_builds", { build, styles }),
   rankNext: (build: Build, metric: string, conditional: boolean) =>
     invoke<Ranked[]>("rank_next", { build, metric, conditional }),
+  adviseBuild: (build: Build, style: string) => invoke<Advice>("advise_build", { build, style }),
   simulateCombo: (build: Build, combo: Combo) => invoke<ComboResult>("simulate_combo", { build, combo }),
   saveBuild: (name: string, build: Build) => invoke<void>("save_build", { name, build }),
   listBuilds: () => invoke<string[]>("list_builds"),
   loadBuild: (name: string) => invoke<Build>("load_build", { name }),
   deleteBuild: (name: string) => invoke<void>("delete_build", { name }),
   fetchMatch: (matchId: number) => invoke<MatchReport>("fetch_match", { matchId }),
+  deathAnalysis: (matchId: number, slot: number) => invoke<DeathAnalysis>("death_analysis", { matchId, slot }),
   matchHistory: (accountId: string) => invoke<HistoryEntry[]>("match_history", { accountId }),
   findLocalMatches: () => invoke<LocalScan>("find_local_matches"),
   analyzeHistory: (accountId: string, count: number) => invoke<{ rows: MatchSummary[]; skipped: number }>("analyze_history", { accountId, count }),

@@ -496,6 +496,21 @@ pub fn fight_for(data: &GameData, b: &BuildInput, shooting: f64) -> Option<combo
     combo::simulate(data, b, &input).ok()
 }
 
+/// The defensive active items a hero uses when a fight turns on them.
+pub const DEFENSIVE_ACTIVES: [&str; 7] = combo::ENEMY_ACTIVES;
+
+/// The same fight against an enemy hero with its build, which uses the given active items when it starts.
+pub fn fight_against(data: &GameData, b: &BuildInput, enemy: &BuildInput, enemy_actives: &[String], shooting: f64) -> Option<combo::ComboResult> {
+    let sheet = calc::compute(data, b).ok()?;
+    let input = window_input(data, b, sheet.abilities.len(), Window::Hybrid);
+    let mut actions: Vec<Action> = enemy_actives.iter().map(|item| Action::EnemyItem { item: item.clone() }).collect();
+    actions.extend(input.actions.into_iter().map(|a| match a {
+        Action::Shoot { .. } => Action::Shoot { seconds: shooting },
+        other => other,
+    }));
+    combo::simulate(data, b, &ComboInput { actions, enemy: Some(enemy.clone()), ..input }).ok()
+}
+
 /// How much of a hero's damage in a fight is spirit damage (0 to 1): every ability and active item once and six
 /// seconds of shooting, with the build at its souls. Melee counts with the gun; damage that ignores resists with
 /// neither.

@@ -336,7 +336,7 @@ export default function App() {
         />
       )}
 
-      {mode === "build" && <BuildBar build={build} sheet={sheet} items={items} onChange={patch} />}
+      {mode === "build" && <BuildBar build={build} heroes={data.heroes} sheet={sheet} items={items} onChange={patch} />}
 
       <main style={{ display: mode === "build" ? undefined : "none" }}>
         <Shop items={data.items} owned={owned} purchased={purchased} onToggle={toggleItem} />

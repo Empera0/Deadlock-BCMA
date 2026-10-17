@@ -1,13 +1,72 @@
-import { Build, fmt, Item, Sheet } from "../api";
+import { useState } from "react";
+import { Build, fmt, Hero, Item, Sheet } from "../api";
+import { readShareCode, shareCode } from "../share";
 
 interface Props {
   build: Build;
+  heroes: Hero[];
   sheet: Sheet | null;
   items: Map<string, Item>;
   onChange: (patch: Partial<Build>) => void;
 }
 
-export default function BuildBar({ build, sheet, items, onChange }: Props) {
+/** Copies the build as a code, and reads a pasted one. */
+function ShareButtons({ build, heroes, items, onChange }: Pick<Props, "build" | "heroes" | "items" | "onChange">) {
+  const [importing, setImporting] = useState(false);
+  const [code, setCode] = useState("");
+  const [note, setNote] = useState("");
+  const share = () => {
+    const text = shareCode(build, heroes, items);
+    navigator.clipboard.writeText(text).then(
+      () => setNote("Build code copied"),
+      () => {
+        // Without clipboard access the code is shown to copy by hand.
+        setCode(text);
+        setImporting(true);
+        setNote("Copy the code from the field");
+      },
+    );
+  };
+  const load = () => {
+    try {
+      onChange(readShareCode(code, heroes, [...items.values()]));
+      setImporting(false);
+      setCode("");
+      setNote("Build loaded from the code");
+    } catch (e) {
+      setNote(e instanceof Error ? e.message : String(e));
+    }
+  };
+  return (
+    <span className="share">
+      <button className="ghost" onClick={share} title="Copy the build as a code to paste anywhere">
+        Share
+      </button>
+      <button className="ghost" onClick={() => setImporting(!importing)} title="Load a build from a code">
+        Import
+      </button>
+      {importing && (
+        <>
+          <input
+            className="share-code"
+            placeholder="Paste a BCMA1. build code"
+            value={code}
+            onChange={(e) => setCode(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && load()}
+            onFocus={(e) => e.target.select()}
+            autoFocus
+          />
+          <button onClick={load} disabled={!code.trim()}>
+            Load
+          </button>
+        </>
+      )}
+      {note && <span className="muted">{note}</span>}
+    </span>
+  );
+}
+
+export default function BuildBar({ build, heroes, sheet, items, onChange }: Props) {
   const count = build.purchases.length;
   const upto = build.upto ?? count;
   const owned = new Set(sheet?.owned ?? []);
@@ -59,6 +118,7 @@ export default function BuildBar({ build, sheet, items, onChange }: Props) {
             </button>
           </>
         )}
+        <ShareButtons build={build} heroes={heroes} items={items} onChange={onChange} />
       </div>
       <div className="chips">
         {count === 0 && <span className="muted">Click an item in the shop to add it to your build.</span>}

@@ -3,6 +3,7 @@ import { api, Build, FightSide, fmt, HistoryEntry, LocalScan, MatchPlayer, Match
 import { MatchDuels, MatchLanes, MatchMap, MatchTrend } from "./MatchExtras";
 import { Bars, clock, FightStrip, LineChart, Marker, Series } from "./MatchCharts";
 import MatchCompare from "./MatchCompare";
+import DeathAnalysisPanel from "./DeathAnalysisPanel";
 
 interface Props {
   /** Opens a build from the match in the builder. */
@@ -596,6 +597,7 @@ function PlayerDetail({
             against two or more enemies or more than 50 m into the enemy's side. The last column is what the team then went into while{" "}
             {player.hero_name} was still dead.
           </div>
+          <DeathAnalysisPanel key={`${report.match_id}-${player.slot}`} matchId={report.match_id} slot={player.slot} hero={player.hero_name} />
           <table className="match-table compare timing">
             <thead>
               <tr>

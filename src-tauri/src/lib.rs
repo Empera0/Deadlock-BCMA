@@ -78,6 +78,14 @@ fn compute(state: State<AppState>, build: BuildInput) -> Result<calc::Sheet, Str
     calc::compute(&state.data.read().unwrap(), &build)
 }
 
+/// Buys, upgrades and one-for-one swaps for the build, measured for a playstyle. Off the main thread: it runs
+/// a fight for every item with every owned item sold in turn.
+#[tauri::command]
+async fn advise_build(state: State<'_, AppState>, build: BuildInput, style: String) -> Result<engine::advisor::Advice, String> {
+    let data = state.data.read().unwrap().clone();
+    tauri::async_runtime::spawn_blocking(move || engine::advisor::advise(&data, &build, &style)).await.map_err(|e| e.to_string())?
+}
+
 #[tauri::command]
 fn rank_next(
     state: State<AppState>,
@@ -375,6 +383,13 @@ async fn match_json(app: &AppHandle, match_id: u64) -> Result<String, String> {
     Ok(json)
 }
 
+/// Why a player in a match died, death by death, and what would have helped.
+#[tauri::command]
+async fn death_analysis(app: AppHandle, state: State<'_, AppState>, match_id: u64, slot: u32) -> Result<engine::deaths::DeathAnalysis, String> {
+    let json = match_json(&app, match_id).await?;
+    engine::deaths::analyze(&state.data.read().unwrap(), &json, slot)
+}
+
 #[derive(serde::Serialize)]
 struct Trend {
     rows: Vec<matches::MatchSummary>,
@@ -591,6 +606,7 @@ pub fn run() {
             get_data,
             compute,
             rank_next,
+            advise_build,
             suggest_builds,
             rift_comeback,
             power_curve,
@@ -604,6 +620,7 @@ pub fn run() {
             load_build,
             delete_build,
             fetch_match,
+            death_analysis,
             match_history,
             find_local_matches,
             analyze_history

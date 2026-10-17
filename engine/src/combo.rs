@@ -1271,7 +1271,7 @@ const PARRY_STUN: f64 = 2.75;
 const PARRY_AMP: f64 = 25.0;
 
 /// Enemy active items the combo can play.
-const ENEMY_ACTIVES: [&str; 7] = ["Metal Skin", "Ethereal Shift", "Divine Barrier", "Guardian Ward", "Majestic Leap", "Colossus", "Dispel Magic"];
+pub const ENEMY_ACTIVES: [&str; 7] = ["Metal Skin", "Ethereal Shift", "Divine Barrier", "Guardian Ward", "Majestic Leap", "Colossus", "Dispel Magic"];
 
 struct Sim {
     t: f64,

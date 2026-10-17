@@ -58,3 +58,30 @@ fn builds_are_put_together_per_playstyle_stage_by_stage() {
     let melee_items = ["Melee Charge", "Lifestrike", "Crushing Fists", "Melee Lifesteal", "Spirit Snatch", "Colossus"];
     assert!(s.builds[0].items.iter().filter(|i| melee_items.contains(&i.name.as_str())).count() >= 2);
 }
+
+#[test]
+fn the_advisor_buys_upgrades_and_swaps() {
+    let d = data();
+    let names = [
+        "Extra Health", "Extra Regen", "Extra Stamina", "Sprint Boots", "Melee Lifesteal", "Rebuttal",
+        "Close Quarters", "Headshot Booster", "High-Velocity Rounds", "Extra Charge", "Extra Spirit", "Mystic Burst",
+    ];
+    let purchases: Vec<String> = names.iter().map(|n| d.items.iter().find(|i| i.name == *n).unwrap_or_else(|| panic!("{n}")).class_name.clone()).collect();
+    let b = BuildInput { hero: "hero_haze".into(), purchases, souls: Some(20_000), ability_tiers: vec![1, 1, 1, 1], ..Default::default() };
+    let started = std::time::Instant::now();
+    let a = engine::advisor::advise(&d, &b, "hybrid").unwrap();
+    println!("{:.1}s free {} slots {}/{}", started.elapsed().as_secs_f64(), a.free_souls, a.slots_used, a.slot_limit);
+    for m in a.upgrades.iter().chain(&a.swaps).chain(&a.buys) {
+        println!("{} {:?} -> {} paid {} net {} gain {:.3}", m.kind, m.sell_name, m.buy_name, m.paid, m.net_cost, m.gain);
+    }
+    println!("worst: {:?}", a.worth.iter().map(|w| (&w.name, (w.loss * 1000.0).round())).collect::<Vec<_>>());
+    assert_eq!(a.slots_used, 12);
+    // The slots are full: nothing new fits without selling, but an owned item can be upgraded.
+    assert!(a.buys.is_empty());
+    assert!(!a.swaps.is_empty() && !a.upgrades.is_empty());
+    for m in &a.swaps {
+        assert!(m.sell.is_some() && m.paid <= a.free_souls + m.refund && m.gain > 0.0);
+    }
+    assert_eq!(a.worth.len(), 12);
+    assert!(a.worth.windows(2).all(|w| w[0].loss <= w[1].loss));
+}

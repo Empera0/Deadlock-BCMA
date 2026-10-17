@@ -838,3 +838,19 @@ fn macro_mistakes_are_part_of_the_score() {
         assert!((r.parts.iter().map(|x| x.max_points).sum::<f64>() - 100.0).abs() < 1e-9);
     }
 }
+
+#[test]
+fn death_analysis_studies_each_death() {
+    let data = data();
+    let json = std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/tests/sample-match.json")).unwrap();
+    let report = engine::deaths::analyze(&data, &json, 3).unwrap();
+    assert!(!report.deaths.is_empty());
+    for d in &report.deaths {
+        assert!(d.fight_damage > 0.0 && d.my_health > 0.0, "{d:?}");
+        assert!(d.window_from < d.window_to && d.time <= d.window_to);
+        assert!(!d.verdict.is_empty());
+        for f in &d.fixes {
+            assert!(f.health_taken < d.health_taken);
+        }
+    }
+}

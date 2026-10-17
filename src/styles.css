@@ -3983,3 +3983,122 @@ header.match {
 .news-item {
   margin-bottom: 6px;
 }
+
+/* Death analysis */
+.death-analysis {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 8px 0 12px;
+}
+.death-analysis > button {
+  align-self: flex-start;
+}
+.death-fixes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+.death-fix {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px 3px 3px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--panel);
+  font-size: 12px;
+}
+.death-fix.owned {
+  border-color: var(--accent);
+}
+.death-fix img {
+  width: 24px;
+  height: 24px;
+}
+.death-fix span {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+.death-fix small {
+  color: var(--muted);
+}
+.death-study {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 6px 10px;
+}
+.death-study summary {
+  cursor: pointer;
+}
+.death-study h4 {
+  margin: 6px 0 4px;
+  font-size: 13px;
+}
+.death-cols {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+/* Buy, upgrade or sell */
+.advisor h4 {
+  margin: 10px 0 4px;
+  font-size: 12px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.advice-move {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  margin-bottom: 4px;
+  text-align: left;
+}
+.advice-move img {
+  width: 22px;
+  height: 22px;
+}
+.advice-move img.sold {
+  opacity: 0.55;
+}
+.advice-move b {
+  margin-left: auto;
+  color: var(--vitality);
+}
+.advice-worth {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.advice-worth span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font-size: 12px;
+}
+.advice-worth img {
+  width: 18px;
+  height: 18px;
+}
+
+/* Build share code */
+.share {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+.share-code {
+  width: 240px;
+  font-family: ui-monospace, monospace;
+  font-size: 12px;
+}

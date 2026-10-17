@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Build, fmt, Group, Hero, Ranked, ScaledProp, Sheet, Stat } from "../api";
 import InvestBars from "./InvestBars";
+import Advisor from "./Advisor";
 
 interface Props {
   heroes: Hero[];
@@ -242,6 +243,8 @@ export default function StatsPanel(p: Props) {
           </button>
         ))}
       </div>
+
+      <Advisor build={build} onChange={p.onChange} />
     </aside>
   );
 }

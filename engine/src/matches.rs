@@ -564,15 +564,15 @@ pub struct PlayerReport {
     pub build: BuildInput,
 }
 
-fn num(v: &Value, key: &str) -> f64 {
+pub(crate) fn num(v: &Value, key: &str) -> f64 {
     v.get(key).and_then(Value::as_f64).unwrap_or(0.0)
 }
 
-fn int(v: &Value, key: &str) -> u32 {
+pub(crate) fn int(v: &Value, key: &str) -> u32 {
     num(v, key).max(0.0) as u32
 }
 
-fn list<'a>(v: &'a Value, key: &str) -> &'a [Value] {
+pub(crate) fn list<'a>(v: &'a Value, key: &str) -> &'a [Value] {
     v.get(key).and_then(Value::as_array).map(Vec::as_slice).unwrap_or(&[])
 }
 
@@ -2227,10 +2227,10 @@ const LANE_PHASE_S: u32 = 9 * 60;
 const LATE_GAME_S: u32 = 25 * 60;
 
 /// Damage-matrix rows that only repeat the sum of the detailed rows.
-const AGGREGATES: [&str; 4] = ["Ability", "Bullet", "Melee", "Misc"];
+pub(crate) const AGGREGATES: [&str; 4] = ["Ability", "Bullet", "Melee", "Misc"];
 
 /// Turns a damage source's internal name into what the player would call it.
-fn source_label(data: &GameData, raw: &str) -> String {
+pub(crate) fn source_label(data: &GameData, raw: &str) -> String {
     if raw.starts_with("citadel_weapon_") {
         return if raw.ends_with("_crit") { "Weapon (headshots)".into() } else { "Weapon".into() };
     }
@@ -2300,7 +2300,7 @@ fn pickups(player: &Value, prefix: &str, time: u32) -> f64 {
         .sum()
 }
 
-struct Events {
+pub(crate) struct Events {
     purchases: Vec<Purchase>,
     abilities: Vec<AbilityStep>,
     /// Item class -> ability index, with the time of the purchase.
@@ -2308,7 +2308,7 @@ struct Events {
     unknown: u32,
 }
 
-fn events(data: &GameData, hero: &Hero, player: &Value) -> Events {
+pub(crate) fn events(data: &GameData, hero: &Hero, player: &Value) -> Events {
     let mut out = Events { purchases: vec![], abilities: vec![], imbues: vec![], unknown: 0 };
     let ability_index = |id: u64| hero.abilities.iter().position(|a| a.id == id && id != 0);
     let mut seen = vec![0u8; hero.abilities.len()];
@@ -2342,7 +2342,7 @@ fn events(data: &GameData, hero: &Hero, player: &Value) -> Events {
 }
 
 /// The build a player had at a point in the match.
-fn build_at(hero: &Hero, events: &Events, time: u32, level: u32) -> BuildInput {
+pub(crate) fn build_at(hero: &Hero, events: &Events, time: u32, level: u32) -> BuildInput {
     let mut tiers = vec![0u8; hero.abilities.len().max(4)];
     for step in events.abilities.iter().filter(|s| s.time <= time) {
         tiers[step.index] = tiers[step.index].max(step.tier);
