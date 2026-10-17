@@ -546,3 +546,25 @@ fn the_zone_changes_the_targets_resists() {
     let ahead = zone(combo::Zone { rift: true, minute: 30.0, own_souls: 85_000.0, enemy_souls: 100_000.0, ..Default::default() });
     assert!(close(ahead.total, plain.total));
 }
+
+#[test]
+fn resist_reductions_combine_by_what_each_leaves() {
+    let d = data();
+    let b = BuildInput { target: engine::build::Target { health: 5000.0, bullet_resist: 50.0, spirit_resist: 0.0 }, ..build(&[]) };
+    let shoot = vec![Action::Shoot { seconds: 1.0 }];
+    let plain = combo::simulate(&d, &b, &ComboInput { actions: shoot.clone(), ..Default::default() }).unwrap();
+    // The fireballs of the hero's Walker take 10%: the target keeps 40% bullet resist.
+    let walker = combo::simulate(&d, &b, &ComboInput { actions: shoot, zone: combo::Zone { own_walker: true, ..Default::default() }, ..Default::default() }).unwrap();
+    assert!(close(walker.total / plain.total, 0.6 / 0.5), "{}", walker.total / plain.total);
+}
+
+#[test]
+fn lucky_shot_adds_a_quarter_to_the_shooting() {
+    let d = data();
+    let lucky = class_of(&d, "Lucky Shot");
+    let shoot = ComboInput { actions: vec![Action::Shoot { seconds: 4.0 }], ..Default::default() };
+    let with = combo::simulate(&d, &BuildInput { souls: Some(6400), ..build(&[&lucky]) }, &shoot).unwrap();
+    let bonus = source(&with, "Lucky Shot");
+    let weapon = source(&with, "Weapon");
+    assert!(bonus > 0.0 && (bonus / weapon - 0.25).abs() < 0.08, "{bonus} vs {weapon}");
+}

@@ -137,6 +137,51 @@ fn total(terms: &[Term]) -> f64 {
 }
 
 /// Resists combine multiplicatively: 1 − Π(1 − rᵢ).
+/// Fire rate with its bonuses and slows (deadlock.wiki, Fire Rate): bonuses add up, slows combine by what each
+/// lets through, and the total is the bonuses less the combined slow. A positive total raises the shots per second;
+/// a negative one lengthens the time between shots instead, and is never below -50%.
+pub fn fire_rate(base: f64, bonus_pct: f64, slow_pct: f64) -> f64 {
+    let total = (bonus_pct - slow_pct) / 100.0;
+    if total >= 0.0 {
+        base * (1.0 + total)
+    } else {
+        base / (1.0 + total.abs().min(MAX_FIRE_RATE_SLOW))
+    }
+}
+
+/// Heroes whose headshots deal less than the usual +65%: their crit bonus scale, percent (deadlock.wiki, Weapon
+/// Damage). The game data the app reads does not carry it.
+const CRIT_BONUS_SCALE: [(&str, f64); 9] = [
+    ("hero_baba", -20.0),
+    ("hero_punkgoat", -20.0),
+    ("hero_unicorn", -25.0),
+    ("hero_doorman", -30.0),
+    ("hero_drifter", -45.0),
+    ("hero_kelvin", -25.0),
+    ("hero_familiar", -20.0),
+    ("hero_viper", -30.0),
+    ("hero_artist", -20.0),
+];
+/// Heroes whose weapon cannot deal critical damage (Paige can still trigger headshot items).
+const NO_CRIT: [&str; 3] = ["hero_deadpack", "hero_necro", "hero_bookworm"];
+
+/// The weapon's headshot multiplier for a hero: 1 + (0.65 + crit bonus scale), or the weapon's own when it differs.
+pub fn crit_multiplier(hero: &str, weapon: f64) -> f64 {
+    if NO_CRIT.contains(&hero) {
+        return 1.0;
+    }
+    match CRIT_BONUS_SCALE.iter().find(|(h, _)| *h == hero) {
+        Some((_, scale)) => 1.0 + (0.65 + scale / 100.0),
+        None => weapon,
+    }
+}
+
+/// Share of the weapon damage bonus that melee damage gets.
+pub const MELEE_WEAPON_SHARE: f64 = 0.5;
+
+/// The largest fire rate penalty, as a share.
+pub const MAX_FIRE_RATE_SLOW: f64 = 0.5;
+
 fn combine_resist(terms: &[Term]) -> f64 {
     100.0 * (1.0 - terms.iter().map(|t| 1.0 - t.value / 100.0).product::<f64>())
 }
@@ -595,20 +640,29 @@ fn compute_at(data: &GameData, b: &BuildInput, force_level: Option<u32>) -> Resu
     if from_spirit("EFireRate") != 0.0 {
         fr_terms.insert(0, spirit_term("EFireRate", "%"));
     }
+    // Penalties (an item's own, or an enemy's slow) combine apart from the bonuses.
+    let (mut slow_terms, fr_terms): (Vec<Term>, Vec<Term>) = fr_terms.into_iter().partition(|t| t.value < 0.0);
+    for t in &mut slow_terms {
+        t.value = t.value.abs();
+    }
     if b.fire_rate_slow != 0.0 {
-        fr_terms.push(term("Fire rate slow from an enemy", -b.fire_rate_slow, "%"));
+        slow_terms.push(term("Fire rate slow from an enemy", b.fire_rate_slow, "%"));
     }
     let fr = total(&fr_terms);
     add("fire_rate_pct", "Fire rate bonus", "weapon", fr, "%", "Σ fire rate % (additive)", fr_terms);
-    let sps = w.shots_per_second * (1.0 + fr / 100.0);
+    let fr_slow = combine_resist(&slow_terms);
+    if fr_slow != 0.0 {
+        add("fire_rate_slow", "Fire rate slow", "weapon", fr_slow, "%", "1 − Π(1 − slowᵢ)  (slows combine multiplicatively)", slow_terms);
+    }
+    let sps = fire_rate(w.shots_per_second, fr, fr_slow);
     add(
         "shots_per_second",
         "Shots per second",
         "weapon",
         sps,
         "/s",
-        "base shots/s × (1 + fire rate %)",
-        vec![term("Base shots/s", w.shots_per_second, ""), term("Fire rate bonus", fr, "%")],
+        "base shots/s × (1 + bonus − slow); below zero, base ÷ (1 + |bonus − slow|), at most −50%",
+        vec![term("Base shots/s", w.shots_per_second, ""), term("Fire rate bonus", fr, "%"), term("Fire rate slow", -fr_slow, "%")],
     );
 
     let clip_pct_terms = bag.take(&["MODIFIER_VALUE_AMMO_CLIP_SIZE_PERCENT"]);
@@ -619,11 +673,12 @@ fn compute_at(data: &GameData, b: &BuildInput, force_level: Option<u32>) -> Resu
         extra.value = extra.value.floor();
         clip_flat_terms.insert(0, extra);
     }
-    let clip = (w.clip_size * (1.0 + total(&clip_pct_terms) / 100.0)).round() + total(&clip_flat_terms);
+    // Flat bonuses first, then the percentage bonuses, rounded up (deadlock.wiki, Ammo).
+    let clip = ((w.clip_size + total(&clip_flat_terms)) * (1.0 + total(&clip_pct_terms) / 100.0) - 1e-9).ceil();
     let mut clip_terms = vec![term("Base magazine", w.clip_size, "")];
     clip_terms.extend(clip_pct_terms);
     clip_terms.extend(clip_flat_terms);
-    add("clip_size", "Magazine", "weapon", clip, "", "round(base × (1 + ammo %)) + flat", clip_terms);
+    add("clip_size", "Magazine", "weapon", clip, "", "(base + flat) × (1 + ammo %), rounded up", clip_terms);
 
     let reload_terms = bag.take(&["MODIFIER_VALUE_RELOAD_SPEED"]);
     let reload = w.reload_time / (1.0 + total(&reload_terms) / 100.0);
@@ -685,19 +740,21 @@ fn compute_at(data: &GameData, b: &BuildInput, force_level: Option<u32>) -> Resu
             term("Reload time", reload, "s"),
         ],
     );
+    let crit = crit_multiplier(&hero.class_name, w.crit_multiplier);
     add(
         "crit_multiplier",
         "Headshot multiplier",
         "weapon",
-        w.crit_multiplier,
+        crit,
         "×",
-        "the weapon's base headshot multiplier",
+        "1 + 0.65 + the hero's crit bonus scale (some heroes hit heads for less, some cannot at all)",
         vec![],
     );
 
     let melee_growth = per_boon("MODIFIER_VALUE_BASE_MELEE_DAMAGE_FROM_LEVEL");
     let melee_terms = bag.take(&["MODIFIER_VALUE_MELEE_DAMAGE_INCREASE"]);
-    let melee_pct = total(&melee_terms);
+    // Melee damage gains half of every weapon damage bonus (deadlock.wiki, Melee Damage).
+    let melee_pct = total(&melee_terms) + MELEE_WEAPON_SHARE * wd;
     for (key, label, base_key) in [
         ("light_melee", "Light melee", "light_melee_damage"),
         ("heavy_melee", "Heavy melee", "heavy_melee_damage"),
@@ -712,13 +769,16 @@ fn compute_at(data: &GameData, b: &BuildInput, force_level: Option<u32>) -> Resu
             t.push(spirit_term("EHeavyMeleeDamage", ""));
         }
         t.extend(melee_terms.clone());
+        if wd != 0.0 {
+            t.push(term(format!("Half of the weapon damage bonus ({}%)", fmt(wd)), MELEE_WEAPON_SHARE * wd, "%"));
+        }
         add(
             key,
             label,
             "weapon",
             (base(base_key) + boons * melee_growth + extra) * (1.0 + melee_pct / 100.0),
             "",
-            "(base + boons × per-level gain + spirit scaling) × (1 + melee %)",
+            "(base + boons × per-level gain + spirit scaling) × (1 + melee % + ½ weapon damage %)",
             t,
         );
     }
@@ -918,7 +978,9 @@ fn compute_at(data: &GameData, b: &BuildInput, force_level: Option<u32>) -> Resu
     );
     let sp_pct_terms = bag.take(&["MODIFIER_VALUE_TECH_POWER_PERCENT"]);
     // Spirit power taken away by an enemy (Spirit Sap, Focus Lens) stops at zero.
-    let spirit_power = ((boons * sp_growth + total(&sp_flat_terms)) * (1.0 + total(&sp_pct_terms) / 100.0)).max(0.0);
+    // Percentage bonuses to spirit power multiply each other (deadlock.wiki, Spirit Power).
+    let sp_mult: f64 = sp_pct_terms.iter().map(|t| 1.0 + t.value / 100.0).product();
+    let spirit_power = ((boons * sp_growth + total(&sp_flat_terms)) * sp_mult).max(0.0);
     let mut sp_terms = vec![term(format!("Level: {boon_count} boons × {}", fmt(sp_growth)), boons * sp_growth, "")];
     sp_terms.extend(sp_flat_terms);
     sp_terms.extend(sp_pct_terms);
@@ -928,7 +990,7 @@ fn compute_at(data: &GameData, b: &BuildInput, force_level: Option<u32>) -> Resu
         "spirit",
         spirit_power,
         "",
-        "(boons × per-level gain + investment + Σ items) × (1 + spirit power %), not below 0",
+        "(boons × per-level gain + investment + Σ items) × Π(1 + spirit power %ᵢ), not below 0",
         sp_terms,
     );
     let mut spirit_mods = [0.0; 3];
@@ -989,8 +1051,10 @@ fn compute_at(data: &GameData, b: &BuildInput, force_level: Option<u32>) -> Resu
     // --- Target ---
     let bullet_shred_terms = bag.take(&["MODIFIER_VALUE_BULLET_AND_MELEE_RESIST_REDUCTION"]);
     let spirit_shred_terms = bag.take(&["MODIFIER_VALUE_TECH_RESIST_REDUCTION"]);
-    let bullet_shred = total(&bullet_shred_terms).abs();
-    let spirit_shred = total(&spirit_shred_terms).abs();
+    // Resist reductions combine by what each leaves, then come off the target's resist (deadlock.wiki, Damage Resistance).
+    let shred = |terms: &[Term]| 100.0 * (1.0 - terms.iter().map(|t| 1.0 - t.value.abs() / 100.0).product::<f64>());
+    let bullet_shred = shred(&bullet_shred_terms);
+    let spirit_shred = shred(&spirit_shred_terms);
     let target_br = b.target.bullet_resist - bullet_shred;
     let target_sr = b.target.spirit_resist - spirit_shred;
     // A bonus or penalty to all damage the hero deals (e.g. Golden Goose Egg).
@@ -1001,10 +1065,10 @@ fn compute_at(data: &GameData, b: &BuildInput, force_level: Option<u32>) -> Resu
     let spirit_taken = (1.0 - target_sr / 100.0).max(0.0) * (1.0 + outgoing / 100.0);
     let mut t = vec![term("Target bullet resist", b.target.bullet_resist, "%")];
     t.extend(bullet_shred_terms);
-    add("target_bullet_resist", "Target net bullet resist", "target", target_br, "%", "target resist − resist shred", t);
+    add("target_bullet_resist", "Target net bullet resist", "target", target_br, "%", "target resist − (1 − Π(1 − shredᵢ))", t);
     let mut t = vec![term("Target spirit resist", b.target.spirit_resist, "%")];
     t.extend(spirit_shred_terms);
-    add("target_spirit_resist", "Target net spirit resist", "target", target_sr, "%", "target resist − resist shred", t);
+    add("target_spirit_resist", "Target net spirit resist", "target", target_sr, "%", "target resist − (1 − Π(1 − shredᵢ))", t);
 
     let target_dps = dps_sustained * bullet_taken;
     add(

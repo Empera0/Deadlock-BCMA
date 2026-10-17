@@ -406,6 +406,19 @@ pub fn hero_conditions(abilities: &[AbilitySheet]) -> Vec<HeroCondition> {
         let per = get("ability_drifter_hunger", "WeaponDmgPerIsolationKill");
         counted("hero:drifter_kills", "Isolated kills", "kills", 100.0, format!("+{}% weapon damage per kill", n(per)), Buff { weapon_pct: per, ..Default::default() });
     }
+    if has("ability_artist_tether") {
+        let per = get("ability_artist_tether", "SpiritPerPickup");
+        if per > 0.0 {
+            counted(
+                "hero:violet_sketches",
+                "Sketches of spirit heroes",
+                "sketches",
+                50.0,
+                format!("+{} spirit power per sketch collected from a spirit hero", n(per)),
+                Buff { spirit_power: per, ..Default::default() },
+            );
+        }
+    }
     if has("ability_vampirebat_batswarm") {
         let (per, max) = (get("ability_vampirebat_batswarm", "BonusBatsPerProc"), get("ability_vampirebat_batswarm", "BonusBatsMax"));
         if per > 0.0 {
@@ -869,6 +882,9 @@ fn healing(ability: &AbilitySheet, plan: &mut Plan, ctx: &Context, duration: Opt
             let time = seconds("AbilityChannelTime");
             plan.heals.push(Heal { max_pct: v("HealMaxHealthPercent") * time, ..over("aurora", v("HealingPerSecond"), time) });
         }
+        // --- Violet ---
+        "ability_artist_tether" if v("HealthRegen") > 0.0 => plan.heals.push(over("sketching", v("HealthRegen"), v("BuffDuration"))),
+        "ability_artist_bamboogrove" => steal(plan, 0.0, v("AbilityLifestealPercentHero"), 0.0, seconds("AbilityDuration")),
         // --- Grey Talon ---
         "ability_power_jump" => steal(plan, v("BulletLifestealPercent"), v("TechLifestealPercent"), 0.0, seconds("AbilityDuration")),
         // --- Haze ---
@@ -1551,6 +1567,54 @@ fn customize(ability: &AbilitySheet, plan: &mut Plan, ctx: &Context, duration: O
             for d in &mut plan.debuffs {
                 d.seconds += seconds("AbilityDuration");
             }
+        }
+        // --- Violet ---
+        "ability_artist_homingbrush" => {
+            // The next few bullets hit harder and splash spirit damage; they are fired at the gun's own pace.
+            let shots = hit_override.unwrap_or(v("MaxShots"));
+            let extra = (v("BulletDamageMultiplier") / 100.0 - 1.0).max(0.0) * weapon;
+            let spread = if ctx.shots_per_second > 0.0 { shots / ctx.shots_per_second } else { 0.0 };
+            plan.parts = vec![
+                hits("Empowered bullets (bonus bullet damage)", Kind::Bullet, extra, shots, spread, 1.0),
+                hits("Ink splash", Kind::Spirit, v("Damage"), shots, spread, 1.0),
+            ];
+            plan.buff = Buff::default();
+            plan.notes.push(format!(
+                "Counts the bonus of {} empowered bullets ({}% bullet damage) on top of the shooting; enter how many hit in the hits box. Each hit on a hero takes {}s off all ability cooldowns (not simulated).",
+                n(shots),
+                n(v("BulletDamageMultiplier")),
+                n(v("CooldownReductionPerHit"))
+            ));
+        }
+        "ability_artist_rollingprojectile" => {
+            // Damage grows from the minimum to the maximum as the brush travels.
+            let travel = duration.unwrap_or(v("MaxDamageTime")).clamp(0.0, v("MaxDamageTime").max(0.0));
+            let share = if v("MaxDamageTime") > 0.0 { travel / v("MaxDamageTime") } else { 1.0 };
+            let damage = v("MinDamage") + (v("MaxDamage") - v("MinDamage")) * share;
+            plan.parts = vec![instant("Brush", Kind::Spirit, damage)];
+            plan.notes.push(format!(
+                "Deals {} to {} spirit damage, the maximum after {}s of travel; set the seconds to the travel time.",
+                n(v("MinDamage")),
+                n(v("MaxDamage")),
+                n(v("MaxDamageTime"))
+            ));
+        }
+        "ability_artist_tether" => {
+            let channel = seconds("AbilityChannelTime");
+            plan.parts = vec![dot("Sketching", Kind::Spirit, v("DPS"), channel), delayed("Finished sketch", Kind::Spirit, v("Damage"), channel)];
+            plan.buff = Buff::default();
+            plan.notes.push(format!(
+                "Assumes Violet keeps looking at the target for the whole {}s sketch, which then stuns it for {}s.",
+                n(channel),
+                n(v("StunDuration"))
+            ));
+        }
+        "ability_artist_bamboogrove" => {
+            plan.parts = vec![instant("Leaving the ink", Kind::Spirit, v("Damage"))];
+            plan.notes.push(format!(
+                "Counts the hit of an enemy leaving the display, which also silences it for {}s. Violet and her allies inside get the spirit power.",
+                n(v("SilenceDuration"))
+            ));
         }
         "ability_frank_revive" => {
             plan.buff = Buff::default();

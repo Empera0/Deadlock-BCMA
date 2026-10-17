@@ -161,3 +161,38 @@ fn base_stats_that_scale_with_spirit_power_grow_with_it() {
     // A hero without any scaling is untouched.
     assert!(hero("Infernus").spirit_scaling.is_empty());
 }
+
+fn class_of(d: &GameData, name: &str) -> String {
+    d.items.iter().find(|i| i.name == name).unwrap_or_else(|| panic!("{name} missing")).class_name.clone()
+}
+
+#[test]
+fn fire_rate_slows_lengthen_the_time_between_shots() {
+    // A bonus raises the shots per second; a penalty lengthens the time between shots, at most by half.
+    assert!(close(calc::fire_rate(2.0, 25.0, 0.0), 2.5));
+    assert!(close(calc::fire_rate(2.0, 0.0, 25.0), 2.0 / 1.25));
+    assert!(close(calc::fire_rate(2.0, 10.0, 80.0), 2.0 / 1.5));
+    assert!(close(calc::fire_rate(2.0, 30.0, 10.0), 2.0 * 1.2));
+}
+
+#[test]
+fn the_magazine_rounds_up_after_the_percentage_bonus() {
+    let d = data();
+    let hero = d.hero(INFERNUS).unwrap();
+    let magazine = class_of(&d, "Extended Magazine");
+    let s = calc::compute(&d, &build(INFERNUS, &[&magazine])).unwrap();
+    let pct = d.item(&magazine).unwrap().props.iter().find(|p| p.key == "BonusClipSizePercent").unwrap().value;
+    assert!(close(s.stat("clip_size").unwrap(), (hero.weapon.clip_size * (1.0 + pct / 100.0) - 1e-9).ceil()));
+}
+
+#[test]
+fn melee_gets_half_the_weapon_damage_bonus() {
+    let d = data();
+    // The same souls for both, so the level is the same.
+    let plain = calc::compute(&d, &BuildInput { souls: Some(800), ..build(INFERNUS, &[]) }).unwrap();
+    let rounds = class_of(&d, "High-Velocity Rounds");
+    let s = calc::compute(&d, &BuildInput { souls: Some(800), ..build(INFERNUS, &[&rounds]) }).unwrap();
+    let wd = s.stat("weapon_damage_pct").unwrap();
+    assert!(wd > 0.0);
+    assert!(close(s.stat("light_melee").unwrap(), plain.stat("light_melee").unwrap() * (1.0 + 0.5 * wd / 100.0)));
+}

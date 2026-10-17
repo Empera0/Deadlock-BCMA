@@ -21,6 +21,8 @@ const LIGHT_MELEE_TIME: f64 = 0.6;
 const HEAVY_MELEE_TIME: f64 = 1.0;
 const BUILDUP_DECAY_DELAY: f64 = 2.0;
 const BUILDUP_DECAY_RATE: f64 = 0.2;
+/// Seconds Alchemical Fire takes to reach its maximum damage.
+const ALCHEMICAL_FIRE_RAMP: f64 = 3.0;
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
@@ -400,6 +402,24 @@ fn item_effects(
                     }
                 }
             }
+            "Lucky Shot" => {
+                // An empowered bullet deals its damage again as bonus weapon damage that cannot crit (deadlock.wiki).
+                if let (Some(chance), Some(pct)) = (v("ProcChance"), v("CritDamagePercent")) {
+                    let stat = |key: &str| sheet.stat(key).unwrap_or(0.0);
+                    let per_shot = if stat("shots_per_second") > 0.0 { stat("dps_burst") / stat("shots_per_second") } else { 0.0 };
+                    passives.push(format!("{}: {}% of shots deal +{}% of their damage as bonus weapon damage (no crit)", e.name, n(chance), n(pct)));
+                    procs.push(proc(Trigger::Bullet { chance: chance / 100.0 }, Kind::Bullet, per_shot * pct / 100.0, 0.0));
+                }
+            }
+            "Stalker" => {
+                // Weapon damage at close range opens a wound: spirit damage over time.
+                if let (Some(dps), Some(seconds)) = (v("DPS"), v("DebuffDuration")) {
+                    let mut p = proc(Trigger::Bullet { chance: 1.0 }, Kind::Spirit, 0.0, cd);
+                    p.dot = Some((dps, seconds));
+                    passives.push(format!("{}: a shot at close range opens a wound for {} spirit DPS over {}s, {}s cooldown", e.name, n(dps), n(seconds), n(cd)));
+                    procs.push(p);
+                }
+            }
             "Mystic Shot" => {
                 if let Some(d) = v("ProcBonusMagicDamage") {
                     let cooldown = if cd > 0.0 { cd } else { proc_cd };
@@ -495,8 +515,17 @@ fn item_effects(
                 }
             }
             "Alchemical Fire" => {
+                // The fire grows from its starting DPS to its maximum over its first 3 seconds, then holds it
+                // (deadlock.wiki, Alchemical Fire): the average over its duration.
                 if let (Some(low), Some(high)) = (v("DPS"), v("DPSMax")) {
-                    actives.push(active(0.0, (low + high) / 2.0, 0.0));
+                    let time = v("AbilityDuration").unwrap_or(0.0);
+                    let ramp = ALCHEMICAL_FIRE_RAMP.min(time);
+                    let average = if time > 0.0 {
+                        ((low + (low + (high - low) * ramp / ALCHEMICAL_FIRE_RAMP)) / 2.0 * ramp + high * (time - ramp)) / time
+                    } else {
+                        high
+                    };
+                    actives.push(active(0.0, average, 0.0));
                 }
             }
             "Prism Blast" | "Shadow Strike" => {
@@ -1185,6 +1214,8 @@ struct Gun {
     pellets: f64,
     base_shots_per_second: f64,
     fire_rate_pct: f64,
+    /// Fire rate slows on the hero, combined; they come off the bonuses as the calculator does.
+    fire_rate_slow: f64,
     clip: f64,
     reload: f64,
     crit: f64,
@@ -1194,8 +1225,11 @@ struct Sim {
     t: f64,
     health: f64,
     dealt: f64,
+    /// The target's own resists, and the reductions the build always applies (its items' passive shred).
     bullet_resist: f64,
     spirit_resist: f64,
+    bullet_shred: f64,
+    spirit_shred: f64,
     kill_time: Option<f64>,
     dots: Vec<Dot>,
     pending: Vec<Pending>,
@@ -1378,25 +1412,31 @@ impl Sim {
 
     /// Share of raw damage the target takes right now, with every active debuff applied.
     fn taken(&self, kind: Kind) -> f64 {
-        let mut e = Effect::default();
+        // Resist reductions combine by what each leaves before coming off the resist; damage amps on the target
+        // multiply each other, every source as one (deadlock.wiki, Damage Resistance and Damage Amplification).
+        // Melee damage is weapon damage: bullet resist and bullet amps apply to it.
+        let weapon = matches!(kind, Kind::Bullet | Kind::Melee);
+        let (mut keep_bullet, mut keep_spirit) = (1.0 - self.bullet_shred / 100.0, 1.0 - self.spirit_shred / 100.0);
+        let mut amp = 1.0;
         for d in &self.debuffs {
             let stacks = d.stacks as f64;
-            e.bullet += d.per_stack.bullet * stacks;
-            e.spirit += d.per_stack.spirit * stacks;
-            e.spirit_amp += d.per_stack.spirit_amp * stacks;
-            e.bullet_amp += d.per_stack.bullet_amp * stacks;
-            e.all_amp += d.per_stack.all_amp * stacks;
+            keep_bullet *= (1.0 - d.per_stack.bullet * stacks / 100.0).max(0.0);
+            keep_spirit *= (1.0 - d.per_stack.spirit * stacks / 100.0).max(0.0);
+            let own = match kind {
+                Kind::Bullet | Kind::Melee => d.per_stack.bullet_amp,
+                Kind::Spirit => d.per_stack.spirit_amp,
+                Kind::Pure => 0.0,
+            };
+            amp *= 1.0 + (d.per_stack.all_amp + own) * stacks / 100.0;
         }
-        let taken = match kind {
-            Kind::Bullet => {
-                (1.0 - (self.bullet_resist - e.bullet) / 100.0).max(0.0) * (1.0 + (e.all_amp + e.bullet_amp) / 100.0)
-            }
-            Kind::Spirit => {
-                (1.0 - (self.spirit_resist - e.spirit) / 100.0).max(0.0) * (1.0 + (e.all_amp + e.spirit_amp) / 100.0)
-            }
-            Kind::Melee | Kind::Pure => 1.0 + e.all_amp / 100.0,
+        let resisted = if weapon {
+            (1.0 - (self.bullet_resist - 100.0 * (1.0 - keep_bullet)) / 100.0).max(0.0)
+        } else if kind == Kind::Spirit {
+            (1.0 - (self.spirit_resist - 100.0 * (1.0 - keep_spirit)) / 100.0).max(0.0)
+        } else {
+            1.0
         };
-        taken * (1.0 + self.outgoing / 100.0)
+        resisted * amp * (1.0 + self.outgoing / 100.0)
     }
 
     /// Sum of every self buff active right now.
@@ -1840,7 +1880,7 @@ impl Sim {
                 self.log(&source, "stack proc", Some(dealt));
             }
             self.ammo = self.ammo.min(gun.clip);
-            let rate = gun.base_shots_per_second * (1.0 + (gun.fire_rate_pct + buff.fire_rate) / 100.0);
+            let rate = calc::fire_rate(gun.base_shots_per_second, gun.fire_rate_pct + buff.fire_rate, gun.fire_rate_slow);
             self.advance((self.t + 1.0 / rate).min(end));
         }
         let now = self.t;
@@ -2264,8 +2304,9 @@ pub fn simulate(data: &GameData, b: &BuildInput, combo: &ComboInput) -> Result<C
         base_bullet: stat("bullet_damage") / (1.0 + weapon_pct / 100.0),
         weapon_pct,
         pellets: hero.weapon.pellets,
-        base_shots_per_second: stat("shots_per_second") / (1.0 + fire_rate_pct / 100.0),
+        base_shots_per_second: hero.weapon.shots_per_second,
         fire_rate_pct,
+        fire_rate_slow: stat("fire_rate_slow"),
         clip: stat("clip_size"),
         reload: stat("reload_time"),
         crit: stat("crit_multiplier").max(1.0),
@@ -2332,8 +2373,10 @@ pub fn simulate(data: &GameData, b: &BuildInput, combo: &ComboInput) -> Result<C
         t: 0.0,
         health: b.target.health,
         dealt: 0.0,
-        bullet_resist: sheet.stat("target_bullet_resist").unwrap_or(b.target.bullet_resist),
-        spirit_resist: sheet.stat("target_spirit_resist").unwrap_or(b.target.spirit_resist),
+        bullet_resist: b.target.bullet_resist,
+        spirit_resist: b.target.spirit_resist,
+        bullet_shred: b.target.bullet_resist - sheet.stat("target_bullet_resist").unwrap_or(b.target.bullet_resist),
+        spirit_shred: b.target.spirit_resist - sheet.stat("target_spirit_resist").unwrap_or(b.target.spirit_resist),
         kill_time: None,
         dots: vec![],
         pending: vec![],
@@ -2446,7 +2489,9 @@ pub fn simulate(data: &GameData, b: &BuildInput, combo: &ComboInput) -> Result<C
                 };
                 sim.advance(sim.t + time);
                 sim.heavy_melee = *heavy;
-                let mut raw = stat(key) * (1.0 + sim.buff().melee_pct / 100.0);
+                // A weapon damage buff counts for half on melee, as it does in the calculator.
+                let melee_buff = sim.buff().melee_pct + calc::MELEE_WEAPON_SHARE * sim.buff().weapon_pct;
+                let mut raw = stat(key) * (1.0 + melee_buff / 100.0);
                 if *heavy {
                     let now = sim.t;
                     for (_, pct, cooldown, ready_at) in &mut sim.heavy_bonus {
