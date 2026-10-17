@@ -2,6 +2,27 @@
 
 All notable changes to Deadlock BCMA are listed here. Versions follow [semantic versioning](https://semver.org).
 
+## [0.2.33] – 2026-10-17
+
+This release lets the combo account for map buffs, parries and the enemy's defensive items, makes lane push count abilities, and connects the Master builder to the combo.
+
+### Added
+
+1. **Map buffs.** The combo panel has a "Your map buffs" section with the match minute, the Casting and Gun powerups, and the statue buffs collected by kind. Powerups grow from minute 5 to minute 40 (Casting: +15 to +65 spirit power and 12% to 20% cooldown reduction; Gun: +12% to +35% fire rate and +35% to +70% ammo); statue buffs count at their level for the minute (from minutes 10 and 30). The buffs belong to the build, so the Stats tab counts them too.
+2. **Parry.** A Parry action stuns the target for 2.75 s, during which it takes 25% more damage from every source.
+3. **The enemy's defensive items.** When the target is an enemy hero, its active items become combo actions:
+   - Metal Skin makes it immune to weapon damage, Ethereal Shift to all damage, for their duration.
+   - Divine Barrier, Guardian Ward and Majestic Leap give it a barrier.
+   - Colossus raises its bullet and spirit resist.
+   - Dispel Magic removes its debuffs and damage over time.
+
+   Weapon and Spirit Shielding grant their barrier once enough damage of their kind lands, and Cheat Death keeps it at 1 health for 4.5 s with 60% less damage taken. Damage taken by barriers is shown apart and does not count toward the kill.
+4. **Fight from the Master builder.** Each phase of a master build has a row of the enemy team, lane opponents first. Choosing an enemy loads your build as it stands at the end of that phase and opens the combo against that enemy's usual build at the same souls.
+
+### Changed
+
+5. **Lane push counts abilities.** Wave clear now adds the area damage of the three basic abilities, per cooldown, on the troopers they catch, so heroes that clear waves with abilities (Seven, Infernus, Violet) push with them and spirit items count toward it. Gun items such as Monster Rounds still count most for gun heroes.
+
 ## [0.2.32] – 2026-10-17
 
 This release adds Violet and brings the damage calculation in line with the formulas documented on the Deadlock wiki.
@@ -309,6 +330,7 @@ This release adds the **Build generator**, with builds read from top-ranked matc
   - trends across your last matches.
 - Windows installer with a desktop shortcut and automatic updates from GitHub releases.
 
+[0.2.33]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.32...v0.2.33
 [0.2.32]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.31...v0.2.32
 [0.2.31]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.30...v0.2.31
 [0.2.30]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.29...v0.2.30
