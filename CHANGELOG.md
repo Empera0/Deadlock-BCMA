@@ -2,6 +2,19 @@
 
 All notable changes to Deadlock BCMA are listed here. Versions follow [semantic versioning](https://semver.org).
 
+## [0.2.37] – 2026-10-17
+
+This release adds a draft helper that suggests which hero to pick and which to ban, from win rates fitted on real matches.
+
+### Added
+
+1. **Draft.** A new Draft screen in the sidebar takes your team, the enemy team, the bans and the enemies in your lane, and shows:
+   - the best picks, each with the win rate points it adds to your team and the team's chance with it, broken down into the hero's own strength, its matchups against each enemy, its lane results against your lane enemies and, with a Steam account ID, your own record on it over the last 90 days ("Only heroes I play" narrows the list to them);
+   - the enemy picks that hurt your team most, the best bans with how often each hero is banned, and the draft's chance as it stands;
+   - a "Plan build" button on each pick that opens the master builder with both teams and the lane.
+
+   Win rates come from the last 30 days of matches at the chosen rank. The weights were fitted on 8,700 Ascendant+ matches against the statistics of the 30 days before them, and the predicted chances match the results: drafts given 45% won 45%, drafts given 55% won 56%. Pairs of allies did not predict wins and are not counted. At this level a draft moves a match by a few points, and the screen says so.
+
 ## [0.2.36] – 2026-10-17
 
 This release makes the shop look the same on every screen.
@@ -367,6 +380,7 @@ This release adds the **Build generator**, with builds read from top-ranked matc
   - trends across your last matches.
 - Windows installer with a desktop shortcut and automatic updates from GitHub releases.
 
+[0.2.37]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.36...v0.2.37
 [0.2.36]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.35...v0.2.36
 [0.2.35]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.34...v0.2.35
 [0.2.34]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.33...v0.2.34
