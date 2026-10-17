@@ -2,6 +2,20 @@
 
 All notable changes to Deadlock BCMA are listed here. Versions follow [semantic versioning](https://semver.org).
 
+## [0.2.34] – 2026-10-17
+
+This release shows how a master build grows over the match, adds a jungle farming calculator, keeps the game data current by itself, and tells you what changed after each update.
+
+### Added
+
+1. **Power curve.** Under each master build, two charts show its fight damage (every ability and active item once and six seconds of shooting) and its effective health every 1,000 souls. Steps that raise the fight damage by 15% or more, and by over twice the usual step, are marked as power spikes, with the items bought there. Hovering a point shows the souls, both numbers and what was bought.
+2. **Farming the jungle.** The Misc tab now shows, for a minute of the match, how long the build takes to clear a small, medium and large camp and the souls per minute of clearing such camps one after another. It counts the three basic abilities once on the camp (area abilities hit every haunt) and then the gun, with weapon damage that only works on units (Monster Rounds, Cultist Sacrifice), and Cultist Sacrifice's extra souls. Haunt health, bounties and resists come from the wiki; haunts grow 2.1% in health per minute.
+3. **What's new.** After the app updates itself, a dialog shows the changes of the new version, and of any versions skipped, once.
+
+### Changed
+
+4. **Game data on every start.** The app now fetches the game data again each time it starts, so a new hero or patch shows up without pressing "Update data"; the status line says when a new hero arrives.
+
 ## [0.2.33] – 2026-10-17
 
 This release lets the combo account for map buffs, parries and the enemy's defensive items, makes lane push count abilities, and connects the Master builder to the combo.
@@ -330,6 +344,7 @@ This release adds the **Build generator**, with builds read from top-ranked matc
   - trends across your last matches.
 - Windows installer with a desktop shortcut and automatic updates from GitHub releases.
 
+[0.2.34]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.33...v0.2.34
 [0.2.33]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.32...v0.2.33
 [0.2.32]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.31...v0.2.32
 [0.2.31]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.30...v0.2.31
