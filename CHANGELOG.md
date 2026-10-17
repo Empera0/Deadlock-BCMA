@@ -2,6 +2,21 @@
 
 All notable changes to Deadlock BCMA are listed here. Versions follow [semantic versioning](https://semver.org).
 
+## [0.2.35] – 2026-10-17
+
+This release explains each death in a match, advises what to buy, upgrade or sell next, and lets builds be shared as a code.
+
+### Added
+
+1. **Death analysis.** In the match view, the Deaths section of a player has a "Why did … die?" button. For each death it shows:
+   - the killer's full fight (every ability and active item once and eight seconds of shooting) against the builds both players had at the time: how fast it kills on its own, or how much of the health it takes, and how much of it is gun damage;
+   - what hit the player, by hero and source, in the match data's three-minute interval around the death;
+   - the fixes: the player's own defensive actives (Metal Skin, Ethereal Shift and the like) used as the fight starts, and the vitality items that would have kept the player alive or slowed the kill most for their price, up to 1,600 souls in the lane, 3,200 until 20 minutes and 6,400 after.
+
+   A summary names the gun and spirit share of the damage, the hero that killed the player most and the item that would have helped in the most deaths.
+2. **Buy, upgrade or sell.** The Stats tab has an advisor that, for a chosen playstyle, lists the affordable items that add the most to its fight, the best upgrades of owned items, and one-for-one swaps that sell an owned item at half its price for a better one. It also shows how much each owned item adds to the fight, so the weakest is easy to see. Clicking a move applies it to the build.
+3. **Build share codes.** The purchase bar has Share and Import. Share copies a short `BCMA1.` code with the hero, purchase order, souls, ability upgrades, imbues and toggled effects; Import loads a pasted code and says what is wrong with a damaged one.
+
 ## [0.2.34] – 2026-10-17
 
 This release shows how a master build grows over the match, adds a jungle farming calculator, keeps the game data current by itself, and tells you what changed after each update.
@@ -344,6 +359,7 @@ This release adds the **Build generator**, with builds read from top-ranked matc
   - trends across your last matches.
 - Windows installer with a desktop shortcut and automatic updates from GitHub releases.
 
+[0.2.35]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.34...v0.2.35
 [0.2.34]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.33...v0.2.34
 [0.2.33]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.32...v0.2.33
 [0.2.32]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.31...v0.2.32
