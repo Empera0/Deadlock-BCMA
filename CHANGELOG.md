@@ -2,6 +2,34 @@
 
 All notable changes to Deadlock BCMA are listed here. Versions follow [semantic versioning](https://semver.org).
 
+## [0.2.32] – 2026-10-17
+
+This release adds Violet and brings the damage calculation in line with the formulas documented on the Deadlock wiki.
+
+### Added
+
+1. **Violet.** The game data is updated to version 6793 with the new hero Violet:
+   - **Living Ink:** the next 3 bullets deal more bullet damage and splash spirit damage.
+   - **Flow State:** damage grows from 50 to 100 as the brush travels; set the seconds to the travel time.
+   - **Still Life:** spirit damage over the 2.6 s sketch, then a finishing hit and a 1 s stun.
+   - **Abstract Landscape:** damage and silence to an enemy leaving the display, and spirit power for Violet.
+   - **Sketches:** sketches collected from spirit heroes are a counted combo condition.
+2. **Lucky Shot and Stalker in the combo.** Lucky Shot's empowered bullets deal their damage again as bonus weapon damage (about a quarter more from the gun), and Stalker's wound deals its spirit damage over time.
+
+### Changed
+
+3. **Resist reductions.** Several reductions now combine by what each leaves before they come off the target's resist, so 25% and 20% make 40%, not 45%.
+4. **Damage amplification on the target.** Amps from different sources, such as Napalm, Malice and Escalating Exposure, now multiply each other instead of adding up.
+5. **Fire rate slows.** Slows now combine multiplicatively and lengthen the time between shots, at most by half, instead of being subtracted from the fire rate bonus.
+6. **Spirit power percentages.** Percentage bonuses to spirit power, such as Boundless Spirit, now multiply each other.
+7. **Alchemical Fire.** The fire's damage ramps up over its first 3 seconds, which the combo now follows.
+
+### Fixed
+
+8. **Headshot multipliers.** Every hero was given the usual 1.65. Drifter now deals 1.20, The Doorman and Vyper 1.35, Celeste and Kelvin 1.40, and Baba, Billy, Rem and Violet 1.45; Deadman Danny, Graves and Paige cannot deal critical damage.
+9. **Melee damage.** Melee now gains half of every weapon damage bonus, and the combo applies the target's bullet resist to it.
+10. **Magazine size.** Flat bonuses are added before the percentage bonuses and the result is rounded up.
+
 ## [0.2.31] – 2026-10-16
 
 This release keeps the lane push from crowding out other lane items on spirit heroes and shows why each item was or was not bought without an extra click.
@@ -281,6 +309,7 @@ This release adds the **Build generator**, with builds read from top-ranked matc
   - trends across your last matches.
 - Windows installer with a desktop shortcut and automatic updates from GitHub releases.
 
+[0.2.32]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.31...v0.2.32
 [0.2.31]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.30...v0.2.31
 [0.2.30]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.29...v0.2.30
 [0.2.29]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.28...v0.2.29
