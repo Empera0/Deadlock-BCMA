@@ -15,7 +15,6 @@
 use crate::build::BuildInput;
 use crate::calc;
 use crate::data::{GameData, Item};
-use crate::kit;
 use crate::matches::TEAM_ITEMS;
 use crate::popular::{self, CounterPlan, ItemStat, Matchup};
 use crate::suggest;
@@ -118,48 +117,21 @@ const PUSH_FULL: f64 = 0.3;
 /// lets it stand in the wave (by the square root of the damage taken, as staying power is only half of clearing).
 fn wave_clear(data: &GameData, b: &BuildInput) -> Option<f64> {
     let sheet = calc::compute(data, b).ok()?;
-    let stat = |key: &str| sheet.stat(key).unwrap_or(0.0);
-    let owned = || sheet.owned.iter().filter_map(|c| data.item(c)).flat_map(|i| i.props.iter());
-    let npc_power: f64 = owned().filter(|p| p.key == "NonPlayerBonusWeaponPower").map(|p| p.value).sum();
-    let npc_resist: f64 = owned().filter(|p| p.key == "NonPlayerBulletResist").map(|p| p.value).fold(0.0, f64::max);
-    let weapon = stat("weapon_damage_pct");
-    let dps = stat("dps_sustained") * (1.0 + (weapon + npc_power) / 100.0) / (1.0 + weapon / 100.0).max(0.01);
-    // Abilities that hit an area clear the wave too: their damage per cast over their cooldown, for the
-    // hero's three basic abilities. Seven's Static Charge or Infernus' Napalm count as much as a gun does.
-    let pellets = data.hero(&b.hero).map(|h| h.weapon.pellets).unwrap_or(1.0);
-    let ctx = kit::Context { per_shot: stat("bullet_damage") * pellets, shots_per_second: stat("shots_per_second"), abilities: &sheet.abilities, flags: &[] };
-    let abilities: f64 = sheet
+    let npc = crate::farm::npc_damage(data, b, &sheet);
+    // Abilities that hit an area clear the wave too: their damage per cast over their cooldown on the troopers
+    // they catch, for the hero's three basic abilities. Seven's Static Charge or Infernus' Napalm count as much as
+    // a gun does.
+    let abilities: f64 = npc
         .abilities
         .iter()
-        .enumerate()
-        // The ultimate is kept for fights, not spent on troopers.
-        .filter(|(i, _)| *i < ULTIMATE_SLOT)
-        .filter(|(_, a)| a.props.iter().any(|p| (p.key.contains("Radius") || p.key.contains("Width")) && p.value > 0.0))
-        .map(|(_, a)| {
-            let cooldown = a.props.iter().find(|p| p.key == "AbilityCooldown").map(|p| p.value).unwrap_or(0.0);
-            let plan = kit::plan(a, &ctx, None, None);
-            if !plan.castable || cooldown <= 0.0 {
-                return 0.0;
-            }
-            let damage: f64 = plan
-                .parts
-                .iter()
-                .map(|part| match part {
-                    kit::Part::Instant { raw, .. } => *raw,
-                    kit::Part::Dot { dps, seconds, .. } => dps * seconds,
-                    kit::Part::Hits { raw, count, .. } => raw * *count as f64,
-                })
-                .sum();
-            damage * WAVE_AREA_HITS / cooldown.max(WAVE_MIN_COOLDOWN)
-        })
+        .filter(|(_, area, _)| *area)
+        .map(|(damage, _, cooldown)| damage * WAVE_AREA_HITS / cooldown.max(WAVE_MIN_COOLDOWN))
         .sum();
-    Some(dps / (1.0 - npc_resist.min(90.0) / 100.0).sqrt() + abilities)
+    Some(npc.gun_dps / (1.0 - npc.npc_bullet_resist.min(90.0) / 100.0).sqrt() + abilities)
 }
 
 /// A wave lasts this long at the least: an ability on a shorter cooldown does not hit it more often.
 const WAVE_MIN_COOLDOWN: f64 = 5.0;
-/// The ultimate's slot among the hero's abilities.
-const ULTIMATE_SLOT: usize = 3;
 /// Troopers an area ability catches in a wave, where the gun hits one at a time (an assumption).
 const WAVE_AREA_HITS: f64 = 3.0;
 

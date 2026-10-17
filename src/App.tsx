@@ -9,6 +9,7 @@ import MatchView from "./components/MatchView";
 import Shop from "./components/Shop";
 import StatsPanel from "./components/StatsPanel";
 import UpdateBanner from "./components/UpdateBanner";
+import WhatsNew from "./components/WhatsNew";
 
 const STORAGE_KEY = "current-build";
 const COMBO_KEY = "current-combo";
@@ -91,6 +92,17 @@ export default function App() {
         const restored = restoreBuild();
         const valid = restored && d.heroes.some((h) => h.class_name === restored.hero);
         setBuild(valid ? restored : emptyBuild(d.heroes[0].class_name));
+        // The game data is fetched again on every start, so a new hero or a patch shows up without a click.
+        api
+          .refreshData()
+          .then((fresh) => {
+            setData(fresh);
+            const known = new Set(d.heroes.map((h) => h.class_name));
+            const added = fresh.heroes.filter((h) => !known.has(h.class_name)).map((h) => h.name);
+            if (added.length) setStatus(`Game data updated: new hero ${added.join(", ")}`);
+            else if (fresh.client_version !== d.client_version) setStatus(`Game data updated to version ${fresh.client_version}`);
+          })
+          .catch(() => {});
       })
       .catch((e) => setStatus(String(e)));
     api.listBuilds().then(setSaved).catch(() => {});
@@ -210,6 +222,7 @@ export default function App() {
         ))}
         <div className="nav-foot">
           <UpdateBanner />
+          <WhatsNew />
           <small>
             Game {data.client_version ?? "?"} · {new Date(data.fetched_at * 1000).toLocaleDateString("en-US")}
           </small>
@@ -357,7 +370,7 @@ export default function App() {
             ) : tab === "combo" ? (
               <ComboPanel heroes={data.heroes} items={data.items} sheet={sheet} combo={combo} result={comboResult} onChange={setCombo} map={build.map} onMap={(map) => patch({ map })} />
             ) : (
-              <MiscPanel sheet={sheet} />
+              <MiscPanel sheet={sheet} build={build} />
             )}
           </div>
         )}

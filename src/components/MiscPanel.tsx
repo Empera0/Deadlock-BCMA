@@ -1,8 +1,74 @@
 import { useEffect, useState } from "react";
-import { api, fmt, RiftComeback, Sheet } from "../api";
+import { api, Build, FarmReport, fmt, RiftComeback, Sheet } from "../api";
+
+/** How fast the build clears each jungle camp at a minute of the match. */
+function Farming({ build }: { build: Build }) {
+  const [minute, setMinute] = useState(10);
+  const [report, setReport] = useState<FarmReport | null>(null);
+  useEffect(() => {
+    let stale = false;
+    api
+      .farmReport(build, minute)
+      .then((r) => !stale && setReport(r))
+      .catch(() => !stale && setReport(null));
+    return () => {
+      stale = true;
+    };
+  }, [build, minute]);
+  return (
+    <div className="group">
+      <h3>Farming the jungle</h3>
+      <p className="muted">
+        How long the build takes to clear each camp and the souls per minute of clearing such camps one after another: its three basic
+        abilities once on the camp (area abilities hit every haunt), then the gun, with weapon damage against units (Monster Rounds,
+        Cultist Sacrifice). Haunts grow 2.1% in health per minute.
+      </p>
+      <label className="field inline">
+        Minute
+        <input type="number" min={0} value={minute} onChange={(e) => setMinute(Math.max(0, Number(e.target.value) || 0))} />
+      </label>
+      {report && (
+        <>
+          <table className="farm-table">
+            <thead>
+              <tr>
+                <th>Camp</th>
+                <th>Health</th>
+                <th>Souls</th>
+                <th>Clear</th>
+                <th>Souls / min</th>
+              </tr>
+            </thead>
+            <tbody>
+              {report.camps.map((c) => (
+                <tr key={c.name} className={c.available ? "" : "muted"} title={c.available ? "" : "Not spawned yet at this minute"}>
+                  <td>{c.name}</td>
+                  <td>{fmt(c.health, 0)}</td>
+                  <td>{fmt(c.souls, 0)}</td>
+                  <td>{Number.isFinite(c.clear_seconds) ? `${fmt(c.clear_seconds, 1)}s` : "—"}</td>
+                  <td>
+                    <b>{fmt(c.souls_per_minute, 0)}</b>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {report.cultist_per_minute > 0 && (
+            <p>Cultist Sacrifice adds about {fmt(report.cultist_per_minute, 0)} souls per minute, consuming a large haunt each time it is ready.</p>
+          )}
+          {report.notes.map((n) => (
+            <p key={n} className="muted">
+              {n}
+            </p>
+          ))}
+        </>
+      )}
+    </div>
+  );
+}
 
 /** Map mechanics that depend on the state of the match: for now the Unstable Rift's comeback bonus. */
-export default function MiscPanel({ sheet }: { sheet: Sheet }) {
+export default function MiscPanel({ sheet, build }: { sheet: Sheet; build: Build }) {
   const [minute, setMinute] = useState(25);
   const [own, setOwn] = useState(130_000);
   const [enemy, setEnemy] = useState(131_000);
@@ -19,6 +85,7 @@ export default function MiscPanel({ sheet }: { sheet: Sheet }) {
 
   return (
     <aside className="panel">
+      <Farming build={build} />
       <div className="group">
         <h3>Unstable Rift comeback</h3>
         <p className="muted">

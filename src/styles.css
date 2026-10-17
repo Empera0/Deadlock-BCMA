@@ -3866,3 +3866,120 @@ header.match {
   height: 22px;
   border-radius: 3px;
 }
+
+/* Power curve of a master build */
+.power-charts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 12px;
+}
+
+.power-chart {
+  margin: 0;
+}
+
+.power-chart figcaption {
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 2px;
+}
+
+.power-chart svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  cursor: crosshair;
+}
+
+.power-chart .grid {
+  stroke: var(--line);
+  stroke-width: 1;
+}
+
+.power-chart .tick {
+  fill: var(--muted);
+  font-size: 10px;
+}
+
+.power-chart .crosshair {
+  stroke: var(--muted);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+}
+
+.power-readout {
+  min-height: 1.4em;
+  margin: 6px 0;
+  font-size: 13px;
+}
+
+.farm-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 6px 0;
+  font-size: 13px;
+}
+
+.farm-table th,
+.farm-table td {
+  padding: 3px 6px;
+  text-align: right;
+  border-bottom: 1px solid var(--line);
+}
+
+.farm-table th:first-child,
+.farm-table td:first-child {
+  text-align: left;
+}
+
+/* What's new after an update */
+.whats-new {
+  display: flex;
+  flex-direction: column;
+  width: min(720px, 92vw);
+  max-height: 84vh;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.whats-new-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+.whats-new-body {
+  overflow-y: auto;
+  padding: 6px 16px 14px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.whats-new-body h3 {
+  margin: 12px 0 4px;
+}
+
+.whats-new-body h4 {
+  margin: 10px 0 2px;
+  color: var(--accent);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.whats-new-body p {
+  margin: 4px 0;
+}
+
+.whats-new-body ul {
+  margin: 2px 0 4px 18px;
+  padding: 0;
+}
+
+.news-item {
+  margin-bottom: 6px;
+}

@@ -318,6 +318,21 @@ fn simulate_combo(
     combo::simulate(&state.data.read().unwrap(), &build, &combo)
 }
 
+/// The build's strength at each point of a master build, for the power curve.
+#[tauri::command]
+async fn power_curve(state: State<'_, AppState>, builds: Vec<BuildInput>) -> Result<Vec<Option<engine::suggest::PowerPoint>>, String> {
+    let data = state.data.read().unwrap().clone();
+    tauri::async_runtime::spawn_blocking(move || builds.iter().map(|b| engine::suggest::power(&data, b)).collect())
+        .await
+        .map_err(|e| e.to_string())
+}
+
+/// How fast the build clears each jungle camp at a minute of the match.
+#[tauri::command]
+fn farm_report(state: State<'_, AppState>, build: BuildInput, minute: f64) -> Result<engine::farm::FarmReport, String> {
+    engine::farm::farm(&state.data.read().unwrap(), &build, minute)
+}
+
 #[tauri::command]
 async fn refresh_data(app: AppHandle, state: State<'_, AppState>) -> Result<GameData, String> {
     let data = tauri::async_runtime::spawn_blocking(download)
@@ -578,6 +593,8 @@ pub fn run() {
             rank_next,
             suggest_builds,
             rift_comeback,
+            power_curve,
+            farm_report,
             popular_build,
             master_build,
             simulate_combo,

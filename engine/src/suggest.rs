@@ -615,3 +615,19 @@ pub fn suggest(data: &GameData, b: &BuildInput, styles: &[String], stage_souls: 
         builds,
     })
 }
+
+/// A build's strength at a point of the match, for the power curve.
+#[derive(Debug, Clone, Serialize)]
+pub struct PowerPoint {
+    pub souls: u32,
+    /// Damage of a full fight: every ability and active item once and six seconds of shooting.
+    pub fight_damage: f64,
+    /// Max health over what the resists let through.
+    pub effective_health: f64,
+}
+
+/// The build's fight damage and effective health, with conditional effects counted for half.
+pub fn power(data: &GameData, b: &BuildInput) -> Option<PowerPoint> {
+    let m = measure(data, b, &[Window::Hybrid])?;
+    Some(PowerPoint { souls: b.souls.unwrap_or(m.spent), fight_damage: m.damage[window_index(Window::Hybrid)], effective_health: m.effective_health })
+}

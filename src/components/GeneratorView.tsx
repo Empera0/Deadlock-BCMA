@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { api, Build, EMPTY_MAP, fmt, Hero, JudgedItem, MasterBuild, MasterItem, MasterReport, MatchPreset, PopularItem, PopularReport } from "../api";
+import PowerCurve from "./PowerCurve";
 import SuggestPanel from "./SuggestPanel";
 
 interface Props {
@@ -607,6 +608,8 @@ function MasterPanel({
               Use this build
             </button>
           </div>
+
+          <PowerCurve master={report.master} />
 
           <details className="counter-details">
             <summary>Counter picks only: two per stage</summary>

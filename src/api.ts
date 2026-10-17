@@ -295,6 +295,8 @@ export const api = {
   getData: () => invoke<GameData>("get_data"),
   refreshData: () => invoke<GameData>("refresh_data"),
   compute: (build: Build) => invoke<Sheet>("compute", { build }),
+  powerCurve: (builds: Build[]) => invoke<(PowerPoint | null)[]>("power_curve", { builds }),
+  farmReport: (build: Build, minute: number) => invoke<FarmReport>("farm_report", { build, minute }),
   popularBuild: (heroId: number) => invoke<PopularReport>("popular_build", { heroId }),
   masterBuild: (myHero: string, allies: number[], enemies: number[], lane: number[], focus: string, damage: string, bought: [string, number][] | null) =>
     invoke<MasterReport>("master_build", { myHero, allies, enemies, lane, focus, damage, bought }),
@@ -915,4 +917,29 @@ export interface MasterReport {
   };
   days: number;
   rank: string;
+}
+
+/** A build's strength at some souls. */
+export interface PowerPoint {
+  souls: number;
+  /** Every ability and active item once and six seconds of shooting. */
+  fight_damage: number;
+  effective_health: number;
+}
+
+export interface CampFarm {
+  name: string;
+  health: number;
+  souls: number;
+  clear_seconds: number;
+  souls_per_minute: number;
+  available: boolean;
+}
+
+export interface FarmReport {
+  minute: number;
+  gun_dps: number;
+  camps: CampFarm[];
+  cultist_per_minute: number;
+  notes: string[];
 }
