@@ -176,6 +176,22 @@ pub fn crit_multiplier(hero: &str, weapon: f64) -> f64 {
     }
 }
 
+/// Powerups (deadlock.wiki, Powerups): (at minute 5, at minute 40 and later).
+const POWERUP_FROM_MINUTE: f64 = 5.0;
+const POWERUP_FULL_MINUTE: f64 = 40.0;
+const POWERUP_CASTING_SPIRIT: (f64, f64) = (15.0, 65.0);
+const POWERUP_CASTING_CDR: (f64, f64) = (12.0, 20.0);
+const POWERUP_GUN_FIRE_RATE: (f64, f64) = (12.0, 35.0);
+const POWERUP_GUN_AMMO: (f64, f64) = (35.0, 70.0);
+/// Permanent statue buffs (deadlock.wiki, Permanent Buff): per buff, before minute 10, from 10, from 30.
+const STATUE_FIRE_RATE: [f64; 3] = [1.5, 2.0, 2.5];
+const STATUE_AMMO: [f64; 3] = [3.0, 5.0, 7.0];
+const STATUE_CDR: [f64; 3] = [0.5, 0.75, 1.0];
+const STATUE_WEAPON: [f64; 3] = [3.0, 4.0, 6.0];
+const STATUE_HEALTH: [f64; 3] = [15.0, 20.0, 30.0];
+const STATUE_SPIRIT: [f64; 3] = [2.0, 3.0, 4.0];
+const STATUE_RESIST: [f64; 3] = [0.5, 0.75, 1.0];
+
 /// Share of the weapon damage bonus that melee damage gets.
 pub const MELEE_WEAPON_SHARE: f64 = 0.5;
 
@@ -531,6 +547,41 @@ fn compute_at(data: &GameData, b: &BuildInput, force_level: Option<u32>) -> Resu
     for (k, v) in &hero.level_up {
         if *v != 0.0 && boons > 0.0 && !LEVEL_HANDLED.contains(&k.as_str()) && !k.contains("ALT_FIRE") {
             bag.push(k, &format!("Level ({boon_count} boons)"), v * boons, "", "");
+        }
+    }
+    // Map buffs: powerups grow in a straight line from minute 5 to minute 40; statue buffs have three levels.
+    let m = &b.map;
+    let grown = ((m.minute - POWERUP_FROM_MINUTE) / (POWERUP_FULL_MINUTE - POWERUP_FROM_MINUTE)).clamp(0.0, 1.0);
+    let lerp = |(lo, hi): (f64, f64)| lo + (hi - lo) * grown;
+    if m.casting {
+        bag.push("MODIFIER_VALUE_TECH_POWER", "Casting powerup", lerp(POWERUP_CASTING_SPIRIT), "", "");
+        bag.push("MODIFIER_VALUE_COOLDOWN_REDUCTION_PERCENTAGE", "Casting powerup", lerp(POWERUP_CASTING_CDR), "", "%");
+    }
+    if m.gun {
+        bag.push("MODIFIER_VALUE_FIRE_RATE", "Gun powerup", lerp(POWERUP_GUN_FIRE_RATE), "", "%");
+        bag.push("MODIFIER_VALUE_AMMO_CLIP_SIZE_PERCENT", "Gun powerup", lerp(POWERUP_GUN_AMMO), "", "%");
+    }
+    let statue_level = if m.minute >= 30.0 { 2 } else if m.minute >= 10.0 { 1 } else { 0 };
+    let st = &m.statues;
+    for (count, key, per, unit) in [
+        (st.fire_rate, "MODIFIER_VALUE_FIRE_RATE", STATUE_FIRE_RATE, "%"),
+        (st.ammo, "MODIFIER_VALUE_AMMO_CLIP_SIZE_PERCENT", STATUE_AMMO, "%"),
+        (st.weapon, "MODIFIER_VALUE_WEAPON_POWER", STATUE_WEAPON, "%"),
+        (st.health, "MODIFIER_VALUE_HEALTH_MAX", STATUE_HEALTH, ""),
+        (st.spirit, "MODIFIER_VALUE_TECH_POWER", STATUE_SPIRIT, ""),
+    ] {
+        if count > 0 {
+            bag.push(key, &format!("Statue buffs ×{count}"), per[statue_level] * count as f64, "", unit);
+        }
+    }
+    // Resists and cooldown reduction combine by what each leaves: one term per buff.
+    for (count, key, per) in [
+        (st.cooldown, "MODIFIER_VALUE_COOLDOWN_REDUCTION_PERCENTAGE", STATUE_CDR),
+        (st.bullet_resist, "MODIFIER_VALUE_BULLET_ARMOR_DAMAGE_RESIST", STATUE_RESIST),
+        (st.spirit_resist, "MODIFIER_VALUE_TECH_RESIST", STATUE_RESIST),
+    ] {
+        for _ in 0..count.min(100) {
+            bag.push(key, "Statue buff", per[statue_level], "", "%");
         }
     }
     if b.bonus_spirit != 0.0 {

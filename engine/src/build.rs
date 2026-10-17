@@ -21,6 +21,33 @@ impl Default for Target {
     }
 }
 
+/// Buffs picked up on the map (deadlock.wiki, Powerups and Permanent Buff).
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(default)]
+pub struct MapBuffs {
+    /// The match minute: powerups grow from minute 5 to 40, statue buffs have a level from minutes 10 and 30.
+    pub minute: f64,
+    /// The Casting powerup: spirit power and cooldown reduction.
+    pub casting: bool,
+    /// The Gun powerup: fire rate and ammo.
+    pub gun: bool,
+    /// How many permanent buffs of each kind were collected.
+    pub statues: Statues,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(default)]
+pub struct Statues {
+    pub fire_rate: u32,
+    pub ammo: u32,
+    pub cooldown: u32,
+    pub weapon: u32,
+    pub health: u32,
+    pub spirit: u32,
+    pub bullet_resist: u32,
+    pub spirit_resist: u32,
+}
+
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(default)]
 pub struct BuildInput {
@@ -40,6 +67,8 @@ pub struct BuildInput {
     pub copied_ult: Option<String>,
     /// Imbue items: item `class_name` -> index of the ability it is imbued into.
     pub imbues: BTreeMap<String, usize>,
+    /// Map buffs the hero carries: powerups and permanent statue buffs.
+    pub map: MapBuffs,
     /// Temporary spirit power from a buff. Set by the combo simulation, never saved with a build.
     #[serde(skip)]
     pub bonus_spirit: f64,

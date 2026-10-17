@@ -47,6 +47,10 @@ pub enum Action {
         count: Option<f64>,
     },
     Wait { seconds: f64 },
+    /// The hero parries the target's melee: it is stunned and takes more damage for a while.
+    Parry,
+    /// The enemy uses one of its active items.
+    EnemyItem { item: String },
 }
 
 #[derive(Debug, Clone, Default, Deserialize)]
@@ -88,6 +92,8 @@ pub struct TargetInfo {
     pub hero: Option<String>,
     /// How each part of the target came about.
     pub notes: Vec<String>,
+    /// The enemy's items (`class_name`s), for its defensive effects.
+    pub items: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -153,6 +159,10 @@ pub struct ComboResult {
     pub passives: Vec<String>,
     /// Owned items that can be used as a combo action.
     pub usable_items: Vec<UsableItem>,
+    /// The enemy's active items that change the damage it takes, usable as combo actions.
+    pub enemy_items: Vec<UsableItem>,
+    /// Damage taken by barriers instead of health.
+    pub absorbed: f64,
     /// Owned items whose damage effect is not simulated.
     pub unsupported: Vec<String>,
     /// Health the hero restores to themselves over the combo, before any cap at max health.
@@ -1221,9 +1231,52 @@ struct Gun {
     crit: f64,
 }
 
+/// How the enemy protects itself: its active items used in the combo, and passive items that trigger.
+#[derive(Default)]
+struct Defense {
+    /// Weapon damage (Metal Skin) or all damage (Ethereal Shift) is ignored until these times.
+    bullet_immune_until: f64,
+    immune_until: f64,
+    /// A barrier takes damage before health until it runs out or expires.
+    barrier: f64,
+    barrier_until: f64,
+    /// Extra bullet and spirit resist until a time: (bullet, spirit, until).
+    resists: Vec<(f64, f64, f64)>,
+    shields: Vec<Shield>,
+    /// Cheat Death: (seconds the target cannot die, damage reduction meanwhile), while it is unused.
+    cheat_death: Option<(f64, f64)>,
+    cheat_until: f64,
+    cheat_reduction: f64,
+    /// Damage that reached health, and damage barriers took.
+    to_health: f64,
+    absorbed: f64,
+}
+
+/// A passive barrier item (Weapon or Spirit Shielding): taking enough damage of its kind within a window grants a barrier.
+struct Shield {
+    name: String,
+    weapon: bool,
+    threshold: f64,
+    window: f64,
+    barrier: f64,
+    seconds: f64,
+    resist: f64,
+    start: f64,
+    sum: f64,
+    used: bool,
+}
+
+/// A parried attacker is stunned and takes this much more damage from every source (deadlock.wiki, Melee Attack).
+const PARRY_STUN: f64 = 2.75;
+const PARRY_AMP: f64 = 25.0;
+
+/// Enemy active items the combo can play.
+const ENEMY_ACTIVES: [&str; 7] = ["Metal Skin", "Ethereal Shift", "Divine Barrier", "Guardian Ward", "Majestic Leap", "Colossus", "Dispel Magic"];
+
 struct Sim {
     t: f64,
     health: f64,
+    defense: Defense,
     dealt: f64,
     /// The target's own resists, and the reductions the build always applies (its items' passive shred).
     bullet_resist: f64,
@@ -1429,10 +1482,18 @@ impl Sim {
             };
             amp *= 1.0 + (d.per_stack.all_amp + own) * stacks / 100.0;
         }
+        // Resist from the enemy's own active or triggered items stacks with its resist.
+        let (mut bullet_resist, mut spirit_resist) = (self.bullet_resist, self.spirit_resist);
+        for (b, sp, until) in &self.defense.resists {
+            if self.t < *until {
+                bullet_resist = crate::misc::stack_resist(bullet_resist, *b);
+                spirit_resist = crate::misc::stack_resist(spirit_resist, *sp);
+            }
+        }
         let resisted = if weapon {
-            (1.0 - (self.bullet_resist - 100.0 * (1.0 - keep_bullet)) / 100.0).max(0.0)
+            (1.0 - (bullet_resist - 100.0 * (1.0 - keep_bullet)) / 100.0).max(0.0)
         } else if kind == Kind::Spirit {
-            (1.0 - (self.spirit_resist - 100.0 * (1.0 - keep_spirit)) / 100.0).max(0.0)
+            (1.0 - (spirit_resist - 100.0 * (1.0 - keep_spirit)) / 100.0).max(0.0)
         } else {
             1.0
         };
@@ -1523,13 +1584,99 @@ impl Sim {
         }
     }
 
+    /// Passive barrier items count the damage of their kind; enough within their window grants the barrier.
+    fn trigger_shields(&mut self, kind: Kind, damage: f64) {
+        let now = self.t;
+        let mut fired = vec![];
+        for s in self.defense.shields.iter_mut().filter(|s| !s.used) {
+            let counts = if s.weapon { matches!(kind, Kind::Bullet | Kind::Melee) } else { kind == Kind::Spirit };
+            if !counts {
+                continue;
+            }
+            if now - s.start > s.window {
+                s.start = now;
+                s.sum = 0.0;
+            }
+            s.sum += damage;
+            if s.sum >= s.threshold {
+                s.used = true;
+                fired.push((s.name.clone(), s.barrier, s.seconds, if s.weapon { (s.resist, 0.0) } else { (0.0, s.resist) }));
+            }
+        }
+        for (name, barrier, seconds, (bullet, spirit)) in fired {
+            self.defense.barrier = self.defense.barrier.max(0.0) + barrier;
+            self.defense.barrier_until = self.defense.barrier_until.max(now + seconds);
+            self.defense.resists.push((bullet, spirit, now + seconds));
+            self.log(&format!("Enemy's {name}"), format!("{} barrier for {}s", n(barrier), n(seconds)), None);
+        }
+    }
+
+    /// The enemy uses one of its active items.
+    fn enemy_item(&mut self, item: &crate::data::Item) {
+        let v = |key: &str| item.props.iter().find(|p| p.key == key).map(|p| p.value).unwrap_or(0.0);
+        let now = self.t;
+        let label = format!("Enemy's {}", item.name);
+        match item.name.as_str() {
+            "Metal Skin" => {
+                self.defense.bullet_immune_until = now + v("AbilityDuration");
+                self.log(&label, format!("immune to weapon damage for {}s", n(v("AbilityDuration"))), None);
+            }
+            "Ethereal Shift" => {
+                self.defense.immune_until = now + v("AbilityDuration");
+                self.log(&label, format!("immune to all damage for {}s", n(v("AbilityDuration"))), None);
+            }
+            "Divine Barrier" | "Guardian Ward" | "Majestic Leap" => {
+                let amount = v("CombatBarrier").max(v("GuardianWardCombatBarrier"));
+                let seconds = v("BuffDuration").max(v("BarrierDuration"));
+                self.defense.barrier = amount;
+                self.defense.barrier_until = now + seconds;
+                self.log(&label, format!("{} barrier for {}s", n(amount), n(seconds)), None);
+            }
+            "Colossus" => {
+                let seconds = v("AbilityDuration");
+                self.defense.resists.push((v("BuffBulletResist"), v("BuffTechResist"), now + seconds));
+                self.log(&label, format!("+{}% bullet and +{}% spirit resist for {}s", n(v("BuffBulletResist")), n(v("BuffTechResist")), n(seconds)), None);
+            }
+            "Dispel Magic" => {
+                self.debuffs.clear();
+                self.dots.clear();
+                self.log(&label, "removes its debuffs and damage over time", None);
+            }
+            _ => self.log(&label, "has no effect on the damage it takes", None),
+        }
+    }
+
     fn deal(&mut self, source: &str, kind: Kind, raw: f64) -> f64 {
-        let damage = raw * self.taken(kind);
+        let mut damage = raw * self.taken(kind);
         if damage <= 0.0 {
             return 0.0;
         }
+        let now = self.t;
+        let weapon = matches!(kind, Kind::Bullet);
+        if now < self.defense.immune_until || (weapon && now < self.defense.bullet_immune_until) {
+            return 0.0;
+        }
+        if now < self.defense.cheat_until {
+            damage *= (1.0 - self.defense.cheat_reduction / 100.0).max(0.0);
+        }
+        self.trigger_shields(kind, damage);
+        let absorbed = if now < self.defense.barrier_until { self.defense.barrier.min(damage) } else { 0.0 };
+        self.defense.barrier -= absorbed;
+        self.defense.absorbed += absorbed;
+        let mut to_health = damage - absorbed;
+        if now < self.defense.cheat_until {
+            to_health = to_health.min((self.health - 1.0 - self.defense.to_health).max(0.0));
+        } else if self.defense.to_health + to_health >= self.health {
+            if let Some((seconds, reduction)) = self.defense.cheat_death.take() {
+                to_health = (self.health - 1.0 - self.defense.to_health).max(0.0);
+                self.defense.cheat_until = now + seconds;
+                self.defense.cheat_reduction = reduction;
+                self.log("Enemy's Cheat Death", format!("cannot die for {}s and takes {}% less damage", n(seconds), n(reduction)), None);
+            }
+        }
+        self.defense.to_health += to_health;
         self.dealt += damage;
-        let killed = self.kill_time.is_none() && self.dealt >= self.health;
+        let killed = self.kill_time.is_none() && self.defense.to_health >= self.health;
         if killed {
             self.kill_time = Some(self.t);
         }
@@ -2174,6 +2321,7 @@ pub fn resolve_target(data: &GameData, b: &BuildInput, combo: &ComboInput) -> Re
         spirit_resist: b.target.spirit_resist,
         hero: None,
         notes: vec![],
+        items: vec![],
     };
     if let Some(enemy) = combo.enemy.as_ref().filter(|e| !e.hero.is_empty()) {
         let hero = data.hero(&enemy.hero).ok_or_else(|| format!("Unknown enemy hero: {}", enemy.hero))?;
@@ -2183,6 +2331,7 @@ pub fn resolve_target(data: &GameData, b: &BuildInput, combo: &ComboInput) -> Re
         t.bullet_resist = stat("bullet_resist");
         t.spirit_resist = stat("spirit_resist");
         t.hero = Some(hero.name.clone());
+        t.items = sheet.owned.clone();
         let items = sheet.owned.iter().filter_map(|c| data.item(c)).map(|i| i.name.as_str()).collect::<Vec<_>>();
         t.notes.push(format!(
             "{} at {} souls with {}: {} health, {}% bullet resist, {}% spirit resist",
@@ -2369,8 +2518,62 @@ pub fn simulate(data: &GameData, b: &BuildInput, combo: &ComboInput) -> Result<C
     }
     let own_max = stat("max_health");
     let own_start = own_max * combo.own_health.unwrap_or(50.0).clamp(0.0, 100.0) / 100.0;
+    // The enemy's passive defenses, and the active ones the combo can play.
+    let enemy_owned: Vec<&crate::data::Item> = target.items.iter().filter_map(|c| data.item(c)).collect();
+    let mut defense = Defense::default();
+    for item in &enemy_owned {
+        let v = |key: &str| item.props.iter().find(|p| p.key == key).map(|p| p.value).unwrap_or(0.0);
+        match item.name.as_str() {
+            "Weapon Shielding" | "Spirit Shielding" => {
+                let weapon = item.name == "Weapon Shielding";
+                defense.shields.push(Shield {
+                    name: item.name.clone(),
+                    weapon,
+                    threshold: v("DamageThreshold"),
+                    window: v("DamageWindow"),
+                    barrier: v("CombatBarrier"),
+                    seconds: v("BarrierDuration"),
+                    resist: if weapon { v("BulletResist") } else { v("TechResist") },
+                    start: 0.0,
+                    sum: 0.0,
+                    used: false,
+                });
+                passives.push(format!(
+                    "Enemy's {}: {} {} damage within {}s gives it a {} barrier for {}s",
+                    item.name,
+                    n(v("DamageThreshold")),
+                    if weapon { "weapon" } else { "spirit" },
+                    n(v("DamageWindow")),
+                    n(v("CombatBarrier")),
+                    n(v("BarrierDuration"))
+                ));
+            }
+            "Cheat Death" => {
+                defense.cheat_death = Some((v("DeathImmunityDuration"), v("DeathImmunityDamageReduction").abs()));
+                passives.push(format!(
+                    "Enemy's Cheat Death: lethal damage leaves it at 1 health for {}s, taking {}% less damage",
+                    n(v("DeathImmunityDuration")),
+                    n(v("DeathImmunityDamageReduction").abs())
+                ));
+            }
+            _ => {}
+        }
+    }
+    let enemy_items: Vec<UsableItem> = enemy_owned
+        .iter()
+        .filter(|i| i.active && ENEMY_ACTIVES.contains(&i.name.as_str()))
+        .map(|i| UsableItem {
+            item: i.class_name.clone(),
+            name: i.name.clone(),
+            description: i.description.clone(),
+            condition: false,
+            max_count: None,
+            unit: String::new(),
+        })
+        .collect();
     let mut sim = Sim {
         t: 0.0,
+        defense,
         health: b.target.health,
         dealt: 0.0,
         bullet_resist: b.target.bullet_resist,
@@ -2476,6 +2679,20 @@ pub fn simulate(data: &GameData, b: &BuildInput, combo: &ComboInput) -> Result<C
     for action in &combo.actions {
         match action {
             Action::Shoot { seconds } => sim.shoot(&gun, seconds.clamp(0.0, 120.0), headshot),
+            Action::Parry => {
+                sim.log("Parry", format!("the target is stunned for {}s and takes +{}% damage", n(PARRY_STUN), n(PARRY_AMP)), None);
+                sim.debuffs.retain(|d| d.source != "Parry");
+                sim.debuffs.push(Debuff {
+                    source: "Parry".into(),
+                    per_stack: Effect { all_amp: PARRY_AMP, ..Default::default() },
+                    stacks: 1,
+                    end: sim.t + PARRY_STUN,
+                });
+            }
+            Action::EnemyItem { item } => match enemy_owned.iter().find(|i| &i.class_name == item) {
+                Some(i) => sim.enemy_item(i),
+                None => sim.log(item, "the enemy does not own this item", None),
+            },
             Action::Wait { seconds } => {
                 let seconds = seconds.clamp(0.0, 120.0);
                 sim.log("Wait", format!("{}s", n(seconds)), None);
@@ -2605,6 +2822,8 @@ pub fn simulate(data: &GameData, b: &BuildInput, combo: &ComboInput) -> Result<C
         abilities,
         passives,
         usable_items,
+        enemy_items,
+        absorbed: sim.defense.absorbed,
         unsupported,
         healing: sim.healed,
         heal_sources: sim.heals,

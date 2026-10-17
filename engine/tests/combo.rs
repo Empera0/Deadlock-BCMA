@@ -568,3 +568,38 @@ fn lucky_shot_adds_a_quarter_to_the_shooting() {
     let weapon = source(&with, "Weapon");
     assert!(bonus > 0.0 && (bonus / weapon - 0.25).abs() < 0.08, "{bonus} vs {weapon}");
 }
+
+#[test]
+fn a_parried_target_takes_more_damage() {
+    let d = data();
+    let b = build(&[]);
+    let shoot = Action::Shoot { seconds: 1.0 };
+    let plain = combo::simulate(&d, &b, &ComboInput { actions: vec![shoot.clone()], ..Default::default() }).unwrap();
+    let parried = combo::simulate(&d, &b, &ComboInput { actions: vec![Action::Parry, shoot], ..Default::default() }).unwrap();
+    assert!(close(parried.total, plain.total * 1.25), "{} vs {}", parried.total, plain.total);
+}
+
+#[test]
+fn the_enemys_defensive_items_change_the_fight() {
+    let d = data();
+    let enemy = |items: &[&str]| build_for("hero_haze", &items.iter().map(|n| class_of(&d, n)).collect::<Vec<_>>().iter().map(|s| s.as_str()).collect::<Vec<_>>());
+    let shoot = Action::Shoot { seconds: 2.0 };
+    let run = |e: BuildInput, actions: Vec<Action>| combo::simulate(&d, &build(&[]), &ComboInput { actions, enemy: Some(e), ..Default::default() }).unwrap();
+
+    // Metal Skin: the shooting during it does nothing.
+    let skin = class_of(&d, "Metal Skin");
+    let r = run(enemy(&["Metal Skin"]), vec![Action::EnemyItem { item: skin.clone() }, shoot.clone()]);
+    assert_eq!(source(&r, "Weapon"), 0.0);
+    assert!(r.enemy_items.iter().any(|i| i.item == skin));
+
+    // A barrier soaks damage before health.
+    let ward = class_of(&d, "Divine Barrier");
+    let r = run(enemy(&["Divine Barrier"]), vec![Action::EnemyItem { item: ward }, shoot.clone()]);
+    assert!(r.absorbed > 0.0);
+
+    // Cheat Death keeps the target alive past lethal damage for a while.
+    let long = vec![Action::Shoot { seconds: 60.0 }];
+    let plain = run(enemy(&[]), long.clone());
+    let saved = run(enemy(&["Cheat Death"]), long);
+    assert!(saved.kill_time.unwrap() > plain.kill_time.unwrap() + 4.0, "{:?} vs {:?}", saved.kill_time, plain.kill_time);
+}

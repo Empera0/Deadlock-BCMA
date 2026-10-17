@@ -15,6 +15,7 @@
 use crate::build::BuildInput;
 use crate::calc;
 use crate::data::{GameData, Item};
+use crate::kit;
 use crate::matches::TEAM_ITEMS;
 use crate::popular::{self, CounterPlan, ItemStat, Matchup};
 use crate::suggest;
@@ -111,10 +112,6 @@ const MIN_SCORE: f64 = 0.12;
 const PUSH_WEIGHT: [f64; 4] = [0.35, 0.15, 0.0, 0.0];
 /// A wave cleared this much faster is the full push credit; from it the item is in the running in those phases.
 const PUSH_FULL: f64 = 0.3;
-/// Push counts in full for a hero whose top players put this share of their souls into weapon items, and never
-/// for less than this share of it.
-const PUSH_GUN_FULL: f64 = 0.6;
-const PUSH_SHARE_MIN: f64 = 0.2;
 
 /// How fast the build clears a trooper wave: its sustained gun damage against troopers, with the weapon damage
 /// that only works on them (Monster Rounds, Cultist Sacrifice), and longer for the bullet resist against them that
@@ -127,8 +124,41 @@ fn wave_clear(data: &GameData, b: &BuildInput) -> Option<f64> {
     let npc_resist: f64 = owned().filter(|p| p.key == "NonPlayerBulletResist").map(|p| p.value).fold(0.0, f64::max);
     let weapon = stat("weapon_damage_pct");
     let dps = stat("dps_sustained") * (1.0 + (weapon + npc_power) / 100.0) / (1.0 + weapon / 100.0).max(0.01);
-    Some(dps / (1.0 - npc_resist.min(90.0) / 100.0).sqrt())
+    // Abilities that hit an area clear the wave too: their damage per cast over their cooldown, for the
+    // abilities the hero has learned. Seven's Static Charge or Infernus' Napalm count as much as a gun does.
+    let pellets = data.hero(&b.hero).map(|h| h.weapon.pellets).unwrap_or(1.0);
+    let ctx = kit::Context { per_shot: stat("bullet_damage") * pellets, shots_per_second: stat("shots_per_second"), abilities: &sheet.abilities, flags: &[] };
+    let abilities: f64 = sheet
+        .abilities
+        .iter()
+        .enumerate()
+        .filter(|(i, _)| b.ability_tiers.get(*i).copied().unwrap_or(0) > 0)
+        .filter(|(_, a)| a.props.iter().any(|p| (p.key.contains("Radius") || p.key.contains("Width")) && p.value > 0.0))
+        .map(|(_, a)| {
+            let cooldown = a.props.iter().find(|p| p.key == "AbilityCooldown").map(|p| p.value).unwrap_or(0.0);
+            let plan = kit::plan(a, &ctx, None, None);
+            if !plan.castable || cooldown <= 0.0 {
+                return 0.0;
+            }
+            let damage: f64 = plan
+                .parts
+                .iter()
+                .map(|part| match part {
+                    kit::Part::Instant { raw, .. } => *raw,
+                    kit::Part::Dot { dps, seconds, .. } => dps * seconds,
+                    kit::Part::Hits { raw, count, .. } => raw * *count as f64,
+                })
+                .sum();
+            damage * WAVE_AREA_HITS / cooldown.max(WAVE_MIN_COOLDOWN)
+        })
+        .sum();
+    Some(dps / (1.0 - npc_resist.min(90.0) / 100.0).sqrt() + abilities)
 }
+
+/// A wave lasts this long at the least: an ability on a shorter cooldown does not hit it more often.
+const WAVE_MIN_COOLDOWN: f64 = 5.0;
+/// Troopers an area ability catches in a wave, where the gun hits one at a time (an assumption).
+const WAVE_AREA_HITS: f64 = 3.0;
 
 /// How much faster the wave is cleared with the item, in the phases where pushing counts.
 fn push_gain(data: &GameData, b: &BuildInput, class: &str, phase: usize) -> f64 {
@@ -405,9 +435,6 @@ pub fn master_build(data: &GameData, input: &MasterInput) -> Result<MasterBuild,
     };
     // A spirit hero still shoots between casts: its items are measured over the abilities and that shooting, or
     // no gun item would ever add anything.
-    // Lane push is measured with the gun, so it counts in full for a hero who clears waves with the gun and less for
-    // one who clears them with abilities: by the share of souls its top players put into weapon items.
-    let push_share = if style == "gun" { 1.0 } else { (gun_share / PUSH_GUN_FULL).clamp(PUSH_SHARE_MIN, 1.0) };
     let gains_style = if style == "spirit" { "spirit_fight" } else { style.as_str() };
     // A damage type the hero's top players do not build for (melee Ivy): what they buy says little about it, so
     // the engine leads and items that do nothing for it get no credit for being popular.
@@ -455,7 +482,7 @@ pub fn master_build(data: &GameData, input: &MasterInput) -> Result<MasterBuild,
             // Off-style, a damage item that does nothing for the chosen damage is not helped by being popular.
             let pop_credit = if off_style && item.category != "vitality" { (gain.max(0.0) / OFF_STYLE_GAIN).min(1.0) } else { 1.0 };
             let mut s = w_pop * pop / pop_top * pop_credit + w_engine * (gain.max(0.0) / ENGINE_FULL).min(1.0) + w_counter * ctr;
-            s += PUSH_WEIGHT[index] * (push * push_share / PUSH_FULL).min(1.0);
+            s += PUSH_WEIGHT[index] * (push / PUSH_FULL).min(1.0);
             s *= 1.0 + (win(item).1 * WIN_WEIGHT).clamp(-WIN_CAP, WIN_CAP);
             if focus.0 == "support" && TEAM_ITEMS.contains(&item.name.as_str()) {
                 s += TEAM_ITEM_BONUS;
@@ -466,7 +493,7 @@ pub fn master_build(data: &GameData, input: &MasterInput) -> Result<MasterBuild,
             s * team.redundancy(item).0
         };
         let eligible = |pop: f64, ctr: f64, gain: f64, push: f64| {
-            pop / pop_top >= POPULAR_FROM || ctr >= STRONG_COUNTER || (off_style && gain >= OFF_STYLE_GAIN) || (PUSH_WEIGHT[index] > 0.0 && push * push_share >= PUSH_FULL)
+            pop / pop_top >= POPULAR_FROM || ctr >= STRONG_COUNTER || (off_style && gain >= OFF_STYLE_GAIN) || (PUSH_WEIGHT[index] > 0.0 && push >= PUSH_FULL)
         };
         let mut sold_here: Vec<String> = vec![];
         let mut considered: Vec<Considered> = vec![];

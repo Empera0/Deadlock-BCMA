@@ -196,3 +196,16 @@ fn melee_gets_half_the_weapon_damage_bonus() {
     assert!(wd > 0.0);
     assert!(close(s.stat("light_melee").unwrap(), plain.stat("light_melee").unwrap() * (1.0 + 0.5 * wd / 100.0)));
 }
+
+#[test]
+fn map_buffs_raise_the_stats() {
+    let d = data();
+    let plain = calc::compute(&d, &build(INFERNUS, &[])).unwrap();
+    let mut b = build(INFERNUS, &[]);
+    b.map = engine::build::MapBuffs { minute: 40.0, casting: true, gun: true, statues: engine::build::Statues { health: 2, ..Default::default() } };
+    let s = calc::compute(&d, &b).unwrap();
+    // At minute 40 the powerups are at full strength; statue buffs from minute 30 are at their third level.
+    assert!(close(s.stat("spirit_power").unwrap() - plain.stat("spirit_power").unwrap(), 65.0));
+    assert!(close(s.stat("fire_rate_pct").unwrap() - plain.stat("fire_rate_pct").unwrap(), 35.0));
+    assert!(close(s.stat("max_health").unwrap() - plain.stat("max_health").unwrap(), 60.0));
+}
