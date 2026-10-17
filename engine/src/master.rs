@@ -125,14 +125,15 @@ fn wave_clear(data: &GameData, b: &BuildInput) -> Option<f64> {
     let weapon = stat("weapon_damage_pct");
     let dps = stat("dps_sustained") * (1.0 + (weapon + npc_power) / 100.0) / (1.0 + weapon / 100.0).max(0.01);
     // Abilities that hit an area clear the wave too: their damage per cast over their cooldown, for the
-    // abilities the hero has learned. Seven's Static Charge or Infernus' Napalm count as much as a gun does.
+    // hero's three basic abilities. Seven's Static Charge or Infernus' Napalm count as much as a gun does.
     let pellets = data.hero(&b.hero).map(|h| h.weapon.pellets).unwrap_or(1.0);
     let ctx = kit::Context { per_shot: stat("bullet_damage") * pellets, shots_per_second: stat("shots_per_second"), abilities: &sheet.abilities, flags: &[] };
     let abilities: f64 = sheet
         .abilities
         .iter()
         .enumerate()
-        .filter(|(i, _)| b.ability_tiers.get(*i).copied().unwrap_or(0) > 0)
+        // The ultimate is kept for fights, not spent on troopers.
+        .filter(|(i, _)| *i < ULTIMATE_SLOT)
         .filter(|(_, a)| a.props.iter().any(|p| (p.key.contains("Radius") || p.key.contains("Width")) && p.value > 0.0))
         .map(|(_, a)| {
             let cooldown = a.props.iter().find(|p| p.key == "AbilityCooldown").map(|p| p.value).unwrap_or(0.0);
@@ -157,6 +158,8 @@ fn wave_clear(data: &GameData, b: &BuildInput) -> Option<f64> {
 
 /// A wave lasts this long at the least: an ability on a shorter cooldown does not hit it more often.
 const WAVE_MIN_COOLDOWN: f64 = 5.0;
+/// The ultimate's slot among the hero's abilities.
+const ULTIMATE_SLOT: usize = 3;
 /// Troopers an area ability catches in a wave, where the gun hits one at a time (an assumption).
 const WAVE_AREA_HITS: f64 = 3.0;
 

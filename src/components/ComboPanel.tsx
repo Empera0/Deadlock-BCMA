@@ -1,4 +1,4 @@
-import { Action, Combo, ComboResult, fmt, Hero, Item, Sheet } from "../api";
+import { Action, Combo, ComboResult, fmt, Hero, Item, MapBuffs, Sheet, Statues } from "../api";
 import ComboTarget from "./ComboTarget";
 
 interface Props {
@@ -8,6 +8,59 @@ interface Props {
   combo: Combo;
   result: ComboResult | null;
   onChange: (combo: Combo) => void;
+  map: MapBuffs;
+  onMap: (map: MapBuffs) => void;
+}
+
+const STATUES: [keyof Statues, string][] = [
+  ["weapon", "Weapon damage"],
+  ["fire_rate", "Fire rate"],
+  ["ammo", "Ammo"],
+  ["spirit", "Spirit power"],
+  ["cooldown", "Cooldown"],
+  ["health", "Health"],
+  ["bullet_resist", "Bullet resist"],
+  ["spirit_resist", "Spirit resist"],
+];
+
+/** Powerups and permanent statue buffs the hero carries; they count in the stats and the combo. */
+function MapBuffsGroup({ map, onMap }: { map: MapBuffs; onMap: (map: MapBuffs) => void }) {
+  const total = Object.values(map.statues).reduce((a, b) => a + b, 0);
+  return (
+    <details className="group map-buffs" open={map.casting || map.gun || total > 0}>
+      <summary>
+        <h3>Your map buffs</h3>
+      </summary>
+      <label className="field inline" title="Powerups grow from minute 5 to 40; statue buffs are stronger from minutes 10 and 30">
+        Minute
+        <input type="number" min={0} value={map.minute} onChange={(e) => onMap({ ...map, minute: Math.max(0, Number(e.target.value) || 0) })} />
+      </label>
+      <div className="zone">
+        <label title="Spirit power and cooldown reduction for 160s">
+          <input type="checkbox" checked={map.casting} onChange={(e) => onMap({ ...map, casting: e.target.checked })} />
+          Casting powerup
+        </label>
+        <label title="Fire rate and ammo for 160s">
+          <input type="checkbox" checked={map.gun} onChange={(e) => onMap({ ...map, gun: e.target.checked })} />
+          Gun powerup
+        </label>
+      </div>
+      <div className="statues">
+        {STATUES.map(([key, label]) => (
+          <label key={key}>
+            {label}
+            <input
+              type="number"
+              min={0}
+              value={map.statues[key]}
+              onChange={(e) => onMap({ ...map, statues: { ...map.statues, [key]: Math.max(0, Math.round(Number(e.target.value) || 0)) } })}
+            />
+          </label>
+        ))}
+      </div>
+      <p className="muted">Statue buffs collected, counted at their level for the minute.</p>
+    </details>
+  );
 }
 
 function label(action: Action, sheet: Sheet, result: ComboResult | null): string {
@@ -16,6 +69,10 @@ function label(action: Action, sheet: Sheet, result: ComboResult | null): string
       return "Shoot";
     case "wait":
       return "Wait";
+    case "parry":
+      return "Parry";
+    case "enemy_item":
+      return `Enemy: ${result?.enemy_items.find((i) => i.item === action.item)?.name ?? "item (not owned)"}`;
     case "melee":
       return action.heavy ? "Heavy melee" : "Light melee";
     case "ability":
@@ -29,7 +86,7 @@ function label(action: Action, sheet: Sheet, result: ComboResult | null): string
   }
 }
 
-export default function ComboPanel({ heroes, items, sheet, combo, result, onChange }: Props) {
+export default function ComboPanel({ heroes, items, sheet, combo, result, onChange, map, onMap }: Props) {
   const add = (action: Action) => onChange({ ...combo, actions: [...combo.actions, action] });
   const update = (index: number, action: Action) =>
     onChange({ ...combo, actions: combo.actions.map((a, i) => (i === index ? action : a)) });
@@ -43,13 +100,15 @@ export default function ComboPanel({ heroes, items, sheet, combo, result, onChan
   };
 
   const top = result ? Math.max(...result.sources.map((s) => s.damage), 1) : 1;
-  const healthLeft = result ? Math.max(0, result.target_health - result.total) : 0;
+  const toHealth = result ? result.total - result.absorbed : 0;
+  const healthLeft = result ? Math.max(0, result.target_health - toHealth) : 0;
   const topHeal = result ? Math.max(...result.heal_sources.map((h) => h.amount), 1) : 1;
   const ownHealth = combo.own_health ?? 50;
 
   return (
     <aside className="panel">
       <ComboTarget heroes={heroes} items={items} combo={combo} result={result} onChange={onChange} />
+      <MapBuffsGroup map={map} onMap={onMap} />
 
       <div className="group">
         <h3>Add action</h3>
@@ -76,6 +135,15 @@ export default function ComboPanel({ heroes, items, sheet, combo, result, onChan
             Heavy melee
           </button>
           <button onClick={() => add({ kind: "wait", seconds: 1 })}>Wait</button>
+          <button title="You parry the target's melee: stunned for 2.75s and +25% damage taken" onClick={() => add({ kind: "parry" })}>
+            Parry
+          </button>
+          {result?.enemy_items.map((i) => (
+            <button key={"enemy" + i.item} className="enemy-action" title={i.description} onClick={() => add({ kind: "enemy_item", item: i.item })}>
+              {i.name}
+              <small>enemy</small>
+            </button>
+          ))}
           {result?.usable_items.map((i) => (
             <button
               key={i.item + i.condition}
@@ -225,12 +293,13 @@ export default function ComboPanel({ heroes, items, sheet, combo, result, onChan
               </div>
             </div>
             <div className="health-bar" title={`${fmt(healthLeft, 0)} of ${fmt(result.target_health, 0)} health left`}>
-              <div style={{ width: `${Math.min(100, (result.total / Math.max(result.target_health, 1)) * 100)}%` }} />
+              <div style={{ width: `${Math.min(100, (toHealth / Math.max(result.target_health, 1)) * 100)}%` }} />
             </div>
             <div className="muted">
               {result.kill_time !== null
-                ? `Target (${fmt(result.target_health, 0)} health) dies ${fmt(result.kill_time, 1)}s in · ${fmt(result.total - result.target_health, 0)} overkill`
+                ? `Target (${fmt(result.target_health, 0)} health) dies ${fmt(result.kill_time, 1)}s in · ${fmt(toHealth - result.target_health, 0)} overkill`
                 : `Target keeps ${fmt(healthLeft, 0)} of ${fmt(result.target_health, 0)} health`}
+              {result.absorbed > 0 && ` · ${fmt(result.absorbed, 0)} taken by barriers`}
             </div>
           </div>
 

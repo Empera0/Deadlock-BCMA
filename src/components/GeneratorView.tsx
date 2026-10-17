@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { api, Build, fmt, Hero, JudgedItem, MasterBuild, MasterItem, MasterReport, MatchPreset, PopularItem, PopularReport } from "../api";
+import { api, Build, EMPTY_MAP, fmt, Hero, JudgedItem, MasterBuild, MasterItem, MasterReport, MatchPreset, PopularItem, PopularReport } from "../api";
 import SuggestPanel from "./SuggestPanel";
 
 interface Props {
@@ -11,7 +11,27 @@ interface Props {
   preset: MatchPreset | null;
   /** Loads a build into the builder, with the abilities imbued items go into, for a hero when it is not the builder's. */
   onUse: (purchases: string[], what: string, imbues?: Record<string, number>, hero?: string) => void;
+  /** Opens the combo with the player's build at some souls against an enemy's usual build at the same souls. */
+  onFight: (fight: Fight) => void;
 }
+
+export interface Fight {
+  hero: string;
+  purchases: string[];
+  imbues: Record<string, number>;
+  souls: number;
+  tiers: number[];
+  enemy: Build;
+  what: string;
+}
+
+/** Ability upgrade tiers the master builder assumes in each phase. */
+const PHASE_TIERS = [
+  [0, 0, 0, 0],
+  [1, 1, 1, 0],
+  [2, 2, 1, 1],
+  [3, 3, 3, 3],
+];
 
 const minute = (m: number) => `${Math.floor(m)}:${String(Math.round((m % 1) * 60)).padStart(2, "0")}`;
 
@@ -240,7 +260,56 @@ function MatchComparison({ master, preset }: { master: MasterBuild; preset: Matc
   );
 }
 
-function MasterPanel({ heroes, hero, preset, onUse }: { heroes: Hero[]; hero: Hero; preset: MatchPreset | null; onUse: Props["onUse"] }) {
+function MasterPanel({
+  heroes,
+  hero,
+  preset,
+  onUse,
+  onFight,
+}: {
+  heroes: Hero[];
+  hero: Hero;
+  preset: MatchPreset | null;
+  onUse: Props["onUse"];
+  onFight: Props["onFight"];
+}) {
+  const [fighting, setFighting] = useState("");
+  // The enemy's usual build at some souls: its core items in the order they are bought, while the souls last.
+  const fight = async (master: MasterBuild, phase: number, enemyId: number) => {
+    const enemy = heroes.find((h) => h.id === enemyId);
+    const p = master.phases[phase];
+    if (!enemy || !p) return;
+    setFighting(`${phase}-${enemyId}`);
+    try {
+      const report = await api.popularBuild(enemyId);
+      let spent = 0;
+      const purchases = report.build.core.filter((c) => (spent += c.cost) <= p.souls_to).map((c) => c.item);
+      const tiers = PHASE_TIERS[phase] ?? [0, 0, 0, 0];
+      const mine = master.items.filter((x) => x.phase <= phase && !x.sold).map((x) => x.item);
+      onFight({
+        hero: master.hero,
+        purchases: mine,
+        imbues: Object.fromEntries(Object.entries(master.imbues).filter(([k]) => mine.includes(k))),
+        souls: p.souls_to,
+        tiers,
+        enemy: {
+          hero: enemy.class_name,
+          purchases,
+          upto: null,
+          souls: p.souls_to,
+          active: [],
+          ability_tiers: tiers,
+          imbues: {},
+          copied_ult: null,
+          target: { health: 2000, bullet_resist: 0, spirit_resist: 0 },
+          map: EMPTY_MAP,
+        },
+        what: `Fighting ${enemy.name} at the end of ${p.title} (${fmt(p.souls_to)} souls each)`,
+      });
+    } finally {
+      setFighting("");
+    }
+  };
   const [focus, setFocus] = useState("auto");
   const [damage, setDamage] = useState("auto");
   const [enemies, setEnemies] = useState<number[]>([]);
@@ -422,6 +491,27 @@ function MasterPanel({ heroes, hero, preset, onUse }: { heroes: Hero[]; hero: He
                     {fmt(phase.souls_from)}–{fmt(phase.souls_to)} souls
                   </small>
                   {phase.sold.length > 0 && <small className="muted">sells {phase.sold.join(", ")}</small>}
+                  {enemies.length > 0 && (
+                    <span className="fight-row" title="Open the combo with this build against the enemy's usual build at the same souls">
+                      <small className="muted">fight</small>
+                      {[...lane, ...enemies.filter((id) => !lane.includes(id))].map((id) => {
+                        const h = byId(id);
+                        return (
+                          h && (
+                            <button
+                              key={id}
+                              className="fight-btn"
+                              disabled={fighting !== ""}
+                              title={`Combo against ${h.name}'s usual build at ${fmt(phase.souls_to)} souls`}
+                              onClick={() => fight(report.master, i, id)}
+                            >
+                              <img src={h.icon} alt={h.name} />
+                            </button>
+                          )
+                        );
+                      })}
+                    </span>
+                  )}
                 </div>
                 <div className="master-items">
                   {report.master.items
@@ -760,7 +850,7 @@ function MasterPanel({ heroes, hero, preset, onUse }: { heroes: Hero[]; hero: He
 }
 
 /** Builds put together for the hero: by the calculator, from what players build, and for a match by the master builder. */
-export default function GeneratorView({ heroes, hero, build, souls, preset, onUse }: Props) {
+export default function GeneratorView({ heroes, hero, build, souls, preset, onUse, onFight }: Props) {
   const [tab, setTab] = useState<"calculated" | "popular" | "master">(preset ? "master" : "calculated");
   useEffect(() => {
     if (preset) setTab("master");
@@ -781,7 +871,7 @@ export default function GeneratorView({ heroes, hero, build, souls, preset, onUs
       <div className="gen-body">
         {tab === "calculated" && <SuggestPanel hero={hero} build={build} souls={souls} onUse={(p) => onUse(p, "Loaded a build the calculator put together")} />}
         {tab === "popular" && <PopularPanel hero={hero} onUse={onUse} />}
-        {tab === "master" && <MasterPanel heroes={heroes} hero={hero} preset={preset} onUse={onUse} />}
+        {tab === "master" && <MasterPanel heroes={heroes} hero={hero} preset={preset} onUse={onUse} onFight={onFight} />}
       </div>
     </div>
   );

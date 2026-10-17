@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { api, Build, Combo, ComboResult, fmt, Hero, Item, Zone } from "../api";
+import { api, Build, Combo, ComboResult, EMPTY_MAP, fmt, Hero, Item, Zone } from "../api";
 import HeroPicker from "./HeroPicker";
 import Shop from "./Shop";
 
@@ -19,6 +19,7 @@ const enemyBuild = (hero: string): Build => ({
   active: [],
   ability_tiers: [0, 0, 0, 0],
   imbues: {},
+  map: EMPTY_MAP,
   copied_ult: null,
   target: { health: 2000, bullet_resist: 0, spirit_resist: 0 },
 });

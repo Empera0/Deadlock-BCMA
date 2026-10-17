@@ -74,7 +74,34 @@ export interface Build {
   copied_ult: string | null;
   /** Imbue items: item class name -> index of the ability. */
   imbues: Record<string, number>;
+  /** Powerups and permanent statue buffs. */
+  map: MapBuffs;
 }
+
+export interface Statues {
+  fire_rate: number;
+  ammo: number;
+  cooldown: number;
+  weapon: number;
+  health: number;
+  spirit: number;
+  bullet_resist: number;
+  spirit_resist: number;
+}
+
+export interface MapBuffs {
+  minute: number;
+  casting: boolean;
+  gun: boolean;
+  statues: Statues;
+}
+
+export const EMPTY_MAP: MapBuffs = {
+  minute: 20,
+  casting: false,
+  gun: false,
+  statues: { fire_rate: 0, ammo: 0, cooldown: 0, weapon: 0, health: 0, spirit: 0, bullet_resist: 0, spirit_resist: 0 },
+};
 
 export interface Term {
   label: string;
@@ -213,7 +240,9 @@ export type Action =
   | { kind: "ability"; index: number; duration: number | null; hits: number | null }
   | { kind: "item"; item: string }
   | { kind: "condition"; item: string; count: number | null }
-  | { kind: "wait"; seconds: number };
+  | { kind: "wait"; seconds: number }
+  | { kind: "parry" }
+  | { kind: "enemy_item"; item: string };
 
 export interface Combo {
   actions: Action[];
@@ -245,13 +274,15 @@ export interface ComboResult {
   full_duration: number;
   dps: number;
   target_health: number;
-  target: { health: number; bullet_resist: number; spirit_resist: number; hero: string | null; notes: string[] };
+  target: { health: number; bullet_resist: number; spirit_resist: number; hero: string | null; notes: string[]; items: string[] };
   kill_time: number | null;
   sources: { source: string; kind: DamageKind; damage: number }[];
   events: { time: number; source: string; detail: string; damage: number | null; heal: number | null }[];
   abilities: { name: string; castable: boolean; lines: string[] }[];
   passives: string[];
   usable_items: { item: string; name: string; description: string; condition: boolean; max_count: number | null; unit: string }[];
+  enemy_items: { item: string; name: string; description: string }[];
+  absorbed: number;
   unsupported: string[];
   healing: number;
   heal_sources: { source: string; amount: number }[];

@@ -3813,3 +3813,56 @@ header.match {
 .enemy-shop-head button {
   margin-left: auto;
 }
+
+/* Map buffs in the combo panel */
+.map-buffs > summary {
+  cursor: pointer;
+  list-style: none;
+}
+
+.map-buffs > summary h3 {
+  display: inline;
+}
+
+.statues {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px 12px;
+  margin: 6px 0;
+}
+
+.statues label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.statues input {
+  width: 52px;
+}
+
+.combo-add button.enemy-action {
+  --cat: var(--danger);
+  border-style: dashed;
+}
+
+/* Master build: fight an enemy at a phase in the combo */
+.fight-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-left: auto;
+}
+
+.fight-btn {
+  padding: 1px;
+  line-height: 0;
+}
+
+.fight-btn img {
+  width: 22px;
+  height: 22px;
+  border-radius: 3px;
+}

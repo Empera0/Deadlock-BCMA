@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { api, Build, Combo, ComboResult, EMPTY_ZONE, fmt, GameData, Ranked, Sheet, MatchPreset } from "./api";
+import { api, Build, Combo, ComboResult, EMPTY_MAP, EMPTY_ZONE, fmt, GameData, Ranked, Sheet, MatchPreset } from "./api";
 import BuildBar from "./components/BuildBar";
 import ComboPanel from "./components/ComboPanel";
 import GeneratorView from "./components/GeneratorView";
@@ -33,6 +33,7 @@ const emptyBuild = (hero: string): Build => ({
   active: [],
   ability_tiers: [0, 0, 0, 0],
   imbues: {},
+  map: EMPTY_MAP,
   copied_ult: null,
   target: { health: 2000, bullet_resist: 0, spirit_resist: 0 },
 });
@@ -40,7 +41,9 @@ const emptyBuild = (hero: string): Build => ({
 function restoreBuild(): Build | null {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? { ...emptyBuild(""), ...JSON.parse(raw) } : null;
+    if (!raw) return null;
+    const saved = JSON.parse(raw);
+    return { ...emptyBuild(""), ...saved, map: { ...EMPTY_MAP, ...saved.map, statues: { ...EMPTY_MAP.statues, ...saved.map?.statues } } };
   } catch {
     return null;
   }
@@ -310,6 +313,13 @@ export default function App() {
             setMode("build");
             setStatus(what);
           }}
+          onFight={(f) => {
+            setBuild({ ...emptyBuild(f.hero), target: build.target, map: build.map, purchases: f.purchases, active: f.purchases, imbues: f.imbues, souls: f.souls, ability_tiers: f.tiers });
+            setCombo((c) => ({ ...c, enemy: f.enemy }));
+            setMode("build");
+            setTab("combo");
+            setStatus(f.what);
+          }}
         />
       )}
 
@@ -345,7 +355,7 @@ export default function App() {
                 onBuy={toggleItem}
               />
             ) : tab === "combo" ? (
-              <ComboPanel heroes={data.heroes} items={data.items} sheet={sheet} combo={combo} result={comboResult} onChange={setCombo} />
+              <ComboPanel heroes={data.heroes} items={data.items} sheet={sheet} combo={combo} result={comboResult} onChange={setCombo} map={build.map} onMap={(map) => patch({ map })} />
             ) : (
               <MiscPanel sheet={sheet} />
             )}
