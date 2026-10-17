@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api, Build, Combo, ComboResult, EMPTY_MAP, EMPTY_ZONE, fmt, GameData, Ranked, Sheet, MatchPreset } from "./api";
 import BuildBar from "./components/BuildBar";
+import DraftView from "./components/DraftView";
 import ComboPanel from "./components/ComboPanel";
 import GeneratorView from "./components/GeneratorView";
 import MiscPanel from "./components/MiscPanel";
@@ -62,7 +63,7 @@ export default function App() {
   const [name, setName] = useState("");
   const [status, setStatus] = useState("");
   const [tab, setTab] = useState<"stats" | "combo" | "misc">("stats");
-  const [mode, setMode] = useState<"build" | "generator" | "match">("build");
+  const [mode, setMode] = useState<"build" | "generator" | "draft" | "match">("build");
   /** A match player handed to the master builder. */
   const [masterPreset, setMasterPreset] = useState<MatchPreset | null>(null);
   const [navOpen, setNavOpen] = useState(() => {
@@ -210,6 +211,7 @@ export default function App() {
           [
             ["build", "Build maker", "M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.5-.5-.5-2.5z"],
             ["generator", "Build generator", "M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9zM19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"],
+            ["draft", "Draft", "M4 5h6v6H4zM14 5h6v6h-6zM4 15h6v4H4zM14 15h6v4h-6z"],
             ["match", "Match analysis", "M4 20V10M10 20V4M16 20v-7M22 20H2"],
           ] as const
         ).map(([key, label, icon]) => (
@@ -303,6 +305,17 @@ export default function App() {
             setStatus(target ? "Opened a build from the match, with that enemy as the target" : "Opened a build from the match");
           }}
           onOpenMaster={(preset) => {
+            setMasterPreset(preset);
+            setMode("generator");
+          }}
+        />
+      </div>
+
+      {/* Kept mounted so the draft stays filled in while a build is planned. */}
+      <div style={{ display: mode === "draft" ? "contents" : "none" }}>
+        <DraftView
+          heroes={data.heroes}
+          onPlan={(preset) => {
             setMasterPreset(preset);
             setMode("generator");
           }}

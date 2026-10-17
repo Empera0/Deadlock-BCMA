@@ -133,9 +133,14 @@ const ANALYTICS_CACHE_S: u64 = 6 * 3600;
 
 /// An analytics endpoint with the shared filters, read from the cache when it is fresh enough.
 fn analytics(cache: &PathBuf, endpoint: &str, query: &str, badge: u32) -> Result<String, String> {
+    analytics_over(cache, endpoint, query, badge, ANALYTICS_DAYS)
+}
+
+/// The same over a window of the given days.
+fn analytics_over(cache: &PathBuf, endpoint: &str, query: &str, badge: u32, days: u64) -> Result<String, String> {
     // The window starts at a whole day, so the same question is the same request all day long.
     let day = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0) / 86_400;
-    let from = (day - ANALYTICS_DAYS) * 86_400;
+    let from = (day - days) * 86_400;
     let filters = format!("min_unix_timestamp={from}&min_average_badge={badge}");
     let query = if query.is_empty() { filters } else { format!("{query}&{filters}") };
     let name: String = format!("{endpoint}-{query}").chars().map(|c| if c.is_ascii_alphanumeric() { c } else { '_' }).collect();
@@ -206,6 +211,53 @@ async fn popular_build(app: AppHandle, state: State<'_, AppState>, hero_id: u64)
     tauri::async_runtime::spawn_blocking(move || {
         let (build, badge) = popular_for(&data, &cache, hero_id)?;
         Ok(PopularReport { build, days: ANALYTICS_DAYS, rank: rank_name(badge).into() })
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+/// The draft helper reads matchups from this many days: the window its weights were fitted with.
+const DRAFT_DAYS: u64 = 30;
+/// A player's own record on each hero comes from this many days of their matches, at any rank.
+const OWN_RECORD_DAYS: u64 = 90;
+
+/// Picks, bans and the draft's chance for the heroes picked so far, at a rank (lowest average badge).
+#[tauri::command]
+#[allow(clippy::too_many_arguments)]
+async fn draft_picks(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    allies: Vec<u64>,
+    enemies: Vec<u64>,
+    lane: Vec<u64>,
+    banned: Vec<u64>,
+    badge: u32,
+    account_id: Option<String>,
+) -> Result<engine::draft::DraftReport, String> {
+    let data = state.data.read().unwrap().clone();
+    let cache = data_dir(&app)?.join("analytics");
+    tauri::async_runtime::spawn_blocking(move || {
+        let read = |endpoint: &str, query: &str| analytics_over(&cache, endpoint, query, badge, DRAFT_DAYS);
+        let account = match account_id.as_deref().map(str::trim).filter(|s| !s.is_empty()) {
+            Some(text) => {
+                let id: u64 = text.parse().map_err(|_| "Enter a Steam account ID (numbers only)".to_string())?;
+                Some(if id > STEAM_ID64_BASE { id - STEAM_ID64_BASE } else { id })
+            }
+            None => None,
+        };
+        let mine = match account {
+            Some(id) => parse(&analytics_over(&cache, "hero-stats", &format!("account_id={id}"), 0, OWN_RECORD_DAYS)?)?,
+            None => vec![],
+        };
+        let stats = engine::draft::DraftData {
+            heroes: parse(&read("hero-stats", "")?)?,
+            counters: engine::draft::parse_counters(&read("hero-counter-stats", "same_lane_filter=false")?)?,
+            lane_counters: engine::draft::parse_counters(&read("hero-counter-stats", "same_lane_filter=true")?)?,
+            mine,
+            bans: engine::draft::parse_bans(&read("hero-ban-stats", "")?)?,
+        };
+        let input = engine::draft::DraftInput { allies, enemies, lane, banned };
+        Ok(engine::draft::draft(&data, &stats, &input))
     })
     .await
     .map_err(|e| e.to_string())?
@@ -613,6 +665,7 @@ pub fn run() {
             farm_report,
             popular_build,
             master_build,
+            draft_picks,
             simulate_combo,
             refresh_data,
             save_build,

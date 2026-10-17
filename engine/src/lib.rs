@@ -7,6 +7,7 @@ pub mod combo;
 pub mod counters;
 pub mod data;
 pub mod deaths;
+pub mod draft;
 pub mod fights;
 pub mod kit;
 pub mod matches;

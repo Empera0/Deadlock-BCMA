@@ -291,6 +291,38 @@ export interface ComboResult {
   own_health_end: number;
 }
 
+export interface DraftReason {
+  label: string;
+  points: number;
+  matches: number;
+}
+
+export interface DraftPick {
+  hero_id: number;
+  hero: string;
+  name: string;
+  icon: string;
+  hero_type: string;
+  edge: number;
+  team_rate: number | null;
+  base_rate: number;
+  matches: number;
+  strength: number;
+  counter: number;
+  lane: number;
+  comfort: number;
+  mine: [number, number] | null;
+  reasons: DraftReason[];
+}
+
+export interface DraftReport {
+  picks: DraftPick[];
+  bans: { hero_id: number; name: string; icon: string; edge: number; ban_share: number; reasons: DraftReason[] }[];
+  threats: { hero_id: number; name: string; icon: string; edge: number; reasons: DraftReason[] }[];
+  team_rate: number | null;
+  notes: string[];
+}
+
 export interface AdviceMove {
   kind: "buy" | "upgrade" | "swap";
   sell: string | null;
@@ -373,6 +405,8 @@ export const api = {
   suggestBuilds: (build: Build, styles: string[]) => invoke<Suggestions>("suggest_builds", { build, styles }),
   rankNext: (build: Build, metric: string, conditional: boolean) =>
     invoke<Ranked[]>("rank_next", { build, metric, conditional }),
+  draftPicks: (allies: number[], enemies: number[], lane: number[], banned: number[], badge: number, accountId: string | null) =>
+    invoke<DraftReport>("draft_picks", { allies, enemies, lane, banned, badge, accountId }),
   adviseBuild: (build: Build, style: string) => invoke<Advice>("advise_build", { build, style }),
   simulateCombo: (build: Build, combo: Combo) => invoke<ComboResult>("simulate_combo", { build, combo }),
   saveBuild: (name: string, build: Build) => invoke<void>("save_build", { name, build }),
