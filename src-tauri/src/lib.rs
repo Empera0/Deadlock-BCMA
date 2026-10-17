@@ -128,37 +128,93 @@ const ASCENDANT: u32 = 101;
 /// A hero needs this many matches at a rank for its build, and an enemy this many for what is bought against it.
 const ENOUGH_HERO_MATCHES: u64 = 400;
 const ENOUGH_ITEM_MATCHES: u64 = 1_500;
-/// Answers of the analytics endpoints are kept this long; the API itself refreshes them every few hours.
-const ANALYTICS_CACHE_S: u64 = 6 * 3600;
+/// Answers of the analytics endpoints are kept on disk this long, or until the game is patched, so the service
+/// is asked again about once a month. A player's own record changes with every match and is kept a day.
+const ANALYTICS_KEEP_S: u64 = 30 * 86_400;
+const OWN_RECORD_KEEP_S: u64 = 86_400;
+
+/// Where the analytics answers are kept, and the game version they belong to.
+struct Cache {
+    dir: PathBuf,
+    version: u64,
+}
+
+impl Cache {
+    fn new(app: &AppHandle, data: &GameData) -> Result<Cache, String> {
+        let dir = data_dir(app)?.join("analytics");
+        // Files named the old way (by the day of their window) are never read again.
+        if let Ok(entries) = fs::read_dir(&dir) {
+            for e in entries.filter_map(Result::ok) {
+                if !e.file_name().to_string_lossy().starts_with('v') {
+                    let _ = fs::remove_file(e.path());
+                }
+            }
+        }
+        Ok(Cache { dir, version: data.client_version.unwrap_or(0) })
+    }
+}
 
 /// An analytics endpoint with the shared filters, read from the cache when it is fresh enough.
-fn analytics(cache: &PathBuf, endpoint: &str, query: &str, badge: u32) -> Result<String, String> {
+fn analytics(cache: &Cache, endpoint: &str, query: &str, badge: u32) -> Result<String, String> {
     analytics_over(cache, endpoint, query, badge, ANALYTICS_DAYS)
 }
 
-/// The same over a window of the given days.
-fn analytics_over(cache: &PathBuf, endpoint: &str, query: &str, badge: u32, days: u64) -> Result<String, String> {
-    // The window starts at a whole day, so the same question is the same request all day long.
-    let day = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0) / 86_400;
-    let from = (day - days) * 86_400;
-    let filters = format!("min_unix_timestamp={from}&min_average_badge={badge}");
-    let query = if query.is_empty() { filters } else { format!("{query}&{filters}") };
-    let name: String = format!("{endpoint}-{query}").chars().map(|c| if c.is_ascii_alphanumeric() { c } else { '_' }).collect();
-    let path = cache.join(format!("{name}.json"));
-    let fresh = fs::metadata(&path)
-        .and_then(|m| m.modified())
-        .ok()
-        .and_then(|t| t.elapsed().ok())
-        .is_some_and(|age| age.as_secs() < ANALYTICS_CACHE_S);
+/// The same over a window of the given days. A kept answer is used while it is fresh and from the current game
+/// version; when the service cannot be reached, any kept answer to the same question is used instead.
+fn analytics_over(cache: &Cache, endpoint: &str, query: &str, badge: u32, days: u64) -> Result<String, String> {
+    let key: String = format!("{endpoint}-{query}-b{badge}-d{days}").chars().map(|c| if c.is_ascii_alphanumeric() { c } else { '_' }).collect();
+    let path = cache.dir.join(format!("v{}-{key}.json", cache.version));
+    let keep = if query.contains("account_id=") { OWN_RECORD_KEEP_S } else { ANALYTICS_KEEP_S };
+    let fresh = fs::metadata(&path).and_then(|m| m.modified()).ok().and_then(|t| t.elapsed().ok()).is_some_and(|age| age.as_secs() < keep);
     if fresh {
         if let Ok(json) = fs::read_to_string(&path) {
             return Ok(json);
         }
     }
-    let json = get(&format!("{MATCH_API}/analytics/{endpoint}?{query}"), "The statistics service has no data for this.")?;
-    let _ = fs::create_dir_all(cache);
-    let _ = fs::write(&path, &json);
-    Ok(json)
+    // Answers to this question kept from earlier game versions.
+    let older: Vec<PathBuf> = fs::read_dir(&cache.dir)
+        .map(|entries| {
+            entries
+                .filter_map(Result::ok)
+                .map(|e| e.path())
+                .filter(|p| p != &path && p.file_name().is_some_and(|n| n.to_string_lossy().ends_with(&format!("-{key}.json"))))
+                .collect()
+        })
+        .unwrap_or_default();
+    let day = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0) / 86_400;
+    let from = (day - days) * 86_400;
+    let filters = format!("min_unix_timestamp={from}&min_average_badge={badge}");
+    let full = if query.is_empty() { filters } else { format!("{query}&{filters}") };
+    match get(&format!("{MATCH_API}/analytics/{endpoint}?{full}"), "The statistics service has no data for this.") {
+        Ok(json) => {
+            let _ = fs::create_dir_all(&cache.dir);
+            let _ = fs::write(&path, &json);
+            for p in older {
+                let _ = fs::remove_file(p);
+            }
+            Ok(json)
+        }
+        // The service is down or out of reach: what was kept last time is better than nothing.
+        Err(e) => [path].into_iter().chain(older).find_map(|p| fs::read_to_string(p).ok()).ok_or(e),
+    }
+}
+
+/// Requests to the analytics service sent at once when filling the cache ahead of time.
+const PARALLEL_REQUESTS: usize = 4;
+
+/// Fills the cache with every (endpoint, query, badge, days) asked for, several requests at a time. The service
+/// can take seconds to answer a question it has not been asked lately, so one after another a master build's
+/// forty requests took a minute. Failures are left for the caller's own request to report.
+fn prefetch(cache: &Cache, jobs: Vec<(&'static str, String, u32, u64)>) {
+    let queue = std::sync::Mutex::new(jobs);
+    std::thread::scope(|scope| {
+        for _ in 0..PARALLEL_REQUESTS {
+            scope.spawn(|| loop {
+                let Some((endpoint, query, badge, days)) = queue.lock().unwrap().pop() else { break };
+                let _ = analytics_over(cache, endpoint, &query, badge, days);
+            });
+        }
+    });
 }
 
 fn parse<T: serde::de::DeserializeOwned>(json: &str) -> Result<T, String> {
@@ -166,7 +222,7 @@ fn parse<T: serde::de::DeserializeOwned>(json: &str) -> Result<T, String> {
 }
 
 /// A hero's popular build: what top players bought and kept over the last two weeks, and the rank it was read at.
-fn popular_for(data: &GameData, cache: &PathBuf, hero_id: u64) -> Result<(popular::PopularBuild, u32), String> {
+fn popular_for(data: &GameData, cache: &Cache, hero_id: u64) -> Result<(popular::PopularBuild, u32), String> {
     for badge in [ETERNUS, ASCENDANT] {
         let heroes: Vec<popular::HeroStat> = parse(&analytics(cache, "hero-stats", "", badge)?)?;
         let matches = heroes.iter().find(|h| h.hero_id == hero_id).map(|h| h.matches).unwrap_or(0);
@@ -207,7 +263,7 @@ struct PopularReport {
 #[tauri::command]
 async fn popular_build(app: AppHandle, state: State<'_, AppState>, hero_id: u64) -> Result<PopularReport, String> {
     let data = state.data.read().unwrap().clone();
-    let cache = data_dir(&app)?.join("analytics");
+    let cache = Cache::new(&app, &data)?;
     tauri::async_runtime::spawn_blocking(move || {
         let (build, badge) = popular_for(&data, &cache, hero_id)?;
         Ok(PopularReport { build, days: ANALYTICS_DAYS, rank: rank_name(badge).into() })
@@ -235,8 +291,17 @@ async fn draft_picks(
     account_id: Option<String>,
 ) -> Result<engine::draft::DraftReport, String> {
     let data = state.data.read().unwrap().clone();
-    let cache = data_dir(&app)?.join("analytics");
+    let cache = Cache::new(&app, &data)?;
     tauri::async_runtime::spawn_blocking(move || {
+        prefetch(
+            &cache,
+            vec![
+                ("hero-stats", String::new(), badge, DRAFT_DAYS),
+                ("hero-counter-stats", "same_lane_filter=false".into(), badge, DRAFT_DAYS),
+                ("hero-counter-stats", "same_lane_filter=true".into(), badge, DRAFT_DAYS),
+                ("hero-ban-stats", String::new(), badge, DRAFT_DAYS),
+            ],
+        );
         let read = |endpoint: &str, query: &str| analytics_over(&cache, endpoint, query, badge, DRAFT_DAYS);
         let account = match account_id.as_deref().map(str::trim).filter(|s| !s.is_empty()) {
             Some(text) => {
@@ -284,12 +349,30 @@ async fn master_build(
     bought: Option<Vec<(String, u32)>>,
 ) -> Result<MasterReport, String> {
     let data = state.data.read().unwrap().clone();
-    let cache = data_dir(&app)?.join("analytics");
+    let cache = Cache::new(&app, &data)?;
     tauri::async_runtime::spawn_blocking(move || {
         let my_id = data.hero(&my_hero).map(|h| h.id).ok_or("Unknown hero")?;
         // The same hero cannot be on both teams.
         let enemies: Vec<u64> = enemies.into_iter().filter(|id| *id != my_id && !allies.contains(id)).collect();
         let allies: Vec<u64> = allies.into_iter().filter(|id| *id != my_id).collect();
+        // Everything the build below may read, fetched at once; it then reads it from the cache. Both ranks are
+        // fetched, as which one a hero is read at is only known from the answers.
+        let mut jobs = vec![
+            ("item-stats", format!("hero_id={my_id}&bucket=net_worth_by_1000"), ASCENDANT, ANALYTICS_DAYS),
+            ("hero-stats", format!("min_duration_s={LONG_MATCH_S}"), ASCENDANT, ANALYTICS_DAYS),
+            ("hero-stats", format!("max_duration_s={SHORT_MATCH_S}"), ASCENDANT, ANALYTICS_DAYS),
+        ];
+        for badge in [ETERNUS, ASCENDANT] {
+            jobs.push(("hero-stats", String::new(), badge, ANALYTICS_DAYS));
+            jobs.push(("item-stats", String::new(), badge, ANALYTICS_DAYS));
+            for id in allies.iter().chain(&enemies).chain([&my_id]) {
+                jobs.push(("item-stats", format!("hero_id={id}"), badge, ANALYTICS_DAYS));
+            }
+            for id in &enemies {
+                jobs.push(("item-stats", format!("enemy_hero_ids={id}"), badge, ANALYTICS_DAYS));
+            }
+        }
+        prefetch(&cache, jobs);
         let ally_builds: Vec<popular::PopularBuild> = allies.iter().map(|id| popular_for(&data, &cache, *id).map(|b| b.0)).collect::<Result<_, _>>()?;
         let ally_team: Vec<popular::Ally> = allies.iter().zip(&ally_builds).map(|(id, build)| popular::Ally { hero_id: *id, build }).collect();
         // What everybody buys against an enemy: one hero's own sample at the top ranks is too small to read.
