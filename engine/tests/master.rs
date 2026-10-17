@@ -108,3 +108,41 @@ fn a_stun_is_worth_its_share_of_a_fight() {
     assert_eq!(master::stun_gain(item("Lightning Scroll"), 0.75, "spirit", false).1, 1.0);
     assert_eq!(master::stun_gain(item("Knockdown"), 0.5, "spirit", false).1, 1.0);
 }
+
+#[test]
+fn counter_picks_are_in_the_build_and_no_component_follows_its_upgrade() {
+    let d = data();
+    let haze = popular::popular_build(&d, 13, hero_matches(13), &stats(include_str!("popular/items-haze.json"))).unwrap();
+    let infernus = popular::popular_build(&d, 1, hero_matches(1), &stats(include_str!("popular/items-infernus.json"))).unwrap();
+    let vs_infernus = popular::lifts(&stats(include_str!("popular/items-all.json")), &stats(include_str!("popular/items-vs-infernus.json")));
+    let enemies = [Enemy { hero_id: 1, build: &infernus, lifts: &vs_infernus }];
+    let core: Vec<String> = haze.core.iter().map(|c| c.item.clone()).collect();
+    let phase_stats = stats(include_str!("popular/phases-haze.json"));
+    let input = MasterInput {
+        matchup: Matchup { my_hero: Some("hero_haze"), my_spirit: Some(false), my_gun_pct: None, my_core: &core, allies: &[], enemies: &enemies, lane: &[1], ranged: true },
+        hero_id: 13,
+        phase_stats: &phase_stats,
+        hero_matches: hero_matches(13),
+        own_build: &haze,
+        focus: "auto",
+        damage: "auto",
+        scaling: &vec![],
+        bought: &[],
+    };
+    let build = master::master_build(&d, &input).unwrap();
+    let picks: Vec<&str> = build.counter.stages.iter().flat_map(|s| s.picks.iter().map(|p| p.advice.item.as_str())).collect();
+    let counters: Vec<&str> = build.items.iter().filter(|x| x.counter).map(|x| x.item.as_str()).collect();
+    assert!(!counters.is_empty(), "no counter pick made it into the build");
+    assert!(counters.iter().all(|c| picks.contains(c)));
+    // The lane's counter picks are bought in the lane.
+    let lane = build.counter.stages.iter().find(|s| s.key == "lane").unwrap();
+    for p in &lane.picks {
+        assert!(build.items.iter().any(|x| x.item == p.advice.item && x.phase == 0 && x.counter), "{} not bought in the lane", p.advice.name);
+    }
+    for (i, x) in build.items.iter().enumerate() {
+        let item = d.item(&x.item).unwrap();
+        for later in &build.items[i + 1..] {
+            assert!(!item.components.contains(&later.item), "{} bought after {}, which it goes into", later.name, x.name);
+        }
+    }
+}

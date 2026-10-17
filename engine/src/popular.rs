@@ -173,9 +173,33 @@ pub fn deals_spirit(data: &GameData, build: &PopularBuild) -> bool {
 const SPLIT_SOULS: u32 = 30_000;
 const SPLIT_TIERS: [u8; 4] = [2, 2, 2, 2];
 
-/// Share of a hero's damage in a fight that is gun damage, with its usual build late in the match, percent.
-/// Item souls are no guide: a hero buying weapon items can still deal most of its damage with abilities.
+/// Share of each hero's damage to enemy heroes that is bullet or melee damage, measured on recent high-rank
+/// matches by examples/damage_split.rs (run again about once a month).
+const MEASURED_GUN: &str = include_str!("../data/gun-share.json");
+
+/// The measured gun share of a hero, percent, when the sample had enough of it.
+pub fn measured_gun_pct(hero_id: u64) -> Option<f64> {
+    static TABLE: std::sync::OnceLock<HashMap<u64, f64>> = std::sync::OnceLock::new();
+    TABLE
+        .get_or_init(|| {
+            let v: serde_json::Value = serde_json::from_str(MEASURED_GUN).unwrap_or_default();
+            v.get("gun_pct")
+                .and_then(|g| g.as_object())
+                .map(|o| o.iter().filter_map(|(k, v)| Some((k.parse().ok()?, v.as_f64()?))).collect())
+                .unwrap_or_default()
+        })
+        .get(&hero_id)
+        .copied()
+}
+
+/// Share of a hero's damage that is gun damage, percent: as measured in real matches when known (a hero's kit
+/// in a simulated fight overrates the gun of heroes such as Grey Talon, whose Charged Shot is spirit damage),
+/// otherwise worked out with its usual build late in the match. Item souls are no guide: a hero buying weapon
+/// items can still deal most of its damage with abilities.
 pub fn gun_pct(data: &GameData, build: &PopularBuild) -> Option<f64> {
+    if let Some(measured) = data.hero(&build.hero).and_then(|h| measured_gun_pct(h.id)) {
+        return Some(measured);
+    }
     let b = BuildInput {
         hero: build.hero.clone(),
         purchases: build.core.iter().map(|c| c.item.clone()).collect(),
@@ -691,6 +715,20 @@ pub(crate) fn close_range(item: &Item) -> Option<f64> {
     Some(if radius > 0.0 && radius <= CLOSE_RANGE_M { radius } else { CLOSE_RANGE_M })
 }
 
+/// A hero that fights from range gets this much of an item that takes it onto its target.
+const DIVE_EASE: f64 = 0.35;
+
+/// An active that takes its owner onto the target (Phantom Strike): an answer for a hero that fights up close,
+/// a trip into the enemy team for one that fights from range.
+pub(crate) fn dives_in(item: &Item) -> bool {
+    item.active && item.description.to_lowercase().contains("teleport to")
+}
+
+/// A passive that cleanses only the next stun or silence, then waits out its cooldown (Indomitable).
+fn cleanses_once(item: &Item) -> bool {
+    !item.active && item.description.to_lowercase().contains("the next stun")
+}
+
 /// One enemy hero: what it threatens and which of the planned items answer it, stage by stage.
 #[derive(Debug, Clone, Serialize)]
 pub struct HeroAnswer {
@@ -961,6 +999,25 @@ pub fn counter_plan(data: &GameData, m: &Matchup) -> CounterPlan {
             easy *= 0.5;
             notes.insert(0, format!("Harder to use: works within {radius:.0}m, and this hero fights from range"));
         }
+        if m.ranged && dives_in(item) {
+            easy *= DIVE_EASE;
+            notes.insert(0, "Harder to use: it takes you onto the target, and this hero fights from range".into());
+        }
+        // An item that cleanses only the next stun or silence (Indomitable) is spent by the first one: against a
+        // team with several, a cheap one baits it and the rest land anyway.
+        let mut baited = 1.0;
+        if cleanses_once(item) {
+            let sources: Vec<String> = profiles
+                .iter()
+                .zip(included)
+                .filter(|(_, on)| **on)
+                .flat_map(|(p, _)| p.lockdown.iter().map(move |a| format!("{}'s {a}", p.hero_name)))
+                .collect();
+            if sources.len() >= 2 {
+                baited = 1.0 / sources.len() as f64;
+                notes.insert(0, format!("Harder to use: it cleanses one stun or silence, and their team has {} ({}), so the first one baits it", sources.len(), sources.join(", ")));
+            }
+        }
         let mut score = 0.0;
         let mut done: Vec<(f64, &str, String)> = vec![];
         let mut reliable: Vec<(Role, f64)> = vec![];
@@ -979,6 +1036,7 @@ pub fn counter_plan(data: &GameData, m: &Matchup) -> CounterPlan {
                     measured_done = true;
                     (part, MEASURED_K * on.iter().cloned().fold(0.0, f64::max) * easy)
                 }
+                (Role::Control, _) => (strength * easy * baited * weight * factor, strength * easy * baited),
                 _ => (strength * easy * weight * factor, strength * easy),
             };
             score += part;

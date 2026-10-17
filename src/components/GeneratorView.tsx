@@ -137,9 +137,6 @@ const DAMAGES: [string, string][] = [
 ];
 
 /** Both teams, the lane and the role: a full build for the player's hero, phase by phase. */
-/** The stage of the game an item's price fits. */
-const stageOf = (cost: number) => (cost <= 1600 ? "lane" : cost <= 3200 ? "mid game" : "late game");
-
 /** A small item tile for the comparison. */
 function MiniItem({ item, cost }: { item: { name: string; icon: string; category: string; description: string }; cost: number }) {
   return (
@@ -520,12 +517,19 @@ function MasterPanel({
                     .map((x) => (
                       <div
                         key={x.item}
-                        className={"master-item " + x.category + (x.sold || x.upgraded ? " sold" : "")}
+                        className={"master-item " + x.category + (x.sold || x.upgraded ? " sold" : "") + (x.counter ? " counter" : "")}
                         title={`${x.name} · ${fmt(x.cost)} souls${x.paid < x.cost ? ` (${fmt(x.paid)} as an upgrade)` : ""}\n\n${x.description}${x.notes.length ? "\n\n" + x.notes.join("\n") : ""}`}
                       >
                         <img src={x.icon} alt="" loading="lazy" />
                         <div>
-                          <b>{x.name}</b>
+                          <b>
+                            {x.name}
+                            {x.counter && (
+                              <em className="counter-tag" title="Bought to answer the enemy team">
+                                Counter
+                              </em>
+                            )}
+                          </b>
                           <small>
                             {fmt(x.cost)}
                             {x.upgrades ? ` · ${fmt(x.paid)} on top of ${x.upgrades}` : ""}
@@ -611,54 +615,6 @@ function MasterPanel({
 
           <PowerCurve master={report.master} />
 
-          <details className="counter-details">
-            <summary>Counter picks only: two per stage</summary>
-          {report.plan.stages.map((stage) => (
-            <div key={stage.key} className="group stage-group">
-              <h3>
-                {stage.title} <small className="muted">· {stage.note}</small>
-              </h3>
-              <div className="pick-row">
-                {stage.picks.map((p, i) => (
-                  <div key={p.advice.item} className={"pick-card " + p.advice.category}>
-                    <span className="pick-rank">{i + 1}</span>
-                    <img src={p.advice.icon} alt="" loading="lazy" />
-                    <div>
-                      <div className="counter-head">
-                        <b>{p.advice.name}</b>
-                        <small>{fmt(p.advice.cost)} souls</small>
-                        {p.advice.active && <small className="tag-active">active</small>}
-                        {p.in_core && <small className="tag-core">in your build</small>}
-                      </div>
-                      <div className="pick-jobs">{p.jobs.join(" · ")}</div>
-                      <div className="counter-effect">{p.advice.effect}</div>
-                      <p className="counter-what">{p.advice.description}</p>
-                      <ul>
-                        {p.advice.reasons.map((r) => (
-                          <li key={r} className={r.startsWith("Top players") ? "lift" : r.startsWith("Harder") ? "hard" : ""}>
-                            {r}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              {stage.alternatives.length > 0 && (
-                <div className="pick-alts">
-                  <small>If those do not fit:</small>
-                  {stage.alternatives.map((p) => (
-                    <span key={p.advice.item} className="pick-alt" title={`${p.advice.effect}\n\n${p.advice.description}`}>
-                      <img src={p.advice.icon} alt="" />
-                      {p.advice.name} <small>{p.jobs.join(", ")}</small>
-                    </span>
-                  ))}
-                </div>
-              )}
-            </div>
-          ))}
-
-          </details>
 
           <div className="group">
             <h3>Hero by hero</h3>
@@ -714,59 +670,6 @@ function MasterPanel({
             </table>
           </div>
 
-          {report.plan.others.length > 0 && (
-            <div className="group">
-              <h3>Other counter items</h3>
-              <p className="muted">
-                Everything else that answers something this team does, best first. Swap one in when a pick above does not suit how the
-                match is going.
-              </p>
-              <table className="match-table compare other-counters">
-                <thead>
-                  <tr>
-                    <th className="left">Item</th>
-                    <th>Souls</th>
-                    <th className="left">Answers</th>
-                    <th className="left">What it does</th>
-                    <th className="left">Against</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {report.plan.others.map((o) => {
-                    const notes = o.advice.reasons.filter((r) => r.startsWith("Harder") || r.startsWith("Top players"));
-                    return (
-                      <tr key={o.advice.item} className={o.advice.category}>
-                        <td className="left">
-                          <span className="other-item">
-                            <img src={o.advice.icon} alt="" loading="lazy" />
-                            <span>
-                              <b>{o.advice.name}</b>
-                              {o.advice.active && <small className="tag-active">active</small>}
-                              <small className="muted">{stageOf(o.advice.cost)}</small>
-                            </span>
-                          </span>
-                        </td>
-                        <td>{fmt(o.advice.cost)}</td>
-                        <td className="left">
-                          <div className="pick-jobs">{o.jobs.join(" · ")}</div>
-                          <div className="counter-effect">{o.advice.effect}</div>
-                        </td>
-                        <td className="left other-what">
-                          {o.advice.description}
-                          {notes.map((n) => (
-                            <small key={n} className={n.startsWith("Harder") ? "hard" : "lift"}>
-                              {n}
-                            </small>
-                          ))}
-                        </td>
-                        <td className="left other-against">{o.advice.against.join(", ")}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
 
           <details className="counter-details">
             <summary>The enemy team and every option, job by job</summary>

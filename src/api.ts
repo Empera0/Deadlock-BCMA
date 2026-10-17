@@ -929,6 +929,8 @@ export interface MasterItem {
   upgraded: boolean;
   /** The ability it is imbued into. */
   imbued: string | null;
+  /** Bought to answer the enemy team: one of the counter plan's picks. */
+  counter: boolean;
 }
 
 /** An item weighed in a phase and not bought. */

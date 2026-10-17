@@ -99,6 +99,23 @@ const STRONG_COUNTER: f64 = 0.7;
 const MIN_COST: [u32; 4] = [0, 0, 1_600, 3_200];
 /// A passive that only works close by counts this much for a hero who fights from range.
 const CLOSE_RANGE_FACTOR: f64 = 0.5;
+/// A counter pick is not bought for a job that this many items in the build already do.
+const COUNTER_JOB_MAX: usize = 2;
+/// The prefixes of the notes shown on an item in the build.
+const SHOWN_NOTES: [&str; 6] = ["Takes", "Harder", "Timing", "Top players", "Stuns", "Clears"];
+
+/// An item's components, theirs too.
+fn parts(data: &GameData, class: &str) -> Vec<String> {
+    let mut out = vec![];
+    let mut todo: Vec<String> = data.item(class).map(|i| i.components.clone()).unwrap_or_default();
+    while let Some(c) = todo.pop() {
+        if !out.contains(&c) {
+            todo.extend(data.item(&c).map(|i| i.components.clone()).unwrap_or_default());
+            out.push(c);
+        }
+    }
+    out
+}
 
 /// What a team item (healing, barriers, team auras) adds on top for a support.
 const TEAM_ITEM_BONUS: f64 = 0.25;
@@ -241,6 +258,8 @@ pub struct MasterItem {
     pub upgraded: bool,
     /// The ability it is imbued into, for an item that goes into one.
     pub imbued: Option<String>,
+    /// Bought to answer the enemy team: one of the counter plan's picks.
+    pub counter: bool,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -429,6 +448,8 @@ pub fn master_build(data: &GameData, input: &MasterInput) -> Result<MasterBuild,
     members.extend(m.allies.iter().map(|a| (a.hero_id, a.build.core.iter().map(|c| c.item.clone()).collect())));
     let team = TeamEffects::of(data, &members);
     let stage_scores = |stage: &str| counter.stages.iter().find(|s| s.key == stage).map(|s| s.scored.clone()).unwrap_or_default();
+    // The counter plan's picks are bought into the build and marked as counters there.
+    let counter_items: Vec<String> = counter.stages.iter().flat_map(|s| s.picks.iter().map(|p| p.advice.item.clone())).collect();
 
     let shop: Vec<&Item> = data.items.iter().filter(|i| i.cost > 0 && i.tier <= 4).collect();
     let mut b = BuildInput { hero: hero.class_name.clone(), ..Default::default() };
@@ -462,7 +483,7 @@ pub fn master_build(data: &GameData, input: &MasterInput) -> Result<MasterBuild,
             if focus.0 == "support" && TEAM_ITEMS.contains(&item.name.as_str()) {
                 s += TEAM_ITEM_BONUS;
             }
-            if m.ranged && popular::close_range(item).is_some() {
+            if m.ranged && (popular::close_range(item).is_some() || popular::dives_in(item)) {
                 s *= CLOSE_RANGE_FACTOR;
             }
             s * team.redundancy(item).0
@@ -473,18 +494,77 @@ pub fn master_build(data: &GameData, input: &MasterInput) -> Result<MasterBuild,
         let mut sold_here: Vec<String> = vec![];
         let mut considered: Vec<Considered> = vec![];
         let mut first = true;
+        // The counter picks of the stage come first, in the first phase of the stage that pays for them.
+        let stage_picks: Vec<String> = counter.stages.iter().filter(|s| s.key == *stage).flat_map(|s| s.picks.iter().map(|p| p.advice.item.clone())).collect();
+        for class in &stage_picks {
+            if b.purchases.contains(class) || items.iter().any(|x| &x.item == class) {
+                continue;
+            }
+            let Some(scored) = counter_scores.iter().find(|c| &c.0 == class) else { continue };
+            let done: Vec<String> = items.iter().filter(|x| !x.sold).flat_map(|x| x.jobs.clone()).collect();
+            if !scored.2.is_empty() && scored.2.iter().all(|j| done.iter().filter(|d| *d == j).count() >= COUNTER_JOB_MAX) {
+                continue;
+            }
+            let Some(g) = suggest::gains(data, &b, gains_style, std::slice::from_ref(class)).into_iter().next() else { continue };
+            if g.paid > to.saturating_sub(paid_total) {
+                continue;
+            }
+            let item = data.item(class).ok_or("Unknown item")?;
+            let pop = popular(item);
+            let ctr = (scored.1 / counter_top).min(1.0);
+            let upgrades = item.components.iter().find(|c| b.purchases.contains(c)).cloned();
+            if let Some(x) = upgrades.as_ref().and_then(|c| items.iter_mut().find(|x| &x.item == c)) {
+                x.upgraded = true;
+            }
+            b.purchases.push(class.clone());
+            if let Some(i) = g.imbue {
+                b.imbues.insert(class.clone(), i);
+            }
+            paid_total += g.paid;
+            items.push(MasterItem {
+                item: class.clone(),
+                name: item.name.clone(),
+                icon: item.icon.clone(),
+                category: item.category.clone(),
+                cost: item.cost,
+                active: item.active,
+                description: item.description.clone(),
+                phase: index,
+                paid: g.paid,
+                score: score(item, pop, g.gain, ctr, 0.0),
+                popular_pct: pop * 100.0,
+                win_pct: win(item).0,
+                win_pp: win(item).1,
+                engine_pct: g.gain.max(0.0) * 100.0,
+                jobs: scored.2.clone(),
+                notes: team.redundancy(item).1.into_iter().chain(scored.3.iter().filter(|w| SHOWN_NOTES.iter().any(|p| w.starts_with(p))).cloned()).collect(),
+                sold: false,
+                upgrades: upgrades.and_then(|c| data.item(&c)).map(|i| i.name.clone()),
+                upgraded: false,
+                imbued: g.imbue.and_then(|i| hero.abilities.get(i)).map(|a| a.name.clone()),
+                counter: true,
+            });
+        }
         loop {
             // A job items already bought do is worth less a second time: never two items for the same job.
             let done_jobs: Vec<String> = items.iter().filter(|x| !x.sold).flat_map(|x| x.jobs.clone()).collect();
             let answer = |c: &(String, f64, Vec<String>, Vec<String>)| -> f64 {
+                // A job two items in the build already do earns a third nothing (Unstoppable on top of Debuff
+                // Reducer and Reactive Barrier).
+                if !c.2.is_empty() && c.2.iter().all(|j| done_jobs.iter().filter(|d| *d == j).count() >= COUNTER_JOB_MAX) {
+                    return 0.0;
+                }
                 let fresh = if c.2.is_empty() { 1.0 } else { c.2.iter().filter(|j| !done_jobs.contains(j)).count() as f64 / c.2.len() as f64 };
                 (c.1 / counter_top).min(1.0) * (DONE_JOB + (1.0 - DONE_JOB) * fresh)
             };
             let left = to.saturating_sub(paid_total);
             let owned = calc::compute(data, &b).map(|s| s.owned).unwrap_or_default();
+            // A component of an item already bought is never bought after it (Extra Stamina after Arcane Surge).
+            let inside: Vec<String> = b.purchases.iter().flat_map(|c| parts(data, c)).collect();
             let candidates: Vec<String> = shop
                 .iter()
                 .filter(|i| i.cost <= left.max(1) * 2 && !b.purchases.contains(&i.class_name) && !items.iter().any(|x| x.item == i.class_name))
+                .filter(|i| !inside.contains(&i.class_name))
                 .map(|i| i.class_name.clone())
                 .collect();
             let gains = suggest::gains(data, &b, gains_style, &candidates);
@@ -544,7 +624,7 @@ pub fn master_build(data: &GameData, input: &MasterInput) -> Result<MasterBuild,
                     let push = push_of(&g.item);
                     why.extend(push_note(push));
                     let mut notes: Vec<String> = team.redundancy(item).1.into_iter().collect();
-                    notes.extend(why.into_iter().filter(|w| ["Takes", "Harder", "Timing", "Top players", "Stuns", "Clears"].iter().any(|p| w.starts_with(p))));
+                    notes.extend(why.into_iter().filter(|w| SHOWN_NOTES.iter().any(|p| w.starts_with(p))));
                     considered.push(Considered {
                         item: g.item.clone(),
                         name: item.name.clone(),
@@ -602,12 +682,13 @@ pub fn master_build(data: &GameData, input: &MasterInput) -> Result<MasterBuild,
                         .redundancy(item)
                         .1
                         .into_iter()
-                        .chain(why.into_iter().filter(|w| ["Takes", "Harder", "Timing", "Top players", "Stuns", "Clears"].iter().any(|p| w.starts_with(p))))
+                        .chain(why.into_iter().filter(|w| SHOWN_NOTES.iter().any(|p| w.starts_with(p))))
                         .collect(),
                     sold: false,
                     upgrades: upgrades.and_then(|c| data.item(&c)).map(|i| i.name.clone()),
                     upgraded: false,
                     imbued: g.imbue.and_then(|i| hero.abilities.get(i)).map(|a| a.name.clone()),
+                    counter: counter_items.contains(&g.item),
                 });
                 continue;
             }
@@ -619,7 +700,8 @@ pub fn master_build(data: &GameData, input: &MasterInput) -> Result<MasterBuild,
             let Some(weakest) = items
                 .iter()
                 .filter(|x| !x.sold && x.cost <= SELLABLE_COST && owned.contains(&x.item))
-                .min_by(|a, b| a.score.total_cmp(&b.score))
+                // Counters are sold last: they answer the enemy team, which the score alone does not show.
+                .min_by(|a, b| a.counter.cmp(&b.counter).then(a.score.total_cmp(&b.score)))
                 .map(|x| (x.item.clone(), x.score, x.cost, x.name.clone()))
             else {
                 break;
