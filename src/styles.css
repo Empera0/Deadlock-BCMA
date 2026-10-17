@@ -2862,9 +2862,12 @@ header.match {
   font-size: 9px;
 }
 
+/* A fixed eight items a row, scaled to the shop's width up to a cap: the shop looks the same on every screen
+   and display scaling instead of fitting a different number of tiles each time. */
 .tier-items {
-  grid-template-columns: repeat(auto-fill, 74px);
+  grid-template-columns: repeat(8, minmax(0, 1fr));
   gap: 4px;
+  max-width: 760px;
 }
 
 .item {
@@ -2873,8 +2876,8 @@ header.match {
 }
 
 .item-art {
-  aspect-ratio: auto;
-  height: 54px;
+  aspect-ratio: 74 / 54;
+  height: auto;
 }
 
 .item-name {
