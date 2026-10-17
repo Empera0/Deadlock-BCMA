@@ -2,6 +2,22 @@
 
 All notable changes to Deadlock BCMA are listed here. Versions follow [semantic versioning](https://semver.org).
 
+## [0.2.40] – 2026-10-17
+
+This release puts the counter items into the master build itself and removes several picks that made no sense for the hero.
+
+### Changed
+
+1. **Counters inside the build.** The items that answer the enemy team are now bought into the master build, in the first phase of their stage that pays for them, and carry a gold "Counter" tag. The separate counter lists below the build are gone; "Hero by hero" still shows which item answers which enemy. Counters are the last items sold to make room.
+2. **Real damage shares.** How much of an enemy's damage is gun and how much is spirit now comes from 200 recent Phantom+ matches, by damage type, instead of a simulated fight. Venator, Rat King, Silver and Haze are mostly gun; Wraith and Grey Talon deal most of their damage as spirit damage.
+
+### Fixed
+
+3. **Phantom Strike for ranged heroes.** Items that take you onto the target count for about a third for heroes that fight from range, so a caster such as Seven is no longer sent into the enemy team.
+4. **Indomitable against several stuns.** It cleanses only the next stun or silence, so against a team with several (Mina, Haze, Drifter) the first one baits it; its value now drops with every stun the team has.
+5. **Stacked answers.** A third item for a job two items in the build already do, such as Unstoppable on top of Debuff Reducer and Reactive Barrier, gets no credit for that job.
+6. **Purchase order.** A component is never bought after the item it goes into, such as Extra Stamina after Arcane Surge.
+
 ## [0.2.39] – 2026-10-17
 
 This release makes the Master builder and the Draft screen fast, and keeps their statistics on your computer.
@@ -401,6 +417,7 @@ This release adds the **Build generator**, with builds read from top-ranked matc
   - trends across your last matches.
 - Windows installer with a desktop shortcut and automatic updates from GitHub releases.
 
+[0.2.40]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.39...v0.2.40
 [0.2.39]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.38...v0.2.39
 [0.2.38]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.37...v0.2.38
 [0.2.37]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.36...v0.2.37
