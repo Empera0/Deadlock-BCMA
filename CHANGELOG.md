@@ -2,6 +2,17 @@
 
 All notable changes to Deadlock BCMA are listed here. Versions follow [semantic versioning](https://semver.org).
 
+## [0.2.42] – 2026-10-17
+
+This release loads your live match, studies your deaths over many matches, works out the order to upgrade abilities in, and compares two builds.
+
+### Added
+
+1. **Your live match.** "Load my live match" in the Master builder and the Draft screen fills both teams from the match you are playing, found by your Steam account ID; the Master builder then builds at once. The game's watch list this comes from holds only the top 200 matches being played, and a match only once it has started; the app says so when your match is not there. The account ID is shared between the Draft and Match analysis screens.
+2. **Why do I die?** A button in Match analysis studies every death of your last 10 matches and puts them together: who kills you and in how many matches, how much of the damage around your deaths is gun and how much spirit, how often the killer's fight alone was enough, and the items that would have helped in the most deaths. Each match opens with a click.
+3. **Upgrade order.** The Stats tab works out which ability to put each point into with your build, and the level each step is reached at. It is measured on a 30-second fight in which every ability is cast as often as its cooldown allows, so cooldown upgrades count; a tier that adds nothing but opens a strong one is looked past, and the ultimate waits for its unlock. Upgrades that change no damage come last and are marked. The three most played orders of top players are shown with their win rates, and clicking a step sets your abilities to it.
+4. **Compare.** A new tab beside Stats, Combo and Misc sets your build against a saved build or a build code: every stat side by side with the difference, fight damage, effective health and souls spent, and two charts of fight damage and effective health over the souls.
+
 ## [0.2.41] – 2026-10-17
 
 This release explains why each item was not bought and lists the counters at the end of each phase.
@@ -426,6 +437,7 @@ This release adds the **Build generator**, with builds read from top-ranked matc
   - trends across your last matches.
 - Windows installer with a desktop shortcut and automatic updates from GitHub releases.
 
+[0.2.42]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.41...v0.2.42
 [0.2.41]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.40...v0.2.41
 [0.2.40]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.39...v0.2.40
 [0.2.39]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.38...v0.2.39
