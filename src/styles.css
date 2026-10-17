@@ -4316,3 +4316,14 @@ header.draft {
   text-transform: uppercase;
   vertical-align: 1px;
 }
+
+/* Why an item was not bought */
+.considered .verdict {
+  display: block;
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--text);
+}
+.considered .verdict.hard {
+  color: var(--muted);
+}

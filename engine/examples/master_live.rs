@@ -91,7 +91,7 @@ fn main() {
             println!("   BUY{} {:<22} score {:.2} pop {:>4.1}% engine {:>5.1}% jobs {:?}", if x.counter { " [COUNTER]" } else { "" }, x.name, x.score, x.popular_pct, x.engine_pct, x.jobs);
         }
         for c in &p.considered {
-            println!("   not {:<22} score {:.2} pop {:>4.1}% engine {:>5.1}% counter {:>5.1}% {:?} {}", c.name, c.score, c.popular_pct, c.engine_pct, c.counter_pct, c.jobs, if c.left_out { "LEFT OUT" } else { "" });
+            println!("   not {:<22} {:.2} | {}", c.name, c.score, c.verdict);
         }
         for s in &b.counter.stages {
             if (i == 0 && s.key == "lane") || (i > 0 && i < 3 && s.key == "mid") || (i == 3 && s.key == "late") {

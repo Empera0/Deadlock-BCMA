@@ -260,6 +260,8 @@ pub struct MasterItem {
     pub imbued: Option<String>,
     /// Bought to answer the enemy team: one of the counter plan's picks.
     pub counter: bool,
+    /// Its answer to the enemy team against the best answer at this point, percent.
+    pub answer_pct: f64,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -293,6 +295,10 @@ pub struct Considered {
     pub notes: Vec<String>,
     /// Few top players buy it at this point and it is no strong answer, so it was not in the running.
     pub left_out: bool,
+    /// What it would have cost on top of the build: less when it upgrades an item already owned.
+    pub paid: u32,
+    /// Why it lost, in a sentence: against which item bought in the phase, and on what.
+    pub verdict: String,
 }
 
 /// This many items not bought are shown for each phase.
@@ -322,6 +328,90 @@ pub struct MasterBuild {
 }
 
 /// The roles a player can pick: (key, name, goal).
+/// What a phase weighed its items on, for telling why one lost.
+struct Parts<'a> {
+    weights: [f64; 3],
+    pop_top: f64,
+    price_weight: f64,
+    style: &'a str,
+}
+
+impl Parts<'_> {
+    /// The three parts of a score: popularity, the hero's own numbers, the answer to the enemy team.
+    fn of(&self, pop_pct: f64, engine_pct: f64, answer_pct: f64) -> [f64; 3] {
+        [
+            self.weights[0] * pop_pct / 100.0 / self.pop_top,
+            self.weights[1] * (engine_pct / 100.0 / ENGINE_FULL).min(1.0),
+            self.weights[2] * answer_pct / 100.0,
+        ]
+    }
+
+    /// What a phase picks by: the score with the price held against it as the role says.
+    fn rank(&self, score: f64, paid: u32) -> f64 {
+        score / (paid as f64 / 3_200.0).max(0.25).powf(self.price_weight)
+    }
+}
+
+/// A part this much smaller than the bar's is worth saying.
+const VERDICT_GAP: f64 = 0.02;
+
+/// Why an item weighed in a phase was not bought: against the weakest item the phase did buy (the bar it had to
+/// clear), the parts of the score it fell short on, its price, a job already done, and what counted against it.
+fn verdict(c: &Considered, items: &[MasterItem], phase: usize, parts: &Parts) -> String {
+    if c.left_out {
+        return format!(
+            "Not in the running: {:.0}% of top players buy it at this point (it takes {:.0}%) and its answer to their team is {:.0}% of a full one (it takes {:.0}%); an item needs one or the other",
+            c.popular_pct,
+            POPULAR_FROM * parts.pop_top * 100.0,
+            c.counter_pct,
+            STRONG_COUNTER * 100.0
+        );
+    }
+    // The bar is the weakest item the phase chose on its score; counters are bought for the enemy team regardless.
+    let chosen = items.iter().filter(|x| x.phase == phase && !x.counter);
+    let Some(bar) = chosen.min_by(|a, b| parts.rank(a.score, a.paid).total_cmp(&parts.rank(b.score, b.paid))) else {
+        return "Only counters were bought in this phase: the rest of its souls went to them".into();
+    };
+    let mine = parts.of(c.popular_pct, c.engine_pct, c.counter_pct);
+    let theirs = parts.of(bar.popular_pct, bar.engine_pct, bar.answer_pct);
+    let mut reasons: Vec<(f64, String)> = vec![];
+    if theirs[0] - mine[0] > VERDICT_GAP {
+        reasons.push((theirs[0] - mine[0], format!("{} is bought by {:.0}% of top players at this point, this by {:.0}%", bar.name, bar.popular_pct, c.popular_pct)));
+    }
+    if theirs[1] - mine[1] > VERDICT_GAP {
+        reasons.push((theirs[1] - mine[1], format!("{} adds +{:.0}% to your {} numbers, this +{:.0}%", bar.name, bar.engine_pct, parts.style, c.engine_pct)));
+    }
+    if theirs[2] - mine[2] > VERDICT_GAP {
+        reasons.push((theirs[2] - mine[2], format!("{} answers more of their team ({:.0}% of a full answer, this {:.0}%)", bar.name, bar.answer_pct, c.counter_pct)));
+    }
+    reasons.sort_by(|a, b| b.0.total_cmp(&a.0));
+    let mut said: Vec<String> = reasons.into_iter().take(2).map(|r| r.1).collect();
+    // A job an item bought by then already does.
+    if let Some((job, by)) = c.jobs.iter().find_map(|j| items.iter().find(|x| x.phase <= phase && !x.sold && x.jobs.contains(j)).map(|x| (j, x))) {
+        said.push(format!("\"{}\" is already done by {}", job.to_lowercase(), by.name));
+    }
+    if c.score >= bar.score && parts.rank(c.score, c.paid) < parts.rank(bar.score, bar.paid) {
+        said.insert(0, format!("it scores {:.2} against {:.2} for {}, but costs {} souls against {}: for its price it does less", c.score, bar.score, bar.name, c.paid, bar.paid));
+    }
+    if c.win_pp <= -1.0 {
+        said.push(format!("top players win {:.0} points less often when they buy it at this point", -c.win_pp));
+    }
+    if let Some(note) = c.notes.iter().find(|n| n.starts_with("Harder") || n.starts_with("Your team has it")) {
+        // A list of teammates is cut to the first.
+        let short = if note.starts_with("Your team has it") { note.split(" and ").next().unwrap_or(note) } else { note };
+        said.push(lower_first(short));
+    }
+    if said.is_empty() {
+        return format!("Close: it scores {:.2} against {:.2} for {}, the weakest item bought here", c.score, bar.score, bar.name);
+    }
+    format!("Lost to {}: {}", bar.name, said.join("; "))
+}
+
+fn lower_first(text: &str) -> String {
+    let mut chars = text.chars();
+    chars.next().map(|f| f.to_lowercase().collect::<String>() + chars.as_str()).unwrap_or_default()
+}
+
 pub fn focuses() -> Vec<(String, String, String)> {
     FOCUS.iter().map(|f| (f.0.into(), f.1.into(), f.2.into())).collect()
 }
@@ -494,14 +584,16 @@ pub fn master_build(data: &GameData, input: &MasterInput) -> Result<MasterBuild,
         let mut sold_here: Vec<String> = vec![];
         let mut considered: Vec<Considered> = vec![];
         let mut first = true;
-        // The counter picks of the stage come first, in the first phase of the stage that pays for them.
+        // The counter picks of the stage are paid for first, in the first phase of the stage that pays for them,
+        // and listed after the rest of the phase's purchases.
+        let mut phase_counters: Vec<MasterItem> = vec![];
         let stage_picks: Vec<String> = counter.stages.iter().filter(|s| s.key == *stage).flat_map(|s| s.picks.iter().map(|p| p.advice.item.clone())).collect();
         for class in &stage_picks {
             if b.purchases.contains(class) || items.iter().any(|x| &x.item == class) {
                 continue;
             }
             let Some(scored) = counter_scores.iter().find(|c| &c.0 == class) else { continue };
-            let done: Vec<String> = items.iter().filter(|x| !x.sold).flat_map(|x| x.jobs.clone()).collect();
+            let done: Vec<String> = items.iter().chain(&phase_counters).filter(|x| !x.sold).flat_map(|x| x.jobs.clone()).collect();
             if !scored.2.is_empty() && scored.2.iter().all(|j| done.iter().filter(|d| *d == j).count() >= COUNTER_JOB_MAX) {
                 continue;
             }
@@ -513,7 +605,7 @@ pub fn master_build(data: &GameData, input: &MasterInput) -> Result<MasterBuild,
             let pop = popular(item);
             let ctr = (scored.1 / counter_top).min(1.0);
             let upgrades = item.components.iter().find(|c| b.purchases.contains(c)).cloned();
-            if let Some(x) = upgrades.as_ref().and_then(|c| items.iter_mut().find(|x| &x.item == c)) {
+            if let Some(x) = upgrades.as_ref().and_then(|c| items.iter_mut().chain(phase_counters.iter_mut()).find(|x| &x.item == c)) {
                 x.upgraded = true;
             }
             b.purchases.push(class.clone());
@@ -521,7 +613,7 @@ pub fn master_build(data: &GameData, input: &MasterInput) -> Result<MasterBuild,
                 b.imbues.insert(class.clone(), i);
             }
             paid_total += g.paid;
-            items.push(MasterItem {
+            phase_counters.push(MasterItem {
                 item: class.clone(),
                 name: item.name.clone(),
                 icon: item.icon.clone(),
@@ -543,11 +635,12 @@ pub fn master_build(data: &GameData, input: &MasterInput) -> Result<MasterBuild,
                 upgraded: false,
                 imbued: g.imbue.and_then(|i| hero.abilities.get(i)).map(|a| a.name.clone()),
                 counter: true,
+                answer_pct: ctr * 100.0,
             });
         }
         loop {
             // A job items already bought do is worth less a second time: never two items for the same job.
-            let done_jobs: Vec<String> = items.iter().filter(|x| !x.sold).flat_map(|x| x.jobs.clone()).collect();
+            let done_jobs: Vec<String> = items.iter().chain(&phase_counters).filter(|x| !x.sold).flat_map(|x| x.jobs.clone()).collect();
             let answer = |c: &(String, f64, Vec<String>, Vec<String>)| -> f64 {
                 // A job two items in the build already do earns a third nothing (Unstoppable on top of Debuff
                 // Reducer and Reactive Barrier).
@@ -597,7 +690,7 @@ pub fn master_build(data: &GameData, input: &MasterInput) -> Result<MasterBuild,
                 why.insert(0, format!("Stuns{by} for {stun:.2}s{times}: the enemy cannot fight back meanwhile, worth +{:.0}% to your fight", worth * 100.0));
                 ((ctr + STUN_WEIGHT * (stun / STUN_FULL).min(1.0)).min(1.0), jobs, why, worth)
             };
-            let score_of = |g: &suggest::Gain| -> Option<(f64, f64, Vec<String>, Vec<String>, f64)> {
+            let score_of = |g: &suggest::Gain| -> Option<(f64, f64, Vec<String>, Vec<String>, f64, f64)> {
                 let item = data.item(&g.item)?;
                 let pop = popular(item);
                 let (ctr, jobs, mut why, stun) = answer_of(&g.item, g.imbue);
@@ -607,7 +700,7 @@ pub fn master_build(data: &GameData, input: &MasterInput) -> Result<MasterBuild,
                     return None;
                 }
                 why.extend(push_note(push));
-                Some((score(item, pop, gain, ctr, push), pop, jobs, why, gain))
+                Some((score(item, pop, gain, ctr, push), pop, jobs, why, gain, ctr))
             };
             // The best item the souls left pay for, by its score with price held against it as the role says.
             if first {
@@ -640,6 +733,8 @@ pub fn master_build(data: &GameData, input: &MasterInput) -> Result<MasterBuild,
                         jobs,
                         notes,
                         left_out: !eligible(pop, ctr, gain, push),
+                        paid: g.paid,
+                        verdict: String::new(),
                     });
                 }
                 considered.sort_by(|a, b| b.score.total_cmp(&a.score));
@@ -651,7 +746,7 @@ pub fn master_build(data: &GameData, input: &MasterInput) -> Result<MasterBuild,
                 .filter_map(|g| score_of(g).map(|s| (s.0 / (g.paid as f64 / 3_200.0).max(0.25).powf(price_weight), s, g)))
                 .filter(|(_, s, _)| s.0 >= MIN_SCORE)
                 .max_by(|a, b| a.0.total_cmp(&b.0));
-            if let Some((_, (score, pop, jobs, why, gain), g)) = best {
+            if let Some((_, (score, pop, jobs, why, gain, ctr), g)) = best {
                 let item = data.item(&g.item).ok_or("Unknown item")?;
                 let upgrades = item.components.iter().find(|c| b.purchases.contains(c)).cloned();
                 if let Some(x) = upgrades.as_ref().and_then(|c| items.iter_mut().find(|x| &x.item == c)) {
@@ -689,6 +784,7 @@ pub fn master_build(data: &GameData, input: &MasterInput) -> Result<MasterBuild,
                     upgraded: false,
                     imbued: g.imbue.and_then(|i| hero.abilities.get(i)).map(|a| a.name.clone()),
                     counter: counter_items.contains(&g.item),
+                    answer_pct: ctr * 100.0,
                 });
                 continue;
             }
@@ -736,8 +832,13 @@ pub fn master_build(data: &GameData, input: &MasterInput) -> Result<MasterBuild,
             }
             sold_here.push(weakest.3);
         }
+        items.extend(phase_counters);
         considered.retain(|c| !items.iter().any(|x| x.item == c.item));
         considered.truncate(CONSIDERED);
+        let parts = Parts { weights: [w_pop, w_engine, w_counter], pop_top, price_weight, style: &style };
+        for c in &mut considered {
+            c.verdict = verdict(c, &items, index, &parts);
+        }
         phases.push(MasterPhase { key: key.to_string(), title: title.to_string(), souls_from: *from, souls_to: *to, sold: sold_here, considered });
     }
     let sheet = calc::compute(data, &b).map_err(|e| e.to_string())?;

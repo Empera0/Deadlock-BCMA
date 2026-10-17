@@ -931,6 +931,8 @@ export interface MasterItem {
   imbued: string | null;
   /** Bought to answer the enemy team: one of the counter plan's picks. */
   counter: boolean;
+  /** Its answer to the enemy team against the best answer at this point, percent. */
+  answer_pct: number;
 }
 
 /** An item weighed in a phase and not bought. */
@@ -949,6 +951,10 @@ export interface Considered {
   jobs: string[];
   notes: string[];
   left_out: boolean;
+  /** What it would have cost on top of the build. */
+  paid: number;
+  /** Why it lost, in a sentence. */
+  verdict: string;
 }
 
 export interface MasterPhase {

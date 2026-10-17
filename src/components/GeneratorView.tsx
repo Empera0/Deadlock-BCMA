@@ -591,10 +591,8 @@ function MasterPanel({
                             <td>+{fmt(c.engine_pct, 0)}%</td>
                             <td>{fmt(c.counter_pct, 0)}%</td>
                             <td className="left other-what">
-                              {c.left_out && <small className="hard">Few top players buy it at this point and it is no strong answer, so it was left out</small>}
-                              {[...c.jobs.map((j) => j.toLowerCase()), ...c.notes].map((n) => (
-                                <small key={n}>{n}</small>
-                              ))}
+                              <span className={"verdict" + (c.left_out ? " hard" : "")}>{c.verdict}.</span>
+                              {c.jobs.length > 0 && <small>Answers: {c.jobs.map((j) => j.toLowerCase()).join(", ")}</small>}
                             </td>
                           </tr>
                         ))}
