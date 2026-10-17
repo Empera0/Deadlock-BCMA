@@ -854,3 +854,39 @@ fn death_analysis_studies_each_death() {
         }
     }
 }
+
+#[test]
+fn deaths_add_up_over_matches() {
+    let data = data();
+    let one = std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/tests/sample-match.json")).unwrap();
+    let two = std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/tests/sample-match-2.json")).unwrap();
+    let account = |json: &str| -> u64 {
+        let v: serde_json::Value = serde_json::from_str(json).unwrap();
+        v["match_info"]["players"][0]["account_id"].as_u64().unwrap()
+    };
+    let mut analyses = vec![];
+    for (id, json) in [(1, &one), (2, &two)] {
+        let slot = engine::deaths::slot_of(json, account(json)).unwrap();
+        analyses.push((id, engine::deaths::analyze(&data, json, slot).unwrap()));
+    }
+    let t = engine::deaths::trend(&analyses);
+    assert_eq!(t.matches, 2);
+    assert_eq!(t.deaths as usize, analyses.iter().map(|a| a.1.deaths.len()).sum::<usize>());
+    assert_eq!(t.killers.iter().map(|k| k.1).sum::<u32>(), t.deaths.min(t.killers.iter().map(|k| k.1).sum()));
+    assert!(t.killers.windows(2).all(|w| w[0].1 >= w[1].1));
+    assert!(t.fixes.iter().all(|f| f.2 <= f.1 && f.2 <= 2));
+    assert!(t.solo_kills <= t.deaths && !t.summary.is_empty());
+}
+
+#[test]
+fn the_live_match_is_read_from_the_players_side() {
+    let json = r#"[
+        {"match_id": 7, "duration_s": 300, "players": [
+            {"account_id": 1, "team": 0, "hero_id": 10}, {"account_id": 2, "team": 1, "hero_id": 20},
+            {"account_id": 3, "team": 1, "hero_id": 21}, {"account_id": 4, "team": 0, "hero_id": 11}]},
+        {"match_id": 8, "duration_s": 100, "players": [{"account_id": 9, "team": 0, "hero_id": 5}]}
+    ]"#;
+    let live = engine::matches::parse_live(json, 3).unwrap().unwrap();
+    assert_eq!((live.match_id, live.hero, live.allies, live.enemies), (7, 21, vec![20], vec![10, 11]));
+    assert!(engine::matches::parse_live(json, 42).unwrap().is_none());
+}

@@ -14,6 +14,7 @@ pub mod matches;
 pub mod measure;
 pub mod farm;
 pub mod misc;
+pub mod order;
 pub mod popular;
 pub mod master;
 pub mod raw;

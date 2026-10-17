@@ -357,6 +357,34 @@ function MasterPanel({
       .finally(() => setBusy(false));
   };
   const find = () => run(mine, allies, enemies, lane);
+  // The player's match being played now, from the game's watch list, with the account set on the Draft or Match screen.
+  const [liveNote, setLiveNote] = useState("");
+  const loadLive = () => {
+    let account = "";
+    try {
+      account = localStorage.getItem("account-id") ?? "";
+    } catch {
+      /* No storage: no account. */
+    }
+    if (!account.trim()) {
+      setLiveNote("Set your Steam account ID on the Draft or Match analysis screen first.");
+      return;
+    }
+    setLiveNote("Looking for your match…");
+    api
+      .liveMatch(account)
+      .then((live) => {
+        const cls = heroes.find((h) => h.id === live.hero)?.class_name;
+        if (!cls) throw new Error("Your hero is not in the game data: use Update data");
+        setMine(cls);
+        setAllies(live.allies);
+        setEnemies(live.enemies);
+        setLane([]);
+        setLiveNote(`Match ${live.match_id}, ${Math.floor(live.duration_s / 60)} minutes in. Mark your lane opponents and build again if you like.`);
+        run(cls, live.allies, live.enemies, []);
+      })
+      .catch((e) => setLiveNote(String(e instanceof Error ? e.message : e)));
+  };
   // A player handed over from a match: both teams, the lane, and a build to set the purchases against.
   useEffect(() => {
     if (!preset) return;
@@ -465,6 +493,10 @@ function MasterPanel({
           <button disabled={busy} onClick={find}>
             {busy ? "Working…" : `Build for ${me.name}`}
           </button>
+          <button className="ghost" disabled={busy} onClick={loadLive} title="Fills both teams from the match you are playing now (top 200 matches only, once the match has started)">
+            Load my live match
+          </button>
+          {liveNote && <span className="muted">{liveNote}</span>}
         </div>
       </div>
       {error && <div className="error">{error}</div>}

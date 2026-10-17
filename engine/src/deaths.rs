@@ -317,3 +317,103 @@ pub fn analyze(data: &GameData, json: &str, slot: u32) -> Result<DeathAnalysis, 
     };
     Ok(DeathAnalysis { slot, hero, deaths, bullet_share: share, killers, fixes: counted, summary })
 }
+
+/// The player's slot in a match, by their account.
+pub fn slot_of(json: &str, account_id: u64) -> Option<u32> {
+    let root: Value = serde_json::from_str(json).ok()?;
+    list(root.get("match_info")?, "players").iter().find(|p| p.get("account_id").and_then(Value::as_u64) == Some(account_id)).map(|p| int(p, "player_slot"))
+}
+
+/// Deaths over many matches: who kills the player, with what kind of damage, and what would have helped most often.
+#[derive(Debug, Clone, Serialize)]
+pub struct DeathTrend {
+    pub matches: u32,
+    pub deaths: u32,
+    /// Share of the damage taken around the deaths that was gun damage.
+    pub bullet_share: f64,
+    /// Killers, most kills first: (hero, kills, matches they killed the player in).
+    pub killers: Vec<(String, u32, u32)>,
+    /// Deaths in which the killer's fight alone was enough, against the ones others helped in.
+    pub solo_kills: u32,
+    /// Fixes that helped in the most deaths, with the deaths and the matches they helped in.
+    pub fixes: Vec<(Fix, u32, u32)>,
+    /// Each match: id, the player's hero, deaths.
+    pub per_match: Vec<(u64, String, u32)>,
+    pub summary: String,
+}
+
+/// Puts the analyses of several matches together.
+pub fn trend(analyses: &[(u64, DeathAnalysis)]) -> DeathTrend {
+    let deaths: Vec<&DeathStudy> = analyses.iter().flat_map(|(_, a)| a.deaths.iter()).collect();
+    let (mut bullet, mut all) = (0.0, 0.0);
+    for s in &deaths {
+        let sum: f64 = s.taken.iter().map(|h| h.amount).sum();
+        all += sum;
+        bullet += sum * s.bullet_share;
+    }
+    let share = if all > 0.0 { bullet / all } else { 0.0 };
+    let mut killers: Vec<(String, u32, u32)> = vec![];
+    let mut fixes: Vec<(Fix, u32, u32)> = vec![];
+    for (_, a) in analyses {
+        let mut seen_killers: Vec<&str> = vec![];
+        let mut seen_fixes: Vec<&str> = vec![];
+        for s in &a.deaths {
+            match killers.iter_mut().find(|k| k.0 == s.killer_hero) {
+                Some(k) => k.1 += 1,
+                None => killers.push((s.killer_hero.clone(), 1, 0)),
+            }
+            if !seen_killers.contains(&s.killer_hero.as_str()) {
+                seen_killers.push(&s.killer_hero);
+                if let Some(k) = killers.iter_mut().find(|k| k.0 == s.killer_hero) {
+                    k.2 += 1;
+                }
+            }
+            for f in s.fixes.iter().filter(|f| !f.owned) {
+                match fixes.iter_mut().find(|x| x.0.item == f.item) {
+                    Some(x) => x.1 += 1,
+                    None => fixes.push((f.clone(), 1, 0)),
+                }
+                if !seen_fixes.contains(&f.item.as_str()) {
+                    seen_fixes.push(&f.item);
+                    if let Some(x) = fixes.iter_mut().find(|x| x.0.item == f.item) {
+                        x.2 += 1;
+                    }
+                }
+            }
+        }
+    }
+    killers.sort_by(|a, b| b.1.cmp(&a.1));
+    killers.truncate(MATCH_FIXES + 2);
+    fixes.sort_by(|a, b| b.1.cmp(&a.1).then(a.0.cost.cmp(&b.0.cost)));
+    fixes.truncate(MATCH_FIXES);
+    let solo_kills = deaths.iter().filter(|s| s.kill_time.is_some()).count() as u32;
+    let matches = analyses.len() as u32;
+    let summary = if deaths.is_empty() {
+        "No deaths in these matches.".to_string()
+    } else {
+        let kind = if share >= 0.65 {
+            "Most of what kills you is gun damage: bullet resist and fire-rate slows pay off most."
+        } else if share <= 0.35 {
+            "Most of what kills you is spirit damage: spirit resist and cleanses pay off most."
+        } else {
+            "What kills you is a mix of gun and spirit damage."
+        };
+        let killer = killers.first().map(|(h, n, m)| format!(" {h} killed you the most: {n} times in {m} matches."));
+        let alone = format!(
+            " In {solo_kills} of {} deaths the killer's full fight was enough on its own; in the rest someone else helped, so positioning matters as much as items.",
+            deaths.len()
+        );
+        let fix = fixes.first().map(|(f, n, m)| format!(" {} ({} souls) would have helped in {n} deaths over {m} matches.", f.name, f.cost));
+        format!("{kind}{}{alone}{}", killer.unwrap_or_default(), fix.unwrap_or_default())
+    };
+    DeathTrend {
+        matches,
+        deaths: deaths.len() as u32,
+        bullet_share: share,
+        killers,
+        solo_kills,
+        fixes,
+        per_match: analyses.iter().map(|(id, a)| (*id, a.hero.clone(), a.deaths.len() as u32)).collect(),
+        summary,
+    }
+}

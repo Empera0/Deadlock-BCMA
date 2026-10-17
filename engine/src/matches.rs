@@ -3403,3 +3403,34 @@ pub fn parse_history(data: &GameData, json: &str, limit: usize) -> Result<Vec<Hi
     out.truncate(limit);
     Ok(out)
 }
+
+/// A match being played, as the game's watch list shows it, from the player's side.
+#[derive(Debug, Clone, Serialize)]
+pub struct LiveMatch {
+    pub match_id: u64,
+    pub duration_s: u32,
+    /// Hero ids: the player's, the teammates' and the enemies'.
+    pub hero: u64,
+    pub allies: Vec<u64>,
+    pub enemies: Vec<u64>,
+}
+
+/// The player's match in the API's list of active matches, if it is there.
+pub fn parse_live(json: &str, account_id: u64) -> Result<Option<LiveMatch>, String> {
+    let rows: Vec<Value> = serde_json::from_str(json).map_err(|e| format!("Unreadable live match data: {e}"))?;
+    for m in &rows {
+        let players = list(m, "players");
+        let Some(me) = players.iter().find(|p| p.get("account_id").and_then(Value::as_u64) == Some(account_id)) else { continue };
+        let team = int(me, "team");
+        let hero = |p: &Value| p.get("hero_id").and_then(Value::as_u64).unwrap_or(0);
+        let others = |same: bool| players.iter().filter(|p| !std::ptr::eq(*p, me) && (int(p, "team") == team) == same).map(hero).filter(|h| *h > 0).collect();
+        return Ok(Some(LiveMatch {
+            match_id: m.get("match_id").and_then(Value::as_u64).unwrap_or(0),
+            duration_s: int(m, "duration_s"),
+            hero: hero(me),
+            allies: others(true),
+            enemies: others(false),
+        }));
+    }
+    Ok(None)
+}

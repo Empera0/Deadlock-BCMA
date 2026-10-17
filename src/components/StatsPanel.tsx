@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Build, fmt, Group, Hero, Ranked, ScaledProp, Sheet, Stat } from "../api";
 import InvestBars from "./InvestBars";
 import Advisor from "./Advisor";
+import AbilityOrderPanel from "./AbilityOrderPanel";
 
 interface Props {
   heroes: Hero[];
@@ -196,6 +197,8 @@ export default function StatsPanel(p: Props) {
           </div>
         ))}
       </div>
+
+      <AbilityOrderPanel build={build} sheet={sheet} onTiers={(tiers) => p.onChange({ ability_tiers: tiers })} />
 
       {sheet.item_effects.length > 0 && (
         <div className="group">

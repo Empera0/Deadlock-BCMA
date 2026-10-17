@@ -88,6 +88,7 @@ export default function DraftView({ heroes, onPlan }: { heroes: Hero[]; onPlan: 
   const [badge, setBadge] = useState(() => Number(load("draft-badge", "101")) || 0);
   const [account, setAccount] = useState(() => load("account-id", ""));
   const [onlyMine, setOnlyMine] = useState(false);
+  const [liveNote, setLiveNote] = useState("");
   const [query, setQuery] = useState("");
   const [report, setReport] = useState<DraftReport | null>(null);
   const [busy, setBusy] = useState(false);
@@ -182,6 +183,25 @@ export default function DraftView({ heroes, onPlan }: { heroes: Hero[]; onPlan: 
         <button className="ghost" onClick={() => (setTeams({ allies: [], enemies: [], banned: [] }), setLane([]))}>
           Clear
         </button>
+        <button
+          className="ghost"
+          disabled={!account.trim()}
+          title="Fills both teams from the match you are playing now (top 200 matches only, once the match has started)"
+          onClick={() => {
+            setLiveNote("Looking for your match…");
+            api
+              .liveMatch(account)
+              .then((live) => {
+                setTeams({ allies: live.allies, enemies: live.enemies, banned: [] });
+                setLane([]);
+                setLiveNote(`Match ${live.match_id}: both teams loaded`);
+              })
+              .catch((e) => setLiveNote(String(e)));
+          }}
+        >
+          Load my live match
+        </button>
+        {liveNote && <span className="muted">{liveNote}</span>}
         {busy && <span className="muted">Working…</span>}
       </div>
 

@@ -1,9 +1,9 @@
 import { MouseEvent, useEffect, useMemo, useState } from "react";
-import { api, Build, FightSide, fmt, HistoryEntry, LocalScan, MatchPlayer, MatchPreset, MatchReport, MatchSample, MatchSummary } from "../api";
+import { api, Build, DeathTrend, FightSide, fmt, HistoryEntry, LocalScan, MatchPlayer, MatchPreset, MatchReport, MatchSample, MatchSummary } from "../api";
 import { MatchDuels, MatchLanes, MatchMap, MatchTrend } from "./MatchExtras";
 import { Bars, clock, FightStrip, LineChart, Marker, Series } from "./MatchCharts";
 import MatchCompare from "./MatchCompare";
-import DeathAnalysisPanel from "./DeathAnalysisPanel";
+import DeathAnalysisPanel, { DeathTrendView } from "./DeathAnalysisPanel";
 
 interface Props {
   /** Opens a build from the match in the builder. */
@@ -1533,7 +1533,24 @@ function Report({
 
 export default function MatchView({ onOpenBuild, onOpenMaster }: Props) {
   const [matchId, setMatchId] = useState("");
-  const [accountId, setAccountId] = useState("");
+  // The account is shared with the Draft screen.
+  const [accountId, setAccountIdState] = useState(() => {
+    try {
+      return localStorage.getItem("account-id") ?? "";
+    } catch {
+      return "";
+    }
+  });
+  const setAccountId = (v: string) => {
+    setAccountIdState(v);
+    try {
+      localStorage.setItem("account-id", v);
+    } catch {
+      /* Only a convenience. */
+    }
+  };
+  const [deaths, setDeaths] = useState<DeathTrend | null>(null);
+  const [showDeaths, setShowDeaths] = useState(false);
   const [report, setReport] = useState<MatchReport | null>(null);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [local, setLocal] = useState<LocalScan | null>(null);
@@ -1590,6 +1607,27 @@ export default function MatchView({ onOpenBuild, onOpenMaster }: Props) {
     try {
       setTrend(await api.analyzeHistory(id, 10));
       setShowTrend(true);
+      setShowDeaths(false);
+      setStatus("");
+    } catch (e) {
+      setStatus(String(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const whyDie = async () => {
+    const id = accountId.trim();
+    if (!/^\d+$/.test(id)) {
+      setStatus("Enter a Steam account ID (numbers only).");
+      return;
+    }
+    setBusy(true);
+    setStatus("Studying the deaths of the last 10 matches… the first time this downloads each of them.");
+    try {
+      setDeaths(await api.deathTrend(id, 10));
+      setShowDeaths(true);
+      setShowTrend(false);
       setStatus("");
     } catch (e) {
       setStatus(String(e));
@@ -1635,6 +1673,14 @@ export default function MatchView({ onOpenBuild, onOpenMaster }: Props) {
         >
           Analyze last 10
         </button>
+        <button disabled={busy} onClick={whyDie} title="Studies every death of this account's last 10 matches: who kills you, with what, and what would have helped.">
+          Why do I die?
+        </button>
+        {deaths && (report || trend) && (
+          <button className="ghost" onClick={() => setShowDeaths(!showDeaths)}>
+            {showDeaths ? "Hide the deaths" : "Show the deaths"}
+          </button>
+        )}
         {trend && report && (
           <button className="ghost" onClick={() => setShowTrend(!showTrend)}>
             {showTrend ? "Back to the match" : "Back to the 10 matches"}
@@ -1704,7 +1750,15 @@ export default function MatchView({ onOpenBuild, onOpenMaster }: Props) {
         )}
 
         <div className="match-main" onClick={toggleDetails}>
-          {trend && (showTrend || !report) ? (
+          {deaths && showDeaths ? (
+            <DeathTrendView
+              trend={deaths}
+              onOpen={(id) => {
+                setShowDeaths(false);
+                loadMatch(String(id));
+              }}
+            />
+          ) : trend && (showTrend || !report) ? (
             <MatchTrend
               rows={trend.rows}
               skipped={trend.skipped}

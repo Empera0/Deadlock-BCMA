@@ -557,6 +557,82 @@ async fn analyze_history(app: AppHandle, state: State<'_, AppState>, account_id:
     Ok(Trend { rows, skipped })
 }
 
+/// A Steam account ID as typed: the long SteamID64 or the short account ID.
+fn steam_account(text: &str) -> Result<u64, String> {
+    let id: u64 = text.trim().parse().map_err(|_| "Enter a Steam account ID (numbers only)".to_string())?;
+    Ok(if id > STEAM_ID64_BASE { id - STEAM_ID64_BASE } else { id })
+}
+
+/// Why a player keeps dying: the deaths of their last matches put together.
+#[tauri::command]
+async fn death_trend(app: AppHandle, state: State<'_, AppState>, account_id: String, count: usize) -> Result<engine::deaths::DeathTrend, String> {
+    let id = steam_account(&account_id)?;
+    let url = format!("{MATCH_API}/players/{id}/match-history");
+    let json = tauri::async_runtime::spawn_blocking(move || get(&url, "No match history found for this account."))
+        .await
+        .map_err(|e| e.to_string())??;
+    let data = std::sync::Arc::new(state.data.read().unwrap().clone());
+    let history = matches::parse_history(&data, &json, count.clamp(1, 20))?;
+    let mut analyses = vec![];
+    for entry in history {
+        // One at a time: the match service limits how fast it can be asked; matches seen before are on disk.
+        let Ok(json) = match_json(&app, entry.match_id).await else { continue };
+        let data = data.clone();
+        let found = tauri::async_runtime::spawn_blocking(move || {
+            let slot = engine::deaths::slot_of(&json, id)?;
+            engine::deaths::analyze(&data, &json, slot).ok()
+        })
+        .await
+        .map_err(|e| e.to_string())?;
+        if let Some(a) = found {
+            analyses.push((entry.match_id, a));
+        }
+    }
+    if analyses.is_empty() {
+        return Err("None of the recent matches could be read.".into());
+    }
+    Ok(engine::deaths::trend(&analyses))
+}
+
+/// The player's match being played now, from the game's watch list.
+#[tauri::command]
+async fn live_match(account_id: String) -> Result<matches::LiveMatch, String> {
+    let id = steam_account(&account_id)?;
+    let url = format!("{MATCH_API}/matches/active?account_id={id}");
+    let json = tauri::async_runtime::spawn_blocking(move || get(&url, "No live match found."))
+        .await
+        .map_err(|e| e.to_string())??;
+    matches::parse_live(&json, id)?.ok_or_else(|| {
+        "Your match is not in the game's watch list: it holds only the top 200 matches being played, and a match only once it has started.".to_string()
+    })
+}
+
+#[derive(serde::Serialize)]
+struct OrderReport {
+    order: engine::order::AbilityOrder,
+    /// What top players of the hero go with, when the statistics service can be reached.
+    popular: Vec<engine::order::PopularOrder>,
+    rank: String,
+}
+
+/// The order to spend ability points in for the build, and the orders top players go with.
+#[tauri::command]
+async fn ability_order(app: AppHandle, state: State<'_, AppState>, build: BuildInput) -> Result<OrderReport, String> {
+    let data = state.data.read().unwrap().clone();
+    let cache = Cache::new(&app, &data)?;
+    tauri::async_runtime::spawn_blocking(move || {
+        let order = engine::order::ability_order(&data, &build)?;
+        let hero_id = data.hero(&build.hero).map(|h| h.id).ok_or("Unknown hero")?;
+        let popular = analytics(&cache, "ability-order-stats", &format!("hero_id={hero_id}"), ASCENDANT)
+            .ok()
+            .and_then(|json| engine::order::popular_orders(&data, hero_id, &json).ok())
+            .unwrap_or_default();
+        Ok(OrderReport { order, popular, rank: rank_name(ASCENDANT).into() })
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
 /// Downloads a match's metadata (or reads the copy saved earlier) and turns it into a report.
 #[tauri::command]
 async fn fetch_match(app: AppHandle, state: State<'_, AppState>, match_id: u64) -> Result<matches::MatchReport, String> {
@@ -757,6 +833,9 @@ pub fn run() {
             delete_build,
             fetch_match,
             death_analysis,
+            death_trend,
+            live_match,
+            ability_order,
             match_history,
             find_local_matches,
             analyze_history

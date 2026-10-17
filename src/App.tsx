@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api, Build, Combo, ComboResult, EMPTY_MAP, EMPTY_ZONE, fmt, GameData, Ranked, Sheet, MatchPreset } from "./api";
 import BuildBar from "./components/BuildBar";
+import ComparePanel from "./components/ComparePanel";
 import DraftView from "./components/DraftView";
 import ComboPanel from "./components/ComboPanel";
 import GeneratorView from "./components/GeneratorView";
@@ -62,7 +63,7 @@ export default function App() {
   const [saved, setSaved] = useState<string[]>([]);
   const [name, setName] = useState("");
   const [status, setStatus] = useState("");
-  const [tab, setTab] = useState<"stats" | "combo" | "misc">("stats");
+  const [tab, setTab] = useState<"stats" | "combo" | "misc" | "compare">("stats");
   const [mode, setMode] = useState<"build" | "generator" | "draft" | "match">("build");
   /** A match player handed to the master builder. */
   const [masterPreset, setMasterPreset] = useState<MatchPreset | null>(null);
@@ -365,6 +366,9 @@ export default function App() {
               <button className={tab === "misc" ? "on" : ""} onClick={() => setTab("misc")}>
                 Misc
               </button>
+              <button className={tab === "compare" ? "on" : ""} onClick={() => setTab("compare")}>
+                Compare
+              </button>
             </div>
             {tab === "stats" ? (
               <StatsPanel
@@ -382,6 +386,8 @@ export default function App() {
               />
             ) : tab === "combo" ? (
               <ComboPanel heroes={data.heroes} items={data.items} sheet={sheet} combo={combo} result={comboResult} onChange={setCombo} map={build.map} onMap={(map) => patch({ map })} />
+            ) : tab === "compare" ? (
+              <ComparePanel heroes={data.heroes} items={items} build={build} sheet={sheet} />
             ) : (
               <MiscPanel sheet={sheet} build={build} />
             )}

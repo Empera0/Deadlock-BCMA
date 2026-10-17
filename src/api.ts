@@ -291,6 +291,44 @@ export interface ComboResult {
   own_health_end: number;
 }
 
+export interface OrderStep {
+  index: number;
+  ability: string;
+  icon: string;
+  tier: number;
+  ap: number;
+  total_ap: number;
+  level: number;
+  souls: number;
+  gain_pct: number;
+  upgrade: string;
+}
+
+export interface OrderReport {
+  order: { steps: OrderStep[]; note: string };
+  popular: { steps: [number, number][]; matches: number; win_pct: number }[];
+  rank: string;
+}
+
+export interface DeathTrend {
+  matches: number;
+  deaths: number;
+  bullet_share: number;
+  killers: [string, number, number][];
+  solo_kills: number;
+  fixes: [DeathFix, number, number][];
+  per_match: [number, string, number][];
+  summary: string;
+}
+
+export interface LiveMatch {
+  match_id: number;
+  duration_s: number;
+  hero: number;
+  allies: number[];
+  enemies: number[];
+}
+
 export interface DraftReason {
   label: string;
   points: number;
@@ -407,6 +445,9 @@ export const api = {
     invoke<Ranked[]>("rank_next", { build, metric, conditional }),
   draftPicks: (allies: number[], enemies: number[], lane: number[], banned: number[], badge: number, accountId: string | null) =>
     invoke<DraftReport>("draft_picks", { allies, enemies, lane, banned, badge, accountId }),
+  abilityOrder: (build: Build) => invoke<OrderReport>("ability_order", { build }),
+  deathTrend: (accountId: string, count: number) => invoke<DeathTrend>("death_trend", { accountId, count }),
+  liveMatch: (accountId: string) => invoke<LiveMatch>("live_match", { accountId }),
   adviseBuild: (build: Build, style: string) => invoke<Advice>("advise_build", { build, style }),
   simulateCombo: (build: Build, combo: Combo) => invoke<ComboResult>("simulate_combo", { build, combo }),
   saveBuild: (name: string, build: Build) => invoke<void>("save_build", { name, build }),

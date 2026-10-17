@@ -85,3 +85,21 @@ fn the_advisor_buys_upgrades_and_swaps() {
     assert_eq!(a.worth.len(), 12);
     assert!(a.worth.windows(2).all(|w| w[0].loss <= w[1].loss));
 }
+
+#[test]
+fn the_ability_order_spends_every_point_and_follows_the_levels() {
+    let d = data();
+    for hero in ["hero_gigawatt", "hero_haze"] {
+        let b = BuildInput { hero: hero.into(), souls: Some(25_000), ..Default::default() };
+        let order = engine::order::ability_order(&d, &b).unwrap();
+        println!("{hero}: {}", order.steps.iter().map(|s| format!("{} {} ({:.1}%)", s.ability, s.tier, s.gain_pct)).collect::<Vec<_>>().join(" > "));
+        assert_eq!(order.steps.len(), 12);
+        assert_eq!(order.steps.last().unwrap().total_ap, 4 * (1 + 2 + 5));
+        assert!(order.steps.windows(2).all(|w| w[0].level <= w[1].level && w[0].total_ap < w[1].total_ap));
+        // Each ability's tiers come in order.
+        for i in 0..4 {
+            let tiers: Vec<u8> = order.steps.iter().filter(|s| s.index == i).map(|s| s.tier).collect();
+            assert_eq!(tiers, vec![1, 2, 3]);
+        }
+    }
+}
