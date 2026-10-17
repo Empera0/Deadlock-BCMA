@@ -2,6 +2,14 @@
 
 All notable changes to Deadlock BCMA are listed here. Versions follow [semantic versioning](https://semver.org).
 
+## [0.2.38] – 2026-10-17
+
+This release installs updates without a click.
+
+### Changed
+
+1. **Automatic updates.** When the app starts and a newer version is out, it now downloads it, installs it and restarts on its own; the version line shows the progress. While the app is open it looks again every 30 minutes: an update found then is downloaded in the background and waits behind a "Restart to update" button, or for the next start, so a restart never interrupts your work. If an update fails, a button tries it again.
+
 ## [0.2.37] – 2026-10-17
 
 This release adds a draft helper that suggests which hero to pick and which to ban, from win rates fitted on real matches.
@@ -380,6 +388,7 @@ This release adds the **Build generator**, with builds read from top-ranked matc
   - trends across your last matches.
 - Windows installer with a desktop shortcut and automatic updates from GitHub releases.
 
+[0.2.38]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.37...v0.2.38
 [0.2.37]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.36...v0.2.37
 [0.2.36]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.35...v0.2.36
 [0.2.35]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.34...v0.2.35
