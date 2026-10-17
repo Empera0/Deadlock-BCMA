@@ -2,6 +2,19 @@
 
 All notable changes to Deadlock BCMA are listed here. Versions follow [semantic versioning](https://semver.org).
 
+## [0.2.39] – 2026-10-17
+
+This release makes the Master builder and the Draft screen fast, and keeps their statistics on your computer.
+
+### Changed
+
+1. **Statistics kept for a month.** The win rates and purchase statistics the Master builder, popular builds and the Draft screen read are now kept on disk for 30 days, or until the game is patched, instead of six hours. The statistics service is asked about once a month; your own record on each hero is refreshed daily.
+2. **Faster Master builder.** The build itself takes about a second; the wait came from some forty questions to the statistics service asked one after another. What is not kept yet is now fetched up front, four requests at a time.
+
+### Fixed
+
+3. **Working without the statistics service.** When the service cannot be reached, the statistics kept last time are used, from an earlier game version if need be, instead of failing.
+
 ## [0.2.38] – 2026-10-17
 
 This release installs updates without a click.
@@ -388,6 +401,7 @@ This release adds the **Build generator**, with builds read from top-ranked matc
   - trends across your last matches.
 - Windows installer with a desktop shortcut and automatic updates from GitHub releases.
 
+[0.2.39]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.38...v0.2.39
 [0.2.38]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.37...v0.2.38
 [0.2.37]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.36...v0.2.37
 [0.2.36]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.35...v0.2.36
