@@ -2,6 +2,19 @@
 
 All notable changes to Deadlock BCMA are listed here. Versions follow [semantic versioning](https://semver.org).
 
+## [0.2.45] – 2026-10-18
+
+This release scouts the players of your live match and builds around your own damage type.
+
+### Added
+
+1. **Lobby scouting.** Once your live match's players are in, the Master builder and the Draft screen show both teams player by player: Steam name, hero, rank, matches and win rate on that hero (pulled toward 50% while there are few) with kills, deaths and assists per match, matches and win rate overall, their three most played heroes, the streak they come in with, and who is likely queued with whom (Steam friends on the same team). Tags point out a main, a player new to the hero, a streak and a party, and your lane opponents are marked. All twelve players take three requests to the statistics service.
+
+### Changed
+
+1. **Items that fit your damage score higher.** In the Master builder, items whose effect comes through bullets, spirit damage or melee hits score up to 30% more when your build deals that kind of damage, and up to 30% less when it deals the other. Each such item says so ("Fits your build: works through your bullets…" or "Harder to use: …").
+2. **Counters planned for the damage you build.** The counter plan now follows the damage chosen in the Master builder instead of the hero's usual one: a gun Lash cuts healing with Toxic Bullets, a spirit Lash with Healbane or Spirit Burn.
+
 ## [0.2.44] – 2026-10-18
 
 This release finds your match from the game itself instead of the watch list of top matches.
@@ -455,6 +468,7 @@ This release adds the **Build generator**, with builds read from top-ranked matc
   - trends across your last matches.
 - Windows installer with a desktop shortcut and automatic updates from GitHub releases.
 
+[0.2.45]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.44...v0.2.45
 [0.2.44]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.43...v0.2.44
 [0.2.43]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.42...v0.2.43
 [0.2.42]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.41...v0.2.42
