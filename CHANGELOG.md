@@ -2,6 +2,14 @@
 
 All notable changes to Deadlock BCMA are listed here. Versions follow [semantic versioning](https://semver.org).
 
+## [0.2.43] – 2026-10-18
+
+This release lets the Master builder watch for your match and build for it on its own.
+
+### Added
+
+1. **Watch for my match.** A switch beside "Load my live match" in the Master builder: while the Master builder is open it looks for your match every 30 seconds, and as soon as a new one shows up it fills both teams and builds for it, once per match. The switch is remembered, and the line beside it says when it last looked. It reads the game's watch list, which holds only the top 200 matches being played and a match only once it has started, so the build comes in the first minutes rather than during hero selection.
+
 ## [0.2.42] – 2026-10-17
 
 This release loads your live match, studies your deaths over many matches, works out the order to upgrade abilities in, and compares two builds.
@@ -437,6 +445,7 @@ This release adds the **Build generator**, with builds read from top-ranked matc
   - trends across your last matches.
 - Windows installer with a desktop shortcut and automatic updates from GitHub releases.
 
+[0.2.43]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.42...v0.2.43
 [0.2.42]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.41...v0.2.42
 [0.2.41]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.40...v0.2.41
 [0.2.40]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.39...v0.2.40
