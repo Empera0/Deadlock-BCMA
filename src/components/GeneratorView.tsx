@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api, Build, EMPTY_MAP, fmt, Hero, JudgedItem, LiveMatch, MasterBuild, MasterItem, MasterReport, MatchPreset, PopularItem, PopularReport } from "../api";
 import PowerCurve from "./PowerCurve";
+import { CONDEBUG_HELP, findLiveMatch, savedAccount } from "../live";
 import SuggestPanel from "./SuggestPanel";
 
 interface Props {
@@ -136,8 +137,11 @@ const DAMAGES: [string, string][] = [
   ["melee", "Melee"],
 ];
 
-/** How often a watched match is looked for. */
-const LIVE_CHECK_MS = 30_000;
+/** How often the console log is read while watching, how long a failed team fetch waits, and how many tries a
+ * match gets. */
+const LIVE_CHECK_MS = 20_000;
+const LIVE_RETRY_MS = 120_000;
+const LIVE_TRIES = 3;
 
 /** Both teams, the lane and the role: a full build for the player's hero, phase by phase. */
 /** A small item tile for the comparison. */
@@ -362,13 +366,6 @@ function MasterPanel({
   const find = () => run(mine, allies, enemies, lane);
   // The player's match being played now, from the game's watch list, with the account set on the Draft or Match screen.
   const [liveNote, setLiveNote] = useState("");
-  const account = () => {
-    try {
-      return (localStorage.getItem("account-id") ?? "").trim();
-    } catch {
-      return "";
-    }
-  };
   // The match the teams were last filled from, so a watched match is built once.
   const [liveId, setLiveId] = useState<number | null>(null);
   const applyLive = (live: LiveMatch) => {
@@ -378,23 +375,37 @@ function MasterPanel({
     setMine(cls);
     setAllies(live.allies);
     setEnemies(live.enemies);
-    setLane([]);
-    setLiveNote(`Match ${live.match_id}, ${Math.floor(live.duration_s / 60)} minutes in. Mark your lane opponents and build again if you like.`);
-    run(cls, live.allies, live.enemies, []);
+    setLane(live.lane);
+    setLiveNote(`Match ${live.match_id}: both teams loaded${live.lane.length ? ", with your lane" : ""}.`);
+    run(cls, live.allies, live.enemies, live.lane);
   };
+  const [liveBusy, setLiveBusy] = useState(false);
   const loadLive = () => {
-    if (!account()) {
-      setLiveNote("Set your Steam account ID on the Draft or Match analysis screen first.");
-      return;
-    }
-    setLiveNote("Looking for your match…");
-    api
-      .liveMatch(account())
+    setLiveBusy(true);
+    setLiveNote("Looking for your match… the teams take about a minute the first time.");
+    findLiveMatch()
       .then(applyLive)
-      .catch((e) => setLiveNote(String(e instanceof Error ? e.message : e)));
+      .catch((e) => setLiveNote(String(e instanceof Error ? e.message : e)))
+      .finally(() => setLiveBusy(false));
   };
-  // Watching: while this screen is open, the watch list is checked every half minute, and a new match of the
-  // player's is filled in and built as soon as it shows up there.
+  // A match number typed by hand, for when the console log is not there.
+  const [typedMatch, setTypedMatch] = useState("");
+  const loadTyped = () => {
+    const id = Number(typedMatch.trim());
+    const account = savedAccount();
+    if (!Number.isInteger(id) || id <= 0) return setLiveNote("Enter the match number (numbers only).");
+    if (!account) return setLiveNote("Set your Steam account ID on the Draft or Match analysis screen first.");
+    setLiveBusy(true);
+    setLiveNote(`Getting the teams of match ${id}… about a minute.`);
+    api
+      .matchTeams(id, account)
+      .then(applyLive)
+      .catch((e) => setLiveNote(String(e instanceof Error ? e.message : e)))
+      .finally(() => setLiveBusy(false));
+  };
+  // Watching: while this screen is open, the game's console log is read every 20 seconds; a new match in it has
+  // its teams fetched (about a minute), and is built for. A failed fetch is tried again after two minutes, at most
+  // three times a match: the spectating service takes only a few matches an hour from one computer.
   const [watching, setWatching] = useState(() => {
     try {
       return localStorage.getItem("watch-live") === "1";
@@ -409,23 +420,44 @@ function MasterPanel({
     } catch {
       /* Only a convenience. */
     }
-    if (on && !account()) setLiveNote("Set your Steam account ID on the Draft or Match analysis screen first.");
   };
+  const tries = useRef<{ match: number; count: number; next: number }>({ match: 0, count: 0, next: 0 });
+  const pending = useRef(false);
   useEffect(() => {
-    if (!watching || !account()) return;
+    if (!watching) return;
     let stopped = false;
-    const look = () => {
-      api
-        .liveMatch(account())
-        .then((live) => {
-          if (stopped || live.match_id === liveId) return;
-          applyLive(live);
-        })
-        .catch(() => {
-          if (!stopped && liveId === null) {
-            setLiveNote(`Watching for your match: not in the game's watch list yet (checked ${new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })})`);
+    const look = async () => {
+      if (pending.current) return;
+      const time = new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
+      try {
+        const c = await api.consoleMatch();
+        if (stopped) return;
+        if (!c.found) return setLiveNote(`Watching: the game's console log was not found. ${CONDEBUG_HELP}`);
+        if (!c.match_id) return setLiveNote(`Watching the game's console log: no match in progress (checked ${time}).`);
+        if (c.match_id === liveId) return;
+        const t = tries.current;
+        if (t.match !== c.match_id) tries.current = { match: c.match_id, count: 0, next: 0 };
+        if (tries.current.count >= LIVE_TRIES || Date.now() < tries.current.next) return;
+        const account = c.account_id ? String(c.account_id) : savedAccount();
+        if (!account) return setLiveNote("Watching: the console log names no account. Set your Steam account ID on the Draft or Match analysis screen.");
+        pending.current = true;
+        tries.current.count += 1;
+        setLiveNote(`Match ${c.match_id} started: getting the teams… about a minute.`);
+        try {
+          const live = await api.matchTeams(c.match_id, account);
+          if (!stopped) applyLive(live);
+        } catch (e) {
+          tries.current.next = Date.now() + LIVE_RETRY_MS;
+          if (!stopped) {
+            const left = LIVE_TRIES - tries.current.count;
+            setLiveNote(`Match ${c.match_id}: ${String(e instanceof Error ? e.message : e)}${left > 0 ? " Trying again in two minutes." : " Use the button to try once more."}`);
           }
-        });
+        } finally {
+          pending.current = false;
+        }
+      } catch (e) {
+        if (!stopped) setLiveNote(String(e instanceof Error ? e.message : e));
+      }
     };
     look();
     const timer = setInterval(look, LIVE_CHECK_MS);
@@ -543,13 +575,21 @@ function MasterPanel({
           <button disabled={busy} onClick={find}>
             {busy ? "Working…" : `Build for ${me.name}`}
           </button>
-          <button className="ghost" disabled={busy} onClick={loadLive} title="Fills both teams from the match you are playing now (top 200 matches only, once the match has started)">
+          <button className="ghost" disabled={busy || liveBusy} onClick={loadLive} title="Fills both teams and your lane from the match you are playing now, read from the game's console log (-condebug)">
             Load my live match
           </button>
-          <label className="check" title="While this screen is open, looks for your match every 30 seconds and builds for it as soon as it shows up">
+          <label className="check" title="While this screen is open, reads the game's console log every 20 seconds and builds for a new match as soon as its teams are in">
             <input type="checkbox" checked={watching} onChange={(e) => toggleWatch(e.target.checked)} />
             Watch for my match
           </label>
+          <input
+            className="match-number"
+            placeholder="or match number"
+            value={typedMatch}
+            onChange={(e) => setTypedMatch(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && loadTyped()}
+            title="The match number, when the console log is not there"
+          />
           {liveNote && <span className="muted">{liveNote}</span>}
         </div>
       </div>

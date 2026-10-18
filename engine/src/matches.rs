@@ -3413,6 +3413,8 @@ pub struct LiveMatch {
     pub hero: u64,
     pub allies: Vec<u64>,
     pub enemies: Vec<u64>,
+    /// The enemies in the player's lane, when the source knows the lanes.
+    pub lane: Vec<u64>,
 }
 
 /// The player's match in the API's list of active matches, if it is there.
@@ -3430,7 +3432,84 @@ pub fn parse_live(json: &str, account_id: u64) -> Result<Option<LiveMatch>, Stri
             hero: hero(me),
             allies: others(true),
             enemies: others(false),
+            lane: vec![],
         }));
     }
     Ok(None)
+}
+
+/// What the game's console log (written with the -condebug launch option) says about the match being played.
+#[derive(Debug, Clone, Default, Serialize)]
+pub struct ConsoleMatch {
+    /// The match the game last created a lobby for, unless that lobby was destroyed again.
+    pub match_id: Option<u64>,
+    /// The account signed in to the game.
+    pub account_id: Option<u64>,
+}
+
+/// The number that follows `prefix` in `line`.
+fn number_after(line: &str, prefix: &str) -> Option<u64> {
+    let rest = &line[line.find(prefix)? + prefix.len()..];
+    let digits: String = rest.chars().take_while(|c| c.is_ascii_digit()).collect();
+    digits.parse().ok()
+}
+
+/// Reads the console log: "Lobby 123 for Match 456 created" starts a match, "... destroyed" ends it, and the
+/// signed-in account shows as "[U:1:789]".
+pub fn console_match(log: &str) -> ConsoleMatch {
+    let mut out = ConsoleMatch::default();
+    for line in log.lines() {
+        if let Some(id) = number_after(line, "[U:1:") {
+            out.account_id = Some(id);
+        }
+        if line.contains("Lobby ") && line.contains(" for Match ") {
+            let Some(id) = number_after(line, " for Match ") else { continue };
+            if line.contains("created") {
+                out.match_id = Some(id);
+            } else if line.contains("destroyed") && out.match_id == Some(id) {
+                out.match_id = None;
+            }
+        }
+    }
+    out
+}
+
+/// The answer of the analytics service's live query (server-sent events of player controller rows: Steam ID,
+/// team, hero and lane), from the side of the given account.
+pub fn parse_live_query(text: &str, match_id: u64, account_id: u64) -> Result<LiveMatch, String> {
+    // Steam IDs in the broadcast are 64-bit; accounts are the low part.
+    const STEAM_ID64_BASE: u64 = 76_561_197_960_265_728;
+    let mut players: Vec<(u64, u64, u64, i64)> = vec![];
+    let mut error = None;
+    let mut event = "";
+    for line in text.lines() {
+        if let Some(name) = line.strip_prefix("event:") {
+            event = name.trim();
+            continue;
+        }
+        let Some(data) = line.strip_prefix("data:") else { continue };
+        let Ok(v) = serde_json::from_str::<Value>(data.trim()) else { continue };
+        if event == "error" {
+            error = v.get("error").map(|e| e.as_str().map(str::to_string).unwrap_or_else(|| e.to_string()));
+            continue;
+        }
+        let Some(steam) = v.get("m_steamID").and_then(Value::as_u64) else { continue };
+        let account = steam.saturating_sub(STEAM_ID64_BASE);
+        if players.iter().any(|p| p.0 == account) {
+            continue;
+        }
+        players.push((account, int(&v, "m_iTeamNum") as u64, v.get("hero").and_then(Value::as_u64).unwrap_or(0), v.get("lane").and_then(Value::as_i64).unwrap_or(0)));
+    }
+    let Some(&(_, team, hero, lane)) = players.iter().find(|p| p.0 == account_id) else {
+        return Err(error.unwrap_or_else(|| "Your account is not among the players of this match".into()));
+    };
+    let ids = |same: bool| players.iter().filter(|p| p.0 != account_id && (p.1 == team) == same && p.2 > 0).map(|p| p.2).collect::<Vec<_>>();
+    Ok(LiveMatch {
+        match_id,
+        duration_s: 0,
+        hero,
+        allies: ids(true),
+        enemies: ids(false),
+        lane: players.iter().filter(|p| p.1 != team && lane > 0 && p.3 == lane && p.2 > 0).map(|p| p.2).collect(),
+    })
 }

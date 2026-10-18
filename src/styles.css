@@ -4434,3 +4434,7 @@ header.draft {
 .compare-stats td.down {
   color: var(--danger);
 }
+
+.gen-actions .match-number {
+  width: 150px;
+}

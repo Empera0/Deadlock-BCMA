@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { findLiveMatch } from "../live";
 import { api, DraftPick, DraftReason, DraftReport, fmt, Hero, MatchPreset } from "../api";
 
 /** Ranks the statistics can be read at: the lowest average badge of the matches. */
@@ -185,15 +186,13 @@ export default function DraftView({ heroes, onPlan }: { heroes: Hero[]; onPlan: 
         </button>
         <button
           className="ghost"
-          disabled={!account.trim()}
-          title="Fills both teams from the match you are playing now (top 200 matches only, once the match has started)"
+          title="Fills both teams and your lane from the match you are playing now, read from the game's console log (-condebug)"
           onClick={() => {
-            setLiveNote("Looking for your match…");
-            api
-              .liveMatch(account)
+            setLiveNote("Looking for your match… the teams take about a minute the first time.");
+            findLiveMatch()
               .then((live) => {
                 setTeams({ allies: live.allies, enemies: live.enemies, banned: [] });
-                setLane([]);
+                setLane(live.lane);
                 setLiveNote(`Match ${live.match_id}: both teams loaded`);
               })
               .catch((e) => setLiveNote(String(e)));

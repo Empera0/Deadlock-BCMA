@@ -1,7 +1,7 @@
 use engine::{build::BuildInput, calc, combo, data::GameData, master, matches, popular, raw};
 use std::{
     fs,
-    io::Read,
+    io::{BufRead, Read},
     path::PathBuf,
     sync::RwLock,
     time::{Duration, SystemTime},
@@ -607,6 +607,100 @@ async fn live_match(account_id: String) -> Result<matches::LiveMatch, String> {
     })
 }
 
+/// Where Deadlock's console log is: every Steam library's Deadlock folder. The game writes it when it is started
+/// with the -condebug launch option.
+fn console_logs() -> Vec<PathBuf> {
+    let mut libraries: Vec<PathBuf> = vec![];
+    for steam in steam_folders() {
+        libraries.push(steam.clone());
+        if let Ok(text) = fs::read_to_string(steam.join("steamapps").join("libraryfolders.vdf")) {
+            for line in text.lines() {
+                let parts: Vec<&str> = line.split('"').collect();
+                // A library line reads: "path"  "D:\\SteamLibrary"
+                if parts.len() >= 4 && parts[1] == "path" {
+                    libraries.push(PathBuf::from(parts[3].replace("\\\\", "\\")));
+                }
+            }
+        }
+    }
+    libraries.dedup();
+    libraries.into_iter().map(|l| l.join("steamapps").join("common").join("Deadlock").join("game").join("citadel").join("console.log")).collect()
+}
+
+/// The end of the console log is enough: a match's lines are the last ones written.
+const CONSOLE_TAIL: u64 = 4 * 1024 * 1024;
+
+#[derive(serde::Serialize)]
+struct ConsoleState {
+    /// The log that was read, or where it was looked for when none was found.
+    path: String,
+    found: bool,
+    #[serde(flatten)]
+    seen: matches::ConsoleMatch,
+}
+
+/// The match being played and the signed-in account, from the game's console log.
+#[tauri::command]
+async fn console_match() -> Result<ConsoleState, String> {
+    tauri::async_runtime::spawn_blocking(|| {
+        let logs = console_logs();
+        let Some(path) = logs.iter().find(|p| p.is_file()) else {
+            return ConsoleState { path: logs.first().map(|p| p.display().to_string()).unwrap_or_default(), found: false, seen: Default::default() };
+        };
+        let mut text = String::new();
+        if let Ok(mut f) = fs::File::open(path) {
+            use std::io::{Seek, SeekFrom};
+            let len = f.metadata().map(|m| m.len()).unwrap_or(0);
+            let _ = f.seek(SeekFrom::Start(len.saturating_sub(CONSOLE_TAIL)));
+            let mut bytes = vec![];
+            let _ = f.read_to_end(&mut bytes);
+            text = String::from_utf8_lossy(&bytes).into_owned();
+        }
+        ConsoleState { path: path.display().to_string(), found: true, seen: matches::console_match(&text) }
+    })
+    .await
+    .map_err(|e| e.to_string())
+}
+
+/// Every player of a match being played, with team, hero and lane, from the statistics service's live query: it
+/// spectates the match and reads its broadcast, which takes about a minute the first time.
+#[tauri::command]
+async fn match_teams(match_id: u64, account_id: String) -> Result<matches::LiveMatch, String> {
+    let account = steam_account(&account_id)?;
+    tauri::async_runtime::spawn_blocking(move || {
+        let query = r#"SELECT "m_steamID", "m_iTeamNum", "m_PlayerDataGlobal__m_nHeroID" AS hero, "m_nAssignedLane" AS lane FROM CCitadelPlayerController WHERE "m_PlayerDataGlobal__m_nHeroID" > 0 LIMIT 24"#;
+        let resp = match ureq::get(&format!("{MATCH_API}/matches/demo/live/query"))
+            .query("match_id", &match_id.to_string())
+            .query("query", query)
+            .timeout(Duration::from_secs(180))
+            .call()
+        {
+            Ok(resp) => resp,
+            Err(ureq::Error::Status(429, _)) => return Err("The spectating service is busy (it takes a few matches an hour). Trying again shortly.".to_string()),
+            Err(ureq::Error::Status(code, r)) => return Err(format!("The spectating service could not watch the match ({code}): {}", r.into_string().unwrap_or_default())),
+            Err(e) => return Err(format!("Download failed: {e}")),
+        };
+        // Server-sent events: read until every player is in or the stream ends.
+        let mut text = String::new();
+        let mut players = 0;
+        for line in std::io::BufReader::new(resp.into_reader()).lines() {
+            let Ok(line) = line else { break };
+            if line.contains("m_steamID") {
+                players += 1;
+            }
+            let end = line.starts_with("event: end");
+            text.push_str(&line);
+            text.push('\n');
+            if end || players >= 12 {
+                break;
+            }
+        }
+        matches::parse_live_query(&text, match_id, account)
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
 #[derive(serde::Serialize)]
 struct OrderReport {
     order: engine::order::AbilityOrder,
@@ -835,6 +929,8 @@ pub fn run() {
             death_analysis,
             death_trend,
             live_match,
+            console_match,
+            match_teams,
             ability_order,
             match_history,
             find_local_matches,

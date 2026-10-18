@@ -327,6 +327,15 @@ export interface LiveMatch {
   hero: number;
   allies: number[];
   enemies: number[];
+  /** The enemies in the player's lane, when known. */
+  lane: number[];
+}
+
+export interface ConsoleState {
+  path: string;
+  found: boolean;
+  match_id: number | null;
+  account_id: number | null;
 }
 
 export interface DraftReason {
@@ -448,6 +457,8 @@ export const api = {
   abilityOrder: (build: Build) => invoke<OrderReport>("ability_order", { build }),
   deathTrend: (accountId: string, count: number) => invoke<DeathTrend>("death_trend", { accountId, count }),
   liveMatch: (accountId: string) => invoke<LiveMatch>("live_match", { accountId }),
+  consoleMatch: () => invoke<ConsoleState>("console_match"),
+  matchTeams: (matchId: number, accountId: string) => invoke<LiveMatch>("match_teams", { matchId, accountId }),
   adviseBuild: (build: Build, style: string) => invoke<Advice>("advise_build", { build, style }),
   simulateCombo: (build: Build, combo: Combo) => invoke<ComboResult>("simulate_combo", { build, combo }),
   saveBuild: (name: string, build: Build) => invoke<void>("save_build", { name, build }),

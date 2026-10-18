@@ -890,3 +890,35 @@ fn the_live_match_is_read_from_the_players_side() {
     assert_eq!((live.match_id, live.hero, live.allies, live.enemies), (7, 21, vec![20], vec![10, 11]));
     assert!(engine::matches::parse_live(json, 42).unwrap().is_none());
 }
+
+#[test]
+fn the_console_log_names_the_match_and_the_account() {
+    let log = "\
+[Steam] Logged in as [U:1:123456]\n\
+[Lobby] Lobby 9 for Match 111 created\n\
+[Lobby] Lobby 9 for Match 111 destroyed\n\
+[Lobby] Lobby 10 for Match 222 created\n";
+    let m = engine::matches::console_match(log);
+    assert_eq!((m.match_id, m.account_id), (Some(222), Some(123456)));
+    let ended = engine::matches::console_match(&format!("{log}[Lobby] Lobby 10 for Match 222 destroyed\n"));
+    assert_eq!(ended.match_id, None);
+    assert_eq!(engine::matches::console_match("nothing here").match_id, None);
+}
+
+#[test]
+fn the_live_query_gives_both_teams_and_the_lane() {
+    let base = 76_561_197_960_265_728u64;
+    let row = |acc: u64, team: u64, hero: u64, lane: i64| format!("data: {{\"m_steamID\":{},\"m_iTeamNum\":{team},\"hero\":{hero},\"lane\":{lane}}}\n\n", base + acc);
+    let text = format!(
+        "event: status\ndata: {{\"message\":\"Broadcast relay not ready yet\"}}\n\n{}{}{}{}{}event: end\ndata: {{}}\n",
+        row(1, 2, 10, 1),
+        row(2, 2, 11, 4),
+        row(3, 3, 20, 1),
+        row(4, 3, 21, 6),
+        row(1, 2, 10, 1)
+    );
+    let live = engine::matches::parse_live_query(&text, 77, 1).unwrap();
+    assert_eq!((live.match_id, live.hero, live.allies, live.enemies, live.lane), (77, 10, vec![11], vec![20, 21], vec![20]));
+    let err = "event: error\ndata: {\"status\":400,\"error\":\"Invalid query\"}\n";
+    assert_eq!(engine::matches::parse_live_query(err, 1, 1).unwrap_err(), "Invalid query");
+}
