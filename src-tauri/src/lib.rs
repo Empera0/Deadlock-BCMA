@@ -701,6 +701,24 @@ async fn match_teams(match_id: u64, account_id: String) -> Result<matches::LiveM
     .map_err(|e| e.to_string())?
 }
 
+/// The players of a match: rank, record on their hero, most played heroes, streak and party, from three batch
+/// requests to the statistics service.
+#[tauri::command]
+async fn scout_lobby(state: State<'_, AppState>, players: Vec<matches::LivePlayer>) -> Result<Vec<engine::scout::Scout>, String> {
+    let data = state.data.read().unwrap().clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let ids = players.iter().map(|p| p.account_id.to_string()).collect::<Vec<_>>().join(",");
+        let fetch = |path: &str| get(&format!("{MATCH_API}/players/{path}?account_ids={ids}"), "No player data found.");
+        let stats = fetch("hero-stats")?;
+        // Ranks and profiles only add to the report: without them it still stands.
+        let ranks = fetch("rank").unwrap_or_else(|_| "[]".into());
+        let profiles = fetch("steam").unwrap_or_else(|_| "[]".into());
+        Ok(engine::scout::scout(&data, &players, &stats, &ranks, &profiles))
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
 #[derive(serde::Serialize)]
 struct OrderReport {
     order: engine::order::AbilityOrder,
@@ -931,6 +949,7 @@ pub fn run() {
             live_match,
             console_match,
             match_teams,
+            scout_lobby,
             ability_order,
             match_history,
             find_local_matches,

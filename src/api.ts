@@ -329,6 +329,36 @@ export interface LiveMatch {
   enemies: number[];
   /** The enemies in the player's lane, when known. */
   lane: number[];
+  /** Everyone in the match, the player first. */
+  players: LivePlayer[];
+}
+
+export interface LivePlayer {
+  account_id: number;
+  hero: number;
+  ally: boolean;
+  lane: number;
+}
+
+export interface Scout {
+  account_id: number;
+  name: string;
+  avatar: string;
+  ally: boolean;
+  lane: number;
+  hero: number;
+  hero_name: string;
+  rank: string;
+  badge: number;
+  hero_matches: number;
+  hero_win_pct: number;
+  hero_kda: [number, number, number];
+  matches: number;
+  win_pct: number;
+  most_played: [string, number, number][];
+  streak: number;
+  party: string[];
+  tags: string[];
 }
 
 export interface ConsoleState {
@@ -459,6 +489,7 @@ export const api = {
   liveMatch: (accountId: string) => invoke<LiveMatch>("live_match", { accountId }),
   consoleMatch: () => invoke<ConsoleState>("console_match"),
   matchTeams: (matchId: number, accountId: string) => invoke<LiveMatch>("match_teams", { matchId, accountId }),
+  scoutLobby: (players: LivePlayer[]) => invoke<Scout[]>("scout_lobby", { players }),
   adviseBuild: (build: Build, style: string) => invoke<Advice>("advise_build", { build, style }),
   simulateCombo: (build: Build, combo: Combo) => invoke<ComboResult>("simulate_combo", { build, combo }),
   saveBuild: (name: string, build: Build) => invoke<void>("save_build", { name, build }),

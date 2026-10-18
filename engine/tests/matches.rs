@@ -922,3 +922,33 @@ fn the_live_query_gives_both_teams_and_the_lane() {
     let err = "event: error\ndata: {\"status\":400,\"error\":\"Invalid query\"}\n";
     assert_eq!(engine::matches::parse_live_query(err, 1, 1).unwrap_err(), "Invalid query");
 }
+
+#[test]
+fn the_lobby_is_scouted_from_the_services_answers() {
+    let data = data();
+    let (a, b) = (data.heroes[0].id, data.heroes[1].id);
+    let players = vec![
+        engine::matches::LivePlayer { account_id: 1, hero: a, ally: true, lane: 1 },
+        engine::matches::LivePlayer { account_id: 2, hero: b, ally: true, lane: 4 },
+        engine::matches::LivePlayer { account_id: 3, hero: a, ally: false, lane: 1 },
+    ];
+    let stats = format!(
+        r#"[{{"account_id":1,"hero_id":{a},"matches_played":80,"wins":50,"kills":400,"deaths":240,"assists":800}},
+           {{"account_id":1,"hero_id":{b},"matches_played":20,"wins":8}},
+           {{"account_id":3,"hero_id":{a},"matches_played":2,"wins":1}}]"#
+    );
+    let ranks = r#"[{"account_id":1,"badge":105,"last_match":{"player_rank_initial_win_streak":4}},{"account_id":3,"badge":0}]"#;
+    let profiles = r#"[{"account_id":1,"personaname":"Me","friends":[{"account_id":2}]},{"account_id":2,"personaname":"Mate","friends":[]},{"account_id":3,"personaname":"Foe","friends":[{"account_id":1}]}]"#;
+    let s = engine::scout::scout(&data, &players, &stats, ranks, profiles);
+    assert_eq!(s.len(), 3);
+    assert_eq!((s[0].rank.as_str(), s[0].hero_matches, s[0].matches, s[0].streak), ("Ascendant 5", 80, 100, 4));
+    assert!((s[0].hero_kda.0 - 5.0).abs() < 1e-9);
+    assert!(s[0].tags.iter().any(|t| t.contains("main")) && s[0].tags.iter().any(|t| t.contains("4 wins")));
+    // Friends on the same team are a party, on the other team not.
+    assert_eq!(s[0].party, vec!["Mate".to_string()]);
+    assert_eq!(s[1].party, vec!["Me".to_string()]);
+    assert!(s[2].party.is_empty());
+    assert!(s[2].tags.iter().any(|t| t.starts_with("New on this hero")));
+    assert_eq!(s[2].rank, "Unranked");
+    assert_eq!(s[0].most_played[0].1, 80);
+}

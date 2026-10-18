@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { api, Build, EMPTY_MAP, fmt, Hero, JudgedItem, LiveMatch, MasterBuild, MasterItem, MasterReport, MatchPreset, PopularItem, PopularReport } from "../api";
 import PowerCurve from "./PowerCurve";
+import LobbyScout from "./LobbyScout";
 import { CONDEBUG_HELP, findLiveMatch, savedAccount } from "../live";
 import SuggestPanel from "./SuggestPanel";
 
@@ -368,10 +369,12 @@ function MasterPanel({
   const [liveNote, setLiveNote] = useState("");
   // The match the teams were last filled from, so a watched match is built once.
   const [liveId, setLiveId] = useState<number | null>(null);
+  const [lastLive, setLastLive] = useState<LiveMatch | null>(null);
   const applyLive = (live: LiveMatch) => {
     const cls = heroes.find((h) => h.id === live.hero)?.class_name;
     if (!cls) throw new Error("Your hero is not in the game data: use Update data");
     setLiveId(live.match_id);
+    setLastLive(live);
     setMine(cls);
     setAllies(live.allies);
     setEnemies(live.enemies);
@@ -594,6 +597,7 @@ function MasterPanel({
         </div>
       </div>
       {error && <div className="error">{error}</div>}
+      {lastLive && <LobbyScout live={lastLive} heroes={heroes} />}
 
       {report && (
         <>

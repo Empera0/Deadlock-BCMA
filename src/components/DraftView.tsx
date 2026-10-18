@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { findLiveMatch } from "../live";
-import { api, DraftPick, DraftReason, DraftReport, fmt, Hero, MatchPreset } from "../api";
+import LobbyScout from "./LobbyScout";
+import { api, LiveMatch, DraftPick, DraftReason, DraftReport, fmt, Hero, MatchPreset } from "../api";
 
 /** Ranks the statistics can be read at: the lowest average badge of the matches. */
 const RANKS: [number, string][] = [
@@ -90,6 +91,7 @@ export default function DraftView({ heroes, onPlan }: { heroes: Hero[]; onPlan: 
   const [account, setAccount] = useState(() => load("account-id", ""));
   const [onlyMine, setOnlyMine] = useState(false);
   const [liveNote, setLiveNote] = useState("");
+  const [live, setLive] = useState<LiveMatch | null>(null);
   const [query, setQuery] = useState("");
   const [report, setReport] = useState<DraftReport | null>(null);
   const [busy, setBusy] = useState(false);
@@ -191,6 +193,7 @@ export default function DraftView({ heroes, onPlan }: { heroes: Hero[]; onPlan: 
             setLiveNote("Looking for your match… the teams take about a minute the first time.");
             findLiveMatch()
               .then((live) => {
+                setLive(live);
                 setTeams({ allies: live.allies, enemies: live.enemies, banned: [] });
                 setLane(live.lane);
                 setLiveNote(`Match ${live.match_id}: both teams loaded`);
@@ -256,6 +259,7 @@ export default function DraftView({ heroes, onPlan }: { heroes: Hero[]; onPlan: 
         </div>
 
         <div className="draft-right">
+          {live && <LobbyScout live={live} heroes={heroes} />}
           {error && <div className="error">{error}</div>}
           {report && (
             <>

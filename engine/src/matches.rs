@@ -3415,6 +3415,18 @@ pub struct LiveMatch {
     pub enemies: Vec<u64>,
     /// The enemies in the player's lane, when the source knows the lanes.
     pub lane: Vec<u64>,
+    /// Everyone in the match, the player first.
+    pub players: Vec<LivePlayer>,
+}
+
+#[derive(Debug, Clone, Serialize, serde::Deserialize)]
+pub struct LivePlayer {
+    pub account_id: u64,
+    pub hero: u64,
+    /// On the player's team.
+    pub ally: bool,
+    /// The lane the game assigned, when known (0 otherwise).
+    pub lane: i64,
 }
 
 /// The player's match in the API's list of active matches, if it is there.
@@ -3426,6 +3438,11 @@ pub fn parse_live(json: &str, account_id: u64) -> Result<Option<LiveMatch>, Stri
         let team = int(me, "team");
         let hero = |p: &Value| p.get("hero_id").and_then(Value::as_u64).unwrap_or(0);
         let others = |same: bool| players.iter().filter(|p| !std::ptr::eq(*p, me) && (int(p, "team") == team) == same).map(hero).filter(|h| *h > 0).collect();
+        let mut everyone: Vec<LivePlayer> = players
+            .iter()
+            .map(|p| LivePlayer { account_id: p.get("account_id").and_then(Value::as_u64).unwrap_or(0), hero: hero(p), ally: int(p, "team") == team, lane: 0 })
+            .collect();
+        everyone.sort_by_key(|p| (p.account_id != account_id, !p.ally));
         return Ok(Some(LiveMatch {
             match_id: m.get("match_id").and_then(Value::as_u64).unwrap_or(0),
             duration_s: int(m, "duration_s"),
@@ -3433,6 +3450,7 @@ pub fn parse_live(json: &str, account_id: u64) -> Result<Option<LiveMatch>, Stri
             allies: others(true),
             enemies: others(false),
             lane: vec![],
+            players: everyone,
         }));
     }
     Ok(None)
@@ -3511,5 +3529,10 @@ pub fn parse_live_query(text: &str, match_id: u64, account_id: u64) -> Result<Li
         allies: ids(true),
         enemies: ids(false),
         lane: players.iter().filter(|p| p.1 != team && lane > 0 && p.3 == lane && p.2 > 0).map(|p| p.2).collect(),
+        players: {
+            let mut all: Vec<LivePlayer> = players.iter().map(|p| LivePlayer { account_id: p.0, hero: p.2, ally: p.1 == team, lane: p.3 }).collect();
+            all.sort_by_key(|p| (p.account_id != account_id, !p.ally, p.lane));
+            all
+        },
     })
 }
