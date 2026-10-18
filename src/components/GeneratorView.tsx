@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { api, Build, EMPTY_MAP, fmt, Hero, JudgedItem, MasterBuild, MasterItem, MasterReport, MatchPreset, PopularItem, PopularReport } from "../api";
+import { api, Build, EMPTY_MAP, fmt, Hero, JudgedItem, LiveMatch, MasterBuild, MasterItem, MasterReport, MatchPreset, PopularItem, PopularReport } from "../api";
 import PowerCurve from "./PowerCurve";
 import SuggestPanel from "./SuggestPanel";
 
@@ -135,6 +135,9 @@ const DAMAGES: [string, string][] = [
   ["hybrid", "Hybrid"],
   ["melee", "Melee"],
 ];
+
+/** How often a watched match is looked for. */
+const LIVE_CHECK_MS = 30_000;
 
 /** Both teams, the lane and the role: a full build for the player's hero, phase by phase. */
 /** A small item tile for the comparison. */
@@ -359,32 +362,79 @@ function MasterPanel({
   const find = () => run(mine, allies, enemies, lane);
   // The player's match being played now, from the game's watch list, with the account set on the Draft or Match screen.
   const [liveNote, setLiveNote] = useState("");
-  const loadLive = () => {
-    let account = "";
+  const account = () => {
     try {
-      account = localStorage.getItem("account-id") ?? "";
+      return (localStorage.getItem("account-id") ?? "").trim();
     } catch {
-      /* No storage: no account. */
+      return "";
     }
-    if (!account.trim()) {
+  };
+  // The match the teams were last filled from, so a watched match is built once.
+  const [liveId, setLiveId] = useState<number | null>(null);
+  const applyLive = (live: LiveMatch) => {
+    const cls = heroes.find((h) => h.id === live.hero)?.class_name;
+    if (!cls) throw new Error("Your hero is not in the game data: use Update data");
+    setLiveId(live.match_id);
+    setMine(cls);
+    setAllies(live.allies);
+    setEnemies(live.enemies);
+    setLane([]);
+    setLiveNote(`Match ${live.match_id}, ${Math.floor(live.duration_s / 60)} minutes in. Mark your lane opponents and build again if you like.`);
+    run(cls, live.allies, live.enemies, []);
+  };
+  const loadLive = () => {
+    if (!account()) {
       setLiveNote("Set your Steam account ID on the Draft or Match analysis screen first.");
       return;
     }
     setLiveNote("Looking for your match…");
     api
-      .liveMatch(account)
-      .then((live) => {
-        const cls = heroes.find((h) => h.id === live.hero)?.class_name;
-        if (!cls) throw new Error("Your hero is not in the game data: use Update data");
-        setMine(cls);
-        setAllies(live.allies);
-        setEnemies(live.enemies);
-        setLane([]);
-        setLiveNote(`Match ${live.match_id}, ${Math.floor(live.duration_s / 60)} minutes in. Mark your lane opponents and build again if you like.`);
-        run(cls, live.allies, live.enemies, []);
-      })
+      .liveMatch(account())
+      .then(applyLive)
       .catch((e) => setLiveNote(String(e instanceof Error ? e.message : e)));
   };
+  // Watching: while this screen is open, the watch list is checked every half minute, and a new match of the
+  // player's is filled in and built as soon as it shows up there.
+  const [watching, setWatching] = useState(() => {
+    try {
+      return localStorage.getItem("watch-live") === "1";
+    } catch {
+      return false;
+    }
+  });
+  const toggleWatch = (on: boolean) => {
+    setWatching(on);
+    try {
+      localStorage.setItem("watch-live", on ? "1" : "0");
+    } catch {
+      /* Only a convenience. */
+    }
+    if (on && !account()) setLiveNote("Set your Steam account ID on the Draft or Match analysis screen first.");
+  };
+  useEffect(() => {
+    if (!watching || !account()) return;
+    let stopped = false;
+    const look = () => {
+      api
+        .liveMatch(account())
+        .then((live) => {
+          if (stopped || live.match_id === liveId) return;
+          applyLive(live);
+        })
+        .catch(() => {
+          if (!stopped && liveId === null) {
+            setLiveNote(`Watching for your match: not in the game's watch list yet (checked ${new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })})`);
+          }
+        });
+    };
+    look();
+    const timer = setInterval(look, LIVE_CHECK_MS);
+    return () => {
+      stopped = true;
+      clearInterval(timer);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [watching, liveId]);
   // A player handed over from a match: both teams, the lane, and a build to set the purchases against.
   useEffect(() => {
     if (!preset) return;
@@ -496,6 +546,10 @@ function MasterPanel({
           <button className="ghost" disabled={busy} onClick={loadLive} title="Fills both teams from the match you are playing now (top 200 matches only, once the match has started)">
             Load my live match
           </button>
+          <label className="check" title="While this screen is open, looks for your match every 30 seconds and builds for it as soon as it shows up">
+            <input type="checkbox" checked={watching} onChange={(e) => toggleWatch(e.target.checked)} />
+            Watch for my match
+          </label>
           {liveNote && <span className="muted">{liveNote}</span>}
         </div>
       </div>
