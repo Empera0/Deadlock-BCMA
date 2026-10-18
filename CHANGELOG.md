@@ -2,6 +2,16 @@
 
 All notable changes to Deadlock BCMA are listed here. Versions follow [semantic versioning](https://semver.org).
 
+## [0.2.44] – 2026-10-18
+
+This release finds your match from the game itself instead of the watch list of top matches.
+
+### Changed
+
+1. **Your live match, from your own game.** The app now reads the match you are playing from the game's console log, which Deadlock writes when it is started with the `-condebug` launch option (in Steam: Deadlock, Properties, Launch Options). The log also names your account, so no Steam ID needs typing. The teams come from the statistics service watching that match: every player's hero, team and lane, so the enemies in your lane are marked too. It works in any match, not only the top 200, and takes about a minute after the match starts.
+2. **Watch for my match** reads the log every 20 seconds and builds for a new match once its teams are in. A fetch that fails is tried again after two minutes, at most three times a match, since the service watches only a few matches an hour from one computer.
+3. **Load my live match** in the Master builder and the Draft screen does the same once, and falls back to the watch list without the log. A match number can also be typed in. Without the log, the app says how to turn `-condebug` on.
+
 ## [0.2.43] – 2026-10-18
 
 This release lets the Master builder watch for your match and build for it on its own.
@@ -445,6 +455,7 @@ This release adds the **Build generator**, with builds read from top-ranked matc
   - trends across your last matches.
 - Windows installer with a desktop shortcut and automatic updates from GitHub releases.
 
+[0.2.44]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.43...v0.2.44
 [0.2.43]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.42...v0.2.43
 [0.2.42]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.41...v0.2.42
 [0.2.41]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.40...v0.2.41
