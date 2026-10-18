@@ -106,3 +106,13 @@ fn counters_are_planned_job_by_job_against_the_enemy_team() {
     // Dynamo can teleport away, which makes answers to crowd control count for less.
     assert!(plan.own_escape.is_empty() || plan.roles.iter().all(|r| r.key != "control" || r.weight < 1.0));
 }
+
+#[test]
+fn items_say_which_damage_they_work_through() {
+    let data = data();
+    let through = |name: &str| popular::works_through(data.items.iter().find(|i| i.name == name).unwrap());
+    assert_eq!(through("Toxic Bullets"), Some("bullets"));
+    assert_eq!(through("Healbane"), Some("spirit"));
+    assert_eq!(through("Spirit Burn"), Some("spirit"));
+    assert_eq!(through("Extra Stamina"), None);
+}

@@ -102,7 +102,11 @@ const CLOSE_RANGE_FACTOR: f64 = 0.5;
 /// A counter pick is not bought for a job that this many items in the build already do.
 const COUNTER_JOB_MAX: usize = 2;
 /// The prefixes of the notes shown on an item in the build.
-const SHOWN_NOTES: [&str; 6] = ["Takes", "Harder", "Timing", "Top players", "Stuns", "Clears"];
+const SHOWN_NOTES: [&str; 7] = ["Takes", "Harder", "Timing", "Top players", "Stuns", "Clears", "Fits"];
+/// How much an item whose effect comes through the build's own damage scores above one that comes through the other
+/// kind (Toxic Bullets against Healbane on a gun build): its score is multiplied by 1 ± this, by the share of the
+/// build's damage the item works through.
+const FIT_WEIGHT: f64 = 0.3;
 
 /// An item's components, theirs too.
 fn parts(data: &GameData, class: &str) -> Vec<String> {
@@ -532,7 +536,37 @@ pub fn master_build(data: &GameData, input: &MasterInput) -> Result<MasterBuild,
     }
     let [w_pop, w_engine, w_counter] = if off_style { OFF_STYLE_WEIGHTS } else { [w_pop, w_engine, w_counter] };
 
-    let counter = popular::counter_plan(data, m);
+    // The share of the build's damage that is the gun: the hero's own when the build is played as usual, else what
+    // the chosen damage makes of it. Items that work through bullets or spirit damage are judged by it.
+    let build_gun = match style.as_str() {
+        "gun" => gun_share.max(0.8),
+        "spirit" => gun_share.min(0.25),
+        "hybrid" => gun_share.clamp(0.4, 0.6),
+        "melee" => 0.5,
+        _ => gun_share,
+    };
+    let fit = |item: &Item| -> (f64, Option<String>) {
+        let Some(kind) = popular::works_through(item) else { return (1.0, None) };
+        let (share, what) = match kind {
+            "bullets" => (build_gun, "gun"),
+            "spirit" => (1.0 - build_gun, "spirit"),
+            _ => (if style == "melee" { 1.0 } else { 0.25 }, "melee"),
+        };
+        let note = if kind == "melee" {
+            (style == "melee").then(|| "Fits your build: works on melee hits, which a melee build is made of".to_string())
+        } else if share >= 0.6 {
+            Some(format!("Fits your build: works through your {kind}, and {:.0}% of its damage is {what}", share * 100.0))
+        } else if share <= 0.4 {
+            Some(format!("Harder to use: works through {kind}, and only {:.0}% of this build's damage is {what}", share * 100.0))
+        } else {
+            None
+        };
+        (1.0 + FIT_WEIGHT * (2.0 * share - 1.0), note)
+    };
+    // The counters are planned for the build's damage, not the hero's usual one: a gun Lash cuts healing with
+    // Toxic Bullets, a spirit one with Healbane.
+    let planned = popular::Matchup { my_gun_pct: Some(build_gun * 100.0), my_spirit: Some(build_gun < 0.5), ..*m };
+    let counter = popular::counter_plan(data, &planned);
     // What the team already does: the player's own kit, and the teammates' kits and usual builds.
     let mut members: Vec<(u64, Vec<String>)> = vec![(input.hero_id, vec![])];
     members.extend(m.allies.iter().map(|a| (a.hero_id, a.build.core.iter().map(|c| c.item.clone()).collect())));
@@ -576,7 +610,7 @@ pub fn master_build(data: &GameData, input: &MasterInput) -> Result<MasterBuild,
             if m.ranged && (popular::close_range(item).is_some() || popular::dives_in(item)) {
                 s *= CLOSE_RANGE_FACTOR;
             }
-            s * team.redundancy(item).0
+            s * fit(item).0 * team.redundancy(item).0
         };
         let eligible = |pop: f64, ctr: f64, gain: f64, push: f64| {
             pop / pop_top >= POPULAR_FROM || ctr >= STRONG_COUNTER || (off_style && gain >= OFF_STYLE_GAIN) || (PUSH_WEIGHT[index] > 0.0 && push >= PUSH_FULL)
@@ -671,6 +705,12 @@ pub fn master_build(data: &GameData, input: &MasterInput) -> Result<MasterBuild,
                     .map(|c| (answer(c), c.2.clone(), c.3.clone()))
                     .unwrap_or((0.0, vec![], vec![]));
                 let Some(item) = data.item(class) else { return (ctr, jobs, why, 0.0) };
+                if let Some(note) = fit(item).1 {
+                    if !why.iter().any(|w| w.starts_with("Harder to use: works through")) || note.starts_with("Fits") {
+                        why.retain(|w| !w.starts_with("Harder to use: works through"));
+                        why.insert(0, note);
+                    }
+                }
                 let mut stun = crate::team::item_lockdown_seconds(item);
                 let mut by = String::new();
                 if item.name == "Echo Shard" {

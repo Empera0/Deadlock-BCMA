@@ -69,6 +69,8 @@ fn main() {
     let gun_pct = popular::gun_pct(&data, &mine);
     let spirit = popular::deals_spirit(&data, &mine);
     println!("{}: deals_spirit {spirit}, gun {gun_pct:?}%", me.name);
+    // DAMAGE=gun|spirit|hybrid|melee builds for that damage instead of the hero's usual one.
+    let damage = std::env::var("DAMAGE").unwrap_or_else(|_| "auto".into());
     let input = MasterInput {
         matchup: Matchup { my_hero: Some(&me.class_name), my_spirit: Some(spirit), my_gun_pct: gun_pct, my_core: &core, allies: &ally_team, enemies: &team, lane: &lane, ranged: true },
         hero_id: me.id,
@@ -76,7 +78,7 @@ fn main() {
         hero_matches,
         own_build: &mine,
         focus: "auto",
-        damage: "auto",
+        damage: &damage,
         scaling: &vec![],
         bought: &[],
     };
@@ -95,7 +97,7 @@ fn main() {
         }
         for s in &b.counter.stages {
             if (i == 0 && s.key == "lane") || (i > 0 && i < 3 && s.key == "mid") || (i == 3 && s.key == "late") {
-                for name in ["Suppressor", "Spirit Sap", "Phantom Strike", "Spirit Shielding", "Weapon Shielding"] {
+                for name in ["Toxic Bullets", "Healbane", "Spirit Burn", "Inhibitor", "Suppressor", "Spirit Sap"] {
                     if let Some(c) = s.scored.iter().find(|c| data.item(&c.0).is_some_and(|it| it.name == name)) {
                         println!("   [{}] {name}: counter {:.2} jobs {:?} why {:?}", s.key, c.1, c.2, c.3);
                     }

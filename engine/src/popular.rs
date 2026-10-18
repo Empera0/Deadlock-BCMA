@@ -472,6 +472,25 @@ const FIGHT_S: f64 = 10.0;
 /// that lasts a few seconds covers only part of a fight; an effect that cannot hit the same enemy again for a
 /// while is up only part of the time.
 /// `gun` is the share of the player's damage that is gun damage (0 to 1), when known.
+/// The damage an item's effect comes through: "bullets", "spirit" or "melee"; none when it works on its own or on
+/// headshots alone.
+pub fn works_through(item: &Item) -> Option<&'static str> {
+    let d = item.description.to_lowercase();
+    if d.starts_with("landing a headshot") || d.starts_with("your next headshot") {
+        None
+    } else if d.contains("melee attack") {
+        Some("melee")
+    } else if d.contains("dealing significant spirit damage") {
+        Some("spirit")
+    } else if d.contains("your bullets") {
+        Some("bullets")
+    } else if d.contains("your spirit damage") || d.contains("deal spirit damage") {
+        Some("spirit")
+    } else {
+        None
+    }
+}
+
 fn ease(item: &Item, gun: Option<f64>) -> (f64, Vec<String>) {
     let d = item.description.to_lowercase();
     let gun_share = gun.unwrap_or(0.5);
