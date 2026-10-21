@@ -824,6 +824,8 @@ export interface MatchDeath {
   alone: boolean;
   deep: boolean;
   in_fight: boolean;
+  /** In the player's own lane while it was still being laned. */
+  in_lane: boolean;
   caught: boolean;
   cost: string[];
   left: number;

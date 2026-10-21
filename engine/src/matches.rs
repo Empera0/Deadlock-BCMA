@@ -282,6 +282,8 @@ fn to_line(point: (f64, f64), line: &[(f64, f64)]) -> f64 {
 const DEATH_REACH: f64 = 1600.0;
 /// Further than this past the middle of the map, on the enemy's side, is deep.
 const DEEP_M: f64 = 50.0;
+/// A lane is still being laned until the later of its two guardians falls, though never past this.
+const LANE_HELD_MAX_S: u32 = 14 * 60;
 
 /// One death: who was around, where it happened, and what the team then had to do without the player.
 #[derive(Debug, Clone, Serialize)]
@@ -300,7 +302,11 @@ pub struct DeathReport {
     pub deep: bool,
     /// The death was part of a team fight.
     pub in_fight: bool,
-    /// Outside a team fight, with no teammate near, against two or more enemies or deep on the enemy's side.
+    /// In the player's own lane while it was still being laned: being outnumbered there (a gank, a lane partner
+    /// gone back) is the lane's doing, not being caught out of position.
+    pub in_lane: bool,
+    /// Outside a team fight and outside the own lane in the laning phase, with no teammate near, against two or
+    /// more enemies or deep on the enemy's side.
     pub caught: bool,
     /// Team fights and mid boss kills that began while the player was still dead from this, outside a fight.
     pub cost: Vec<String>,
@@ -2250,7 +2256,12 @@ pub(crate) fn source_label(data: &GameData, raw: &str) -> String {
             let rest = raw[class.len()..].trim_matches('_').replace('_', " ");
             if rest.is_empty() { name.to_string() } else { format!("{name} ({rest})") }
         }
-        None => raw.to_string(),
+        // Sources shared by every hero (the zipline) are in neither list: their class name, read as words.
+        None => {
+            let words = raw.trim_start_matches("citadel_").trim_start_matches("ability_").replace('_', " ");
+            let mut chars = words.chars();
+            chars.next().map(|c| c.to_uppercase().chain(chars).collect()).unwrap_or_else(|| raw.to_string())
+        }
     }
 }
 
@@ -3140,6 +3151,15 @@ pub fn parse(data: &GameData, json: &str) -> Result<MatchReport, String> {
             let depth_m = spot.1 * if me.team == 0 { 1.0 } else { -1.0 } / crate::raw::UNITS_PER_METER;
             let in_fight = fights.iter().any(|f| time + 3 >= f.start && time <= f.end + 6 && f.sides.iter().any(|s| s.deaths.contains(&slot)));
             let (alone, deep) = (allies == 0, depth_m > DEEP_M);
+            // The own lane, until the later of its two guardians falls.
+            let lane_held = lane_reports
+                .iter()
+                .find(|l| l.lane == me.lane)
+                .map(|l| l.sides.iter().map(|s| s.guardian_lost_at.unwrap_or(LANE_HELD_MAX_S)).max().unwrap_or(LANE_PHASE_S))
+                .unwrap_or(LANE_PHASE_S)
+                .clamp(LANE_PHASE_S, LANE_HELD_MAX_S);
+            let own_line = played.iter().find(|x| x.0 == slot).and_then(|x| lines.iter().find(|l| l.0 == x.1));
+            let in_lane = time <= lane_held && own_line.is_some_and(|l| to_line(spot, &l.1) < LANE_BAND);
             // Still dead from this very death when something began: no later death of the player lies in between.
             let down_for = |start: u32| start > time && !deaths.iter().any(|o| o.1 == slot && o.0 > time && o.0 < start);
             let mut cost: Vec<String> = vec![];
@@ -3163,7 +3183,8 @@ pub fn parse(data: &GameData, json: &str) -> Result<MatchReport, String> {
                 alone,
                 deep,
                 in_fight,
-                caught: !in_fight && alone && (enemies >= 2 || deep),
+                in_lane,
+                caught: !in_fight && !in_lane && alone && (enemies >= 2 || deep),
                 cost,
                 left: (spot.0 + MAP_RADIUS) / (2.0 * MAP_RADIUS),
                 top: (MAP_RADIUS - spot.1) / (2.0 * MAP_RADIUS),

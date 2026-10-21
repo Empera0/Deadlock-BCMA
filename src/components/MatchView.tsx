@@ -594,7 +594,8 @@ function PlayerDetail({
           <h3>Deaths</h3>
           <div className="muted">
             Who was around a second before each death and where it happened. Caught: outside a team fight, no teammate within 40 m,
-            against two or more enemies or more than 50 m into the enemy's side. The last column is what the team then went into while{" "}
+            against two or more enemies or more than 50 m into the enemy's side. A death in your own lane before the later of its two
+            guardians falls is the lane's (a gank, a partner gone back) and never counts as caught. The last column is what the team then went into while{" "}
             {player.hero_name} was still dead.
           </div>
           <DeathAnalysisPanel key={`${report.match_id}-${player.slot}`} matchId={report.match_id} slot={player.slot} hero={player.hero_name} />
@@ -623,7 +624,17 @@ function PlayerDetail({
                     <td>{d.nearest_ally_m !== null ? `${fmt(d.nearest_ally_m, 0)} m` : "none alive"}</td>
                     <td>{d.depth_m >= 0 ? `${fmt(d.depth_m, 0)} m enemy side` : `${fmt(-d.depth_m, 0)} m own side`}</td>
                     <td className="left">
-                      {d.in_fight ? "team fight" : d.caught ? <b className="timing-bad">caught alone</b> : d.alone ? "alone" : "skirmish"}
+                      {d.in_fight
+                        ? "team fight"
+                        : d.caught
+                          ? <b className="timing-bad">caught alone</b>
+                          : d.in_lane && d.alone && d.enemies >= 2
+                            ? "outnumbered in lane"
+                            : d.in_lane
+                              ? "in lane"
+                              : d.alone
+                                ? "alone"
+                                : "skirmish"}
                     </td>
                     <td className="left wide">{d.cost.length > 0 ? <b className="timing-bad">{d.cost.join(" and ")}</b> : "–"}</td>
                   </tr>

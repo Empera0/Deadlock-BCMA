@@ -952,3 +952,17 @@ fn the_lobby_is_scouted_from_the_services_answers() {
     assert_eq!(s[2].rank, "Unranked");
     assert_eq!(s[0].most_played[0].1, 80);
 }
+
+#[test]
+fn deaths_in_the_own_lane_while_it_is_laned_are_never_caught() {
+    let data = data();
+    for json in [SAMPLE, LONG] {
+        let r = matches::parse(&data, json).unwrap();
+        assert!(r.deaths.iter().any(|d| d.in_lane), "some deaths fall in the laning phase");
+        for d in &r.deaths {
+            assert!(!(d.in_lane && d.caught), "{} at {}s", d.slot, d.time);
+            // Nothing after the longest a lane can be held counts as in lane.
+            assert!(!d.in_lane || d.time <= 14 * 60);
+        }
+    }
+}
