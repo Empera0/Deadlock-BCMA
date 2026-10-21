@@ -7,6 +7,7 @@ use serde::Serialize;
 use serde_json::Value;
 
 use crate::build::BuildInput;
+use crate::calc;
 use crate::combo::{ComboResult, Kind};
 use crate::data::GameData;
 use crate::matches::{build_at, events, int, list, num, source_label, AGGREGATES};
@@ -41,6 +42,8 @@ pub struct Fix {
     /// Share of the player's health the killer's fight takes with the item (1 = exactly dead).
     pub health_taken: f64,
     pub kill_time: Option<f64>,
+    /// With every slot taken, the item held that is sold to make room for it: the cheapest one.
+    pub replaces: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -169,8 +172,23 @@ fn fixes(data: &GameData, killer: &BuildInput, me: &BuildInput, time: u32, befor
         .filter_map(|(class, owned)| {
             let item = data.item(&class)?;
             let mut trial = me.clone();
+            let mut replaces = None;
             if !owned {
                 trial.purchases.push(class.clone());
+                // No free slot: the cheapest item held is sold for it, as a player would.
+                let sheet = calc::compute(data, &trial).ok()?;
+                if sheet.slots_used > sheet.slot_limit {
+                    let (sold, name) = sheet
+                        .owned
+                        .iter()
+                        .filter(|c| **c != class)
+                        .filter_map(|c| data.item(c).map(|i| (c.clone(), i.name.clone(), i.cost)))
+                        .min_by_key(|x| x.2)
+                        .map(|x| (x.0, x.1))?;
+                    trial.purchases.retain(|c| *c != sold);
+                    trial.active.retain(|c| *c != sold);
+                    replaces = Some(name);
+                }
             }
             let actives: Vec<String> = if usable(&class) { vec![class.clone()] } else { vec![] };
             let r = suggest::fight_against(data, killer, &trial, &actives, SHOOTING)?;
@@ -183,6 +201,7 @@ fn fixes(data: &GameData, killer: &BuildInput, me: &BuildInput, time: u32, befor
                 owned,
                 health_taken: after,
                 kill_time: r.kill_time,
+                replaces,
             })
         })
         .collect();
@@ -196,6 +215,11 @@ fn fixes(data: &GameData, killer: &BuildInput, me: &BuildInput, time: u32, befor
     });
     out.truncate(FIXES + out.iter().filter(|f| f.owned).count());
     out
+}
+
+/// ", in place of Extra Charge" when the slots were full.
+fn instead(f: &Fix) -> String {
+    f.replaces.as_ref().map(|r| format!(", in place of {r}")).unwrap_or_default()
 }
 
 fn verdict(s: &DeathStudy) -> String {
@@ -212,8 +236,8 @@ fn verdict(s: &DeathStudy) -> String {
     };
     let fix = match s.fixes.first() {
         Some(f) if f.owned => format!(" Using your {} at the start would leave it at {} of your health.", f.name, pct(f.health_taken)),
-        Some(f) if f.health_taken < 1.0 && s.health_taken >= 1.0 => format!(" {} ({} souls) would have kept you alive through it.", f.name, f.cost),
-        Some(f) => format!(" {} ({} souls) cuts it to {} of your health.", f.name, f.cost, pct(f.health_taken)),
+        Some(f) if f.health_taken < 1.0 && s.health_taken >= 1.0 => format!(" {} ({} souls{}) would have kept you alive through it.", f.name, f.cost, instead(f)),
+        Some(f) => format!(" {} ({} souls{}) cuts it to {} of your health.", f.name, f.cost, instead(f), pct(f.health_taken)),
         None => String::new(),
     };
     format!("{fight}.{fix}")

@@ -12,6 +12,7 @@ function FixChip({ fix, count }: { fix: DeathFix; count?: number }) {
         {fix.owned ? `Use ${fix.name}` : fix.name}
         <small>
           {fix.owned ? "owned" : `${fmt(fix.cost)} souls`}
+          {fix.replaces ? ` · in place of ${fix.replaces}` : ""}
           {count !== undefined ? ` · ${count} deaths` : ` · ${pct(fix.health_taken)} of health`}
         </small>
       </span>
@@ -108,7 +109,8 @@ export default function DeathAnalysisPanel({ matchId, slot, hero }: { matchId: n
       <p className="muted">
         The fight is the killer alone, with the builds both of you had at the time; the damage taken is everything that hit you in the
         match data's three-minute interval around the death. Items are vitality items up to 1,600 souls in the lane, 3,200 until 20
-        minutes and 6,400 after; actives are used as the fight starts.
+        minutes and 6,400 after; actives are used as the fight starts. With every slot taken, an item comes in place of the cheapest
+        one you held, which is sold for it.
       </p>
     </div>
   );

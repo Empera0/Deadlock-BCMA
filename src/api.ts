@@ -436,6 +436,8 @@ export interface DeathFix {
   owned: boolean;
   health_taken: number;
   kill_time: number | null;
+  /** With every slot taken, the item sold to make room for it. */
+  replaces: string | null;
 }
 
 export interface DeathStudy {
