@@ -2,6 +2,20 @@
 
 All notable changes to Deadlock BCMA are listed here. Versions follow [semantic versioning](https://semver.org).
 
+## [0.2.46] – 2026-10-21
+
+This release adds Nurse Harrow, with her kit read the way the game plays it.
+
+### Added
+
+1. **Nurse Harrow.** The game data is updated to the latest patch, which adds Nurse Harrow to every screen: builds, combos, the Master builder, the Draft screen and match analysis.
+2. **Her kit in the combo.** Leech Therapy heals her for the damage it deals. The leeches she collects are a condition you set in the combo: each adds fire rate and health regen (and spirit power once upgraded), and makes Lurking Terrors fear longer. Wretched Vapors cast on herself speeds up her shooting while it lasts. Healing Needles heals allies and is left out of the damage combo, with what it heals noted. Lurking Terrors notes its fear, slow and fire rate cut.
+3. **Her kit in counters and teams.** Lurking Terrors counts as crowd control (the fear) and as a channelled ultimate that interrupting items answer. Against her, healing reduction is worth more since she heals. On your team, she already heals and helps, so team items count for a little less.
+
+### Changed
+
+1. **Gun and spirit damage measured again.** The share of each hero's damage that is the gun is measured again on 300 recent high-rank matches, now for 43 heroes; Nurse Harrow, measured on her own matches, deals 24% of hers with the gun. The Master builder and the counter plan judge items by these shares.
+
 ## [0.2.45] – 2026-10-18
 
 This release scouts the players of your live match and builds around your own damage type.
@@ -468,6 +482,7 @@ This release adds the **Build generator**, with builds read from top-ranked matc
   - trends across your last matches.
 - Windows installer with a desktop shortcut and automatic updates from GitHub releases.
 
+[0.2.46]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.45...v0.2.46
 [0.2.45]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.44...v0.2.45
 [0.2.44]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.43...v0.2.44
 [0.2.43]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.42...v0.2.43
