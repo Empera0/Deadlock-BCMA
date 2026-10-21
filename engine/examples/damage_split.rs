@@ -2,6 +2,8 @@
 //! matrices of recent high-rank matches, and writes engine/data/gun-share.json. Run it about once a month:
 //! `cargo run -p engine --example damage_split -- <cache dir> [matches]`. Match answers are kept in the cache
 //! directory and the requests are spaced out, so a second run asks the service for nothing it already gave.
+//! A third argument, hero ids separated by commas, measures only those heroes from matches they played and adds them
+//! to the file: for a new hero too rare yet in the general sample.
 
 use std::collections::BTreeMap;
 use std::process::Command;
@@ -22,10 +24,12 @@ fn main() {
     let args: Vec<String> = std::env::args().collect();
     let dir = &args[1];
     let wanted: usize = args.get(2).and_then(|n| n.parse().ok()).unwrap_or(200);
+    let only: Vec<u64> = args.get(3).map(|a| a.split(',').filter_map(|n| n.trim().parse().ok()).collect()).unwrap_or_default();
+    let filter = if only.is_empty() { String::new() } else { format!("&hero_ids={}", args[3]) };
     std::fs::create_dir_all(dir).unwrap();
     let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs();
     let list = curl(&format!(
-        "https://api.deadlock-api.com/v1/matches/metadata?min_unix_timestamp={}&min_average_badge={MIN_BADGE}&min_duration_s=1200&limit={wanted}",
+        "https://api.deadlock-api.com/v1/matches/metadata?min_unix_timestamp={}&min_average_badge={MIN_BADGE}&min_duration_s=1200&limit={wanted}{filter}",
         now - 3 * 86_400
     ));
     let ids: Vec<u64> = serde_json::from_str::<Vec<Value>>(&list).unwrap().iter().filter_map(|m| m.get("match_id")?.as_u64()).collect();
@@ -94,18 +98,26 @@ fn main() {
             t.2 += 1;
         }
     }
-    let shares: BTreeMap<String, f64> = totals
+    let file = concat!(env!("CARGO_MANIFEST_DIR"), "/data/gun-share.json");
+    // Heroes measured on their own are added to the general sample, which keeps its size.
+    let (mut shares, sample): (BTreeMap<String, f64>, u64) = if only.is_empty() {
+        (BTreeMap::new(), read)
+    } else {
+        let old: Value = serde_json::from_str(&std::fs::read_to_string(file).unwrap()).unwrap();
+        (serde_json::from_value(old["gun_pct"].clone()).unwrap(), old["matches"].as_u64().unwrap_or(0))
+    };
+    shares.extend(totals
         .iter()
+        .filter(|(hero, _)| only.is_empty() || only.contains(hero))
         .filter(|(_, t)| t.2 >= MIN_PLAYERS && t.1 > 0.0)
-        .map(|(hero, t)| (hero.to_string(), (t.0 / t.1 * 1000.0).round() / 10.0))
-        .collect();
+        .map(|(hero, t)| (hero.to_string(), (t.0 / t.1 * 1000.0).round() / 10.0)));
     let out = serde_json::json!({
         "about": "Share of each hero's damage to enemy heroes that is bullet or melee damage (the rest is spirit damage), percent, by hero id. Written by examples/damage_split.rs.",
-        "matches": read,
+        "matches": sample,
         "min_average_badge": MIN_BADGE,
         "measured_at": now,
         "gun_pct": shares,
     });
-    std::fs::write(concat!(env!("CARGO_MANIFEST_DIR"), "/data/gun-share.json"), serde_json::to_string_pretty(&out).unwrap() + "\n").unwrap();
+    std::fs::write(file, serde_json::to_string_pretty(&out).unwrap() + "\n").unwrap();
     println!("{read} matches, {} heroes", shares.len());
 }
