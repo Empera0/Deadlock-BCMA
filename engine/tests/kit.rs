@@ -694,3 +694,34 @@ fn express_shot_fires_a_boosted_double_shot_on_cooldown() {
     let shots = sheet.stat("shots_per_second").unwrap().ceil() - 1.0;
     assert!(close(source(&r, "Weapon"), shots * sheet.stat("bullet_damage").unwrap() * sheet.stat("crit_multiplier").unwrap()));
 }
+
+#[test]
+fn nurse_harrow_leeches_raise_fire_rate_and_her_kit_reads_right() {
+    let d = data();
+    let mut b = hero(&d, "Nurse Harrow");
+    b.ability_tiers = vec![3, 3, 3, 3];
+    let shoot = Action::Shoot { seconds: 3.0 };
+    let bare = run(&d, &b, vec![shoot.clone()], 0.0);
+    let leeches = run(&d, &b, vec![Action::Condition { item: "hero:nurse_leeches".into(), count: Some(10.0) }, shoot.clone()], 0.0);
+    assert!(leeches.total > bare.total * 1.3, "ten leeches: +50% fire rate, {} against {}", leeches.total, bare.total);
+
+    // Wretched Vapors speeds up her shooting while it lasts.
+    let (vapors, _) = ability(&d, &b, "Wretched Vapors");
+    let rushed = run(&d, &b, vec![cast(vapors), shoot], 0.0);
+    assert!(rushed.total > bare.total * 1.2, "{} against {}", rushed.total, bare.total);
+
+    // Healing Needles heals allies: not a damage action.
+    let (needles, a) = ability(&d, &b, "Healing Needles");
+    let sheet = calc::compute(&d, &b).unwrap();
+    let ctx = engine::kit::Context { per_shot: 1.0, shots_per_second: 1.0, abilities: &sheet.abilities, flags: &[] };
+    assert!(!engine::kit::plan(&a, &ctx, None, None).castable, "slot {needles}");
+
+    // Lurking Terrors fears, slows and cuts fire rate; Leech Therapy heals her and makes her a healer to cut.
+    let hero = d.heroes.iter().find(|h| h.name == "Nurse Harrow").unwrap();
+    let terrors = hero.abilities.iter().find(|a| a.name == "Lurking Terrors").unwrap();
+    assert!(engine::team::locks_down(terrors));
+    assert!(engine::team::ability_lockdown_seconds(terrors) >= 2.0);
+    let found = engine::counters::threats(&sheet.abilities);
+    assert!(found.iter().any(|f| f.ability == "Lurking Terrors" && f.kind == engine::counters::Threat::Lockdown));
+    assert!(found.iter().any(|f| f.ability == "Lurking Terrors" && f.kind == engine::counters::Threat::Channel));
+}

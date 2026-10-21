@@ -419,6 +419,19 @@ pub fn hero_conditions(abilities: &[AbilitySheet]) -> Vec<HeroCondition> {
             );
         }
     }
+    if has("ability_nurse_leech_therapy") {
+        let c = "ability_nurse_leech_therapy";
+        let (fire_rate, spirit, regen) = (get(c, "FireRatePerLeechPickup"), get(c, "SpiritPowerPerLeechStack"), get(c, "RegenPerLeechPickup"));
+        let buff = Buff { fire_rate, spirit_power: spirit, ..Default::default() };
+        counted(
+            "hero:nurse_leeches",
+            "Leeches collected",
+            "leeches",
+            get(c, "MaxLeechBonusStacks").max(1.0),
+            format!("{} and +{} health regen per leech collected; Lurking Terrors fears {}s longer per leech", buff.text(), n(regen), n(get("ability_nurse_fear", "FearDurationPerLeechStack"))),
+            buff,
+        );
+    }
     if has("ability_vampirebat_batswarm") {
         let (per, max) = (get("ability_vampirebat_batswarm", "BonusBatsPerProc"), get("ability_vampirebat_batswarm", "BonusBatsMax"));
         if per > 0.0 {
@@ -921,6 +934,8 @@ fn healing(ability: &AbilitySheet, plan: &mut Plan, ctx: &Context, duration: Opt
         }
         // --- Lash ---
         "ability_lash_flog" => plan.leech = v("HealPctVsHeroes"),
+        // --- Nurse Harrow ---
+        "ability_nurse_leech_therapy" => plan.leech = v("HealPercentOfLeechDamage"),
         // --- McGinnis ---
         "citadel_ability_mobile_resupply" => {
             let time = seconds("AbilityDuration");
@@ -1858,6 +1873,53 @@ fn customize(ability: &AbilitySheet, plan: &mut Plan, ctx: &Context, duration: O
             ));
             if v("CheckmateThreshold") > 0.0 {
                 plan.notes.push(format!("Checkmate executes heroes below {} health; the execute is not simulated.", n(v("CheckmateThreshold"))));
+            }
+        }
+        // --- Nurse Harrow ---
+        "ability_nurse_leech_therapy" => {
+            plan.notes.push(format!(
+                "Assumes the leeches stay on the target for the whole {}s; they also eat {}s of the target's buffs per second. Leeches left on the ground are collected afterwards (see the Leeches collected condition).",
+                n(seconds("AbilityDuration")),
+                n(v("LeechEatDurationPerSecond"))
+            ));
+        }
+        "ability_nurse_adrenaline_rush" => {
+            // Specter Rush speeds up every action: shooting and reloading as much as anything.
+            plan.parts.clear();
+            plan.buff = Buff { fire_rate: v("RushTimeScaleBonusPercent"), ..Default::default() };
+            plan.buff_seconds = seconds("AbilityDuration");
+            plan.notes.push(format!(
+                "Cast on yourself: +{}% speed of all actions for {}s, read as fire rate. Damage taken meanwhile is put off and lands {}% larger when it ends, followed by {}s {}% slower; neither is simulated.",
+                n(v("RushTimeScaleBonusPercent")),
+                n(seconds("AbilityDuration")),
+                n(v("DeferredDamageBonusPercent")),
+                n(v("CrashDuration")),
+                n(v("CrashTimeScalePenaltyPercent"))
+            ));
+        }
+        "ability_nurse_healing_needles" => {
+            // A clip of syringes for allies: no damage, and while it is loaded the gun does not shoot enemies.
+            plan.castable = false;
+            plan.parts.clear();
+            plan.debuffs.clear();
+            plan.notes.push(format!(
+                "Heals allies {} per syringe ({}% more on a headshot); charges come back by dealing damage. Not part of the damage combo.",
+                n(v("HealRegen")),
+                n(v("HeadshotHealBonusPercent"))
+            ));
+        }
+        "ability_nurse_fear" => {
+            let fear = v("DebuffDuration") + v("FearDurationPerLeechStack") * count("hero:nurse_leeches");
+            plan.notes.push(format!(
+                "Assumes the target faces you, so it takes full damage until feared ({}s to build up, then {}s of fear). Facing away it takes {}%. It also slows {}% and cuts fire rate {}%, and the target cannot use stamina or movement abilities.",
+                n(v("BuildupTime")),
+                n(fear),
+                n(v("FacingAwayDamagePercent")),
+                n(v("SlowPercent")),
+                n(v("FireRateSlow"))
+            ));
+            if v("ChannelDamageImmune") > 0.0 {
+                plan.notes.push("You take no damage while channelling.".into());
             }
         }
         // --- Warden ---

@@ -339,7 +339,7 @@ pub struct Enemy<'a> {
 }
 
 /// Ability properties that mean the ability heals its hero.
-const ABILITY_HEAL_KEYS: [&str; 32] = [
+const ABILITY_HEAL_KEYS: [&str; 35] = [
     "HealingFactor",
     "AbilityLifestealPercentHero",
     "HealFixedHealth",
@@ -372,6 +372,9 @@ const ABILITY_HEAL_KEYS: [&str; 32] = [
     "BonusHealthRegen",
     "HealPerPickup",
     "RakeHealPerKill",
+    "HealPercentOfLeechDamage",
+    "HealRegen",
+    "RegenPerLeechPickup",
 ];
 /// Ability properties that mean the ability moves its hero fast, lifts it off the ground or hides it.
 const ABILITY_MOVE_KEYS: [&str; 20] = [

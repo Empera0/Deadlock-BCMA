@@ -282,6 +282,13 @@ const ABILITY_FIXES: &[(&str, &[(Effect, &str)], &[Effect])] = &[
     ("ability_throw_sand", &[(Effect::Disarm, "AbilityDuration")], &[]),
     // Mo & Krill, Combo: holds and stuns the target through the 2.4s channel (3.1s upgraded).
     ("ability_ult_combo", &[(Effect::Lockdown, "AbilityChannelTime")], &[]),
+    // Nurse Harrow, Lurking Terrors: enemies looking at her build up terror, cannot use stamina or movement abilities,
+    // and at full terror flee in fear for 2.2s; all through the 7s channel they are slowed 30% and shoot 30% slower.
+    ("ability_nurse_fear", &[(Effect::Lockdown, "DebuffDuration"), (Effect::Slow, "AbilityChannelTime"), (Effect::FireRateCut, "AbilityChannelTime")], &[]),
+    // Nurse Harrow, Healing Needles: a clip of syringes that heal allies.
+    ("ability_nurse_healing_needles", &[(Effect::TeamHeal, "BuildUpDuration")], &[]),
+    // Nurse Harrow, Wretched Vapors: speeds up an ally and puts off the damage it takes.
+    ("ability_nurse_adrenaline_rush", &[(Effect::TeamHeal, "AbilityDuration")], &[]),
     // Paradox, Pulse Grenade: slows on every pulse for the whole 3.2s (4.8s upgraded).
     ("citadel_ability_chrono_pulse_grenade", &[(Effect::Slow, "AbilityDuration")], &[]),
     // Paradox, Time Wall: touching it slows 64% for 2s; the second upgrade also silences for 2.3s.

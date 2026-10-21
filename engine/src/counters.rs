@@ -36,6 +36,11 @@ const LOCKDOWN_KEYS: [&str; 9] = [
     "TetherDuration",
 ];
 const SHORTEST_LOCKDOWN: f64 = 0.5;
+/// Lockdown the property names do not show: the ability and the property that holds how long it lasts.
+const LOCKDOWN_FIXES: [(&str, &str); 1] = [
+    // Nurse Harrow, Lurking Terrors: full terror makes the target flee in fear.
+    ("ability_nurse_fear", "DebuffDuration"),
+];
 const SILENCE_KEYS: [&str; 2] = ["SilenceDuration", "SilenceDebuff"];
 /// Abilities that lift their hero into the air; the data has no flag for it.
 const FLIGHT_ABILITIES: [&str; 4] =
@@ -52,7 +57,8 @@ pub fn threats(abilities: &[AbilitySheet]) -> Vec<Found> {
     for (index, a) in abilities.iter().enumerate() {
         let longest = |keys: &[&str]| a.props.iter().filter(|p| keys.contains(&p.key.as_str())).map(|p| p.value).fold(0.0, f64::max);
         let mut add = |kind: Threat, seconds: f64| out.push(Found { kind, ability: a.name.clone(), seconds });
-        let lockdown = longest(&LOCKDOWN_KEYS);
+        let fixed = LOCKDOWN_FIXES.iter().find(|f| f.0 == a.class_name).map(|f| longest(&[f.1])).unwrap_or(0.0);
+        let lockdown = longest(&LOCKDOWN_KEYS).max(fixed);
         if lockdown >= SHORTEST_LOCKDOWN {
             add(Threat::Lockdown, lockdown);
         }
