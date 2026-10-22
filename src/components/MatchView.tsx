@@ -4,6 +4,7 @@ import { MatchDuels, MatchLanes, MatchMap, MatchTrend } from "./MatchExtras";
 import { Bars, clock, FightStrip, LineChart, Marker, Series } from "./MatchCharts";
 import MatchCompare from "./MatchCompare";
 import DeathAnalysisPanel, { DeathTrendView } from "./DeathAnalysisPanel";
+import ItemTimingPanel from "./ItemTimingPanel";
 
 interface Props {
   /** Opens a build from the match in the builder. */
@@ -498,6 +499,8 @@ function PlayerDetail({
           </table>
         </div>
       )}
+
+      <ItemTimingPanel key={`timing-${report.match_id}-${player.slot}`} matchId={report.match_id} slot={player.slot} hero={player.hero_name} />
 
       {player.build_timing.some((t) => t.advice.length > 0) && (
         <div className="group">

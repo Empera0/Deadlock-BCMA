@@ -21,4 +21,5 @@ pub mod master;
 pub mod raw;
 pub mod scout;
 pub mod suggest;
+pub mod timing;
 pub mod team;

@@ -113,6 +113,10 @@ const TOPICS: { key: GuideTopic; title: string; intro: string; steps: Step[] }[]
         title: "Why did you die?",
         body: "Each death is a duel: how fast the killer's full fight kills you, and how fast yours would have killed them, with the builds of the time. The items listed would have turned it or changed it most; ones that only keep you alive a second longer are left out.",
       },
+      {
+        title: "Against top players",
+        body: "Each item you bought, against the minute top players of your hero buy it: early, on time, late or very late, and the items most of them buy that you never did. Big items coming late is where most souls are lost.",
+      },
       { title: "Why you die over many matches", body: "From the recent matches list: who kills you most, with what kind of damage, and the item that would have helped most often." },
       { title: "Open the build", body: "Open final build in the builder loads a player's build of that match into the Build maker." },
     ],

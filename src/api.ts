@@ -370,6 +370,27 @@ export interface ConsoleState {
   finished: number[];
 }
 
+export interface ItemTiming {
+  item: string;
+  name: string;
+  icon: string;
+  cost: number;
+  bought_at: number;
+  median_s: number;
+  early_s: number;
+  late_s: number;
+  buyers: number;
+  tone: string;
+  minutes_off: number;
+  win_pp_then: number | null;
+}
+
+export interface ItemTimingReport {
+  items: ItemTiming[];
+  missing: { item: string; name: string; icon: string; cost: number; median_s: number; share: number }[];
+  summary: string;
+}
+
 /** A finished match shared with the statistics service: whether its metadata and replay can now be read. */
 export interface SharedMatch {
   match_id: number;
@@ -511,6 +532,7 @@ export const api = {
   liveMatch: (accountId: string) => invoke<LiveMatch>("live_match", { accountId }),
   consoleMatch: () => invoke<ConsoleState>("console_match"),
   shareMatch: (matchId: number) => invoke<SharedMatch>("share_match", { matchId }),
+  itemTiming: (matchId: number, slot: number) => invoke<ItemTimingReport>("item_timing", { matchId, slot }),
   matchTeams: (matchId: number, accountId: string) => invoke<LiveMatch>("match_teams", { matchId, accountId }),
   scoutLobby: (players: LivePlayer[]) => invoke<Scout[]>("scout_lobby", { players }),
   adviseBuild: (build: Build, style: string) => invoke<Advice>("advise_build", { build, style }),

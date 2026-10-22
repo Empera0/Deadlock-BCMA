@@ -662,6 +662,25 @@ async fn console_match() -> Result<ConsoleState, String> {
     .map_err(|e| e.to_string())
 }
 
+/// When a player of a match bought each item, against when top players of the hero buy it, and the items most of
+/// them buy that the player never did.
+#[tauri::command]
+async fn item_timing(app: AppHandle, state: State<'_, AppState>, match_id: u64, slot: u32) -> Result<engine::timing::TimingReport, String> {
+    let data = state.data.read().unwrap().clone();
+    let cache = Cache::new(&app, &data)?;
+    let json = match_json(&app, match_id).await?;
+    tauri::async_runtime::spawn_blocking(move || {
+        let report = matches::parse(&data, &json)?;
+        let player = report.players.iter().find(|p| p.slot == slot).ok_or("No such player in the match")?;
+        let hero = data.hero(&player.hero).ok_or("Unknown hero")?;
+        let rows = analytics(&cache, "item-stats", &format!("hero_id={}&bucket=game_time_min", hero.id), ASCENDANT)?;
+        let stats: Vec<popular::ItemStat> = serde_json::from_str(&rows).map_err(|e| format!("The statistics service answered in an unexpected form: {e}"))?;
+        Ok(engine::timing::compare(&data, &stats, &player.purchases, report.duration_s))
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
 /// What the statistics service holds of a finished match once it is shared: its salts, which let anyone read its
 /// metadata and, when Valve kept one, its replay.
 #[derive(serde::Serialize)]
@@ -975,6 +994,7 @@ pub fn run() {
             console_match,
             match_teams,
             share_match,
+            item_timing,
             scout_lobby,
             ability_order,
             match_history,
