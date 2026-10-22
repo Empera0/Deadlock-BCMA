@@ -4,6 +4,11 @@
 //! ability text), and the enemies inside it come from the area it covers: the bigger the area, the more of the
 //! enemy team stands in it, fewer and fewer more with every square meter. Ability range and radius bonuses grow
 //! the sizes (calc applies them), so Greater Expansion on Death Slam catches more enemies.
+//!
+//! How many enemies stand in a square meter is measured, not guessed: examples/area_calibrate.rs counts the
+//! enemy heroes every cast really hit in team fights of match replays and writes engine/data/area-density.json,
+//! with a density of its own for every ability cast often enough there, so each one hits on average what it
+//! did in those matches, and one over all of them for the rest.
 
 use crate::calc::AbilitySheet;
 use crate::combo::ComboResult;
@@ -17,9 +22,26 @@ pub const TEAM_FIGHT_S: f64 = 12.0;
 const CONTROL_CAP: f64 = 0.5;
 /// Abilities whose area damages but whose lockdown lands on one enemy: Petrifying Bola petrifies the direct hit.
 const LOCKDOWN_ON_ONE: [&str; 1] = ["ability_viper_petrifybola"];
-/// Enemies around the target per square meter in a team fight, beyond the target itself. A 6 m circle catches
-/// about 1.7 enemies, a 10 m one about 2.4 and a 30 m storm about all four the cap allows.
-const DENSITY: f64 = 0.007;
+/// Enemies around the target per square meter in a team fight, when the measurements cannot be read.
+const FALLBACK_DENSITY: f64 = 0.0011;
+
+/// The measured densities: over all area abilities, and each ability's own.
+fn densities() -> &'static (f64, std::collections::HashMap<String, f64>) {
+    static MEASURED: std::sync::OnceLock<(f64, std::collections::HashMap<String, f64>)> = std::sync::OnceLock::new();
+    MEASURED.get_or_init(|| {
+        let v: serde_json::Value = serde_json::from_str(include_str!("../data/area-density.json")).unwrap_or_default();
+        let all = v["density"].as_f64().unwrap_or(FALLBACK_DENSITY);
+        let own = v["abilities"].as_object().map(|m| m.iter().filter_map(|(k, d)| Some((k.clone(), d.as_f64()?))).collect()).unwrap_or_default();
+        (all, own)
+    })
+}
+
+/// Enemies per square meter around the target of this ability in a team fight: its own measured density, or the
+/// one over all area abilities.
+fn density_of(class: &str) -> f64 {
+    let (all, own) = densities();
+    own.get(class).copied().unwrap_or(*all)
+}
 
 /// A size: one of the ability's properties (meters or degrees), twice one (a radius given for a width), or a
 /// number when the data has none.
@@ -54,11 +76,15 @@ const SHAPES: &[(&str, Shape)] = &[
     ("ability_fencer_throwblade", Circle(Prop("SigilRadius"))),
     ("ability_fencer_lunge", Line(Twice("SlashCollisionRadius"), Prop("SlashLength"))),
     ("ability_fencer_ultimate", Line(Twice("DashRadius"), Prop("DashRange"))),
-    // Baba: Threadsap bursts along its thread; the brew covers an area; Feed The Birds covers a cone.
+    // Baba: Threadsap bursts along its thread; the brew covers an area; Feed The Birds covers a cone; Granny Long
+    // Legs' ground pound hits around her.
+    ("ability_baba_bench_run", Circle(Prop("Radius"))),
     ("ability_baba_bubbling_brew", Line(Twice("ExplodeRadius"), Prop("AbilityCastRange"))),
     ("ability_baba_hexing_brew", Circle(Prop("Radius"))),
     ("ability_baba_ultimate_2", Cone(Prop("LockonConeAngle"), Prop("AbilityCastRange"))),
-    // Bebop: the bomb explodes around its target; the beam hits everyone along it.
+    // Bebop: enemies knocked up land with an explosion around them; the bomb explodes around its target; the beam
+    // hits everyone along it.
+    ("citadel_ability_uppercut", Circle(Prop("OnLandDamageRadius"))),
     ("citadel_ability_sticky_bomb", Circle(Prop("Radius"))),
     ("citadel_ability_bebop_laser_beam", Line(Prop("BeamWidth"), Prop("BeamLength"))),
     // Billy: the slam's shockwave; Chain Gang chains every enemy nearby.
@@ -77,6 +103,8 @@ const SHAPES: &[(&str, Shape)] = &[
     ("ability_deadpack_chargeblast", Line(Twice("ExplosionRadius"), Prop("Range"))),
     ("ability_deadpack_rocketeer", Circle(Prop("Radius"))),
     ("ability_deadpack_flamethrower", Line(Prop("BeamWidth"), Prop("AbilityCastRange"))),
+    // Close The Deal's crash hurts everyone where it lands.
+    ("ability_deadpack_ultimate", Circle(Fixed(6.0))),
     // Drifter: Rend swipes a cone.
     ("drifter_blood_blast", Cone(Prop("TargetingConeAngle"), Prop("AbilityCastRange"))),
     // Dynamo: the pulse runs along the ground; Singularity pulls in everyone nearby.
@@ -140,6 +168,8 @@ const SHAPES: &[(&str, Shape)] = &[
     // Rat King: the scrap grenade's shrapnel and the rats leaping onto enemies around their landing.
     ("ability_ratking_scrap_grenade", Circle(Prop("ShrapnelSphereRadius"))),
     ("ability_ratking_ratnibble", Circle(Prop("Radius"))),
+    // The banner's slam.
+    ("ability_ratking_standard_bearer", Circle(Prop("Radius"))),
     // Rem: the pillow's knockback area and the gaze.
     ("ability_familiar_ability02", Circle(Prop("Radius"))),
     ("ability_familiar_ability01", Cone(Fixed(40.0), Prop("AbilityCastRange"))),
@@ -156,6 +186,8 @@ const SHAPES: &[(&str, Shape)] = &[
     // Solomon: the bishop's path and the rooks.
     ("ability_chessmaster_throwbishop", Line(Twice("Radius"), Prop("AbilityCastRange"))),
     ("ability_chessmaster_forkpiece", Line(Fixed(4.0), Fixed(30.0))),
+    // The queen strikes the squares around her.
+    ("ability_chessmaster_queen", Circle(Fixed(8.0))),
     // The Doorman: the bell's explosion and the cart's path.
     ("ability_doorman_bomb", Circle(Prop("Radius"))),
     ("ability_doorman_luggage_cart", Line(Fixed(4.0), Prop("AbilityCastRange"))),
@@ -200,7 +232,7 @@ fn shape_of(a: &AbilitySheet) -> Option<Shape> {
 
 /// The square meters the ability covers, and the most targets it can reach (a chain's bounces); `None` for an
 /// ability that hits one target.
-fn covered(a: &AbilitySheet) -> Option<(f64, f64)> {
+pub fn covered(a: &AbilitySheet) -> Option<(f64, f64)> {
     let area = match shape_of(a)? {
         Circle(r) => std::f64::consts::PI * size(a, r).powi(2),
         Cone(angle, reach) => size(a, angle).clamp(0.0, 360.0) / 360.0 * std::f64::consts::PI * size(a, reach).powi(2),
@@ -216,12 +248,16 @@ fn covered(a: &AbilitySheet) -> Option<(f64, f64)> {
 
 /// Enemies the ability hits in a team fight, the target included: 1 for a single-target ability.
 pub fn targets(a: &AbilitySheet) -> f64 {
-    let Some((area, most)) = covered(a) else { return 1.0 };
+    covered(a).map(|(area, most)| enemies_in(area, most, density_of(&a.class_name))).unwrap_or(1.0)
+}
+
+/// Enemies an area catches at a density of enemies per square meter, the target included, up to `most`.
+pub fn enemies_in(area: f64, most: f64, density: f64) -> f64 {
     if area <= 0.0 || most <= 1.0 {
         return 1.0;
     }
     let room = most - 1.0;
-    1.0 + room * (1.0 - (-DENSITY * area / room).exp())
+    1.0 + room * (1.0 - (-density * area / room).exp())
 }
 
 /// The ability a combo source belongs to: its name, or its name with a part in brackets.

@@ -119,6 +119,12 @@ fn build_of(data: &GameData, player: &Value, time: u32) -> Option<(BuildInput, S
     Some((build_at(hero, &ev, time, level_at(player, time)), hero.name.clone()))
 }
 
+/// The build of the player in a slot at a point of a match (the parsed raw match metadata), as the match data has it.
+pub fn build_in_match(data: &GameData, root: &Value, slot: u32, time: u32) -> Option<BuildInput> {
+    let player = list(root.get("match_info")?, "players").iter().find(|p| int(p, "player_slot") == slot)?.clone();
+    build_of(data, &player, time).map(|b| b.0)
+}
+
 fn item_names(data: &GameData, b: &BuildInput) -> Vec<String> {
     b.purchases.iter().filter_map(|c| data.item(c)).map(|i| i.name.clone()).collect()
 }
