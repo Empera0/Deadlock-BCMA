@@ -182,8 +182,9 @@ export default function PowerCurve({ master }: { master: MasterBuild }) {
         )}
       </div>
       <p className="muted">
-        Fight damage is every ability and active item once and six seconds of shooting, against a target without resists; effective health is max
-        health over what the resists let through.
+        Fight damage is a team fight: every ability and active item once and six seconds of shooting against a target without resists, each
+        ability's damage on every enemy its area catches, and its stuns counted for the time the enemies cannot fight back. Effective health is
+        max health over what the resists let through.
       </p>
     </div>
   );

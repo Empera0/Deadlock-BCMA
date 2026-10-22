@@ -10,6 +10,13 @@ use crate::combo::ComboResult;
 
 /// The most enemies an area is expected to catch in a team fight: rarely all five at once.
 pub const TEAM_FIGHT_CAP: f64 = 4.0;
+/// The enemy team, and how long the fights the engine measures last, seconds.
+const ENEMY_TEAM: f64 = 5.0;
+pub const TEAM_FIGHT_S: f64 = 12.0;
+/// Locking the enemy team down is counted as at most this share of a fight.
+const CONTROL_CAP: f64 = 0.5;
+/// Abilities whose area damages but whose lockdown lands on one enemy: Petrifying Bola petrifies the direct hit.
+const LOCKDOWN_ON_ONE: [&str; 1] = ["ability_viper_petrifybola"];
 /// Enemies around the target per square meter in a team fight, beyond the target itself. A 6 m circle catches
 /// about 1.7 enemies, a 10 m one about 2.4 and a 30 m storm about all four the cap allows.
 const DENSITY: f64 = 0.007;
@@ -143,8 +150,9 @@ const SHAPES: &[(&str, Shape)] = &[
     ("citadel_ability_storm_cloud", Circle(Prop("Radius"))),
     // Shiv: the dash damages everyone along its path.
     ("citadel_ability_shiv_dash", Line(Twice("DashRadius"), Prop("DashRange"))),
-    // Sinclair: the bolt's explosion.
+    // Sinclair: the bolt's explosion, and the hex turning every enemy in its area into a rabbit.
     ("ability_magician_magicbolt", Circle(Prop("Radius"))),
+    ("ability_magician_animalhexarea", Circle(Prop("Radius"))),
     // Solomon: the bishop's path and the rooks.
     ("ability_chessmaster_throwbishop", Line(Twice("Radius"), Prop("AbilityCastRange"))),
     ("ability_chessmaster_forkpiece", Line(Fixed(4.0), Fixed(30.0))),
@@ -232,6 +240,25 @@ pub fn extra_damage(abilities: &[AbilitySheet], r: &ComboResult) -> f64 {
     r.sources.iter().filter_map(|s| ability_of(abilities, &s.source).map(|a| s.damage * (targets(a) - 1.0))).sum()
 }
 
+/// Share of the enemy team's fighting time an ability's lockdowns take away (0 to the cap): each cast's stun,
+/// sleep or hold on every enemy it catches, over the enemy team's time in a fight of the given length.
+pub fn control_share(casts: &[(&AbilitySheet, f64)], fight_s: f64) -> f64 {
+    let locked: f64 = casts
+        .iter()
+        .map(|(a, n)| {
+            let on = if LOCKDOWN_ON_ONE.contains(&a.class_name.as_str()) { 1.0 } else { targets(a) };
+            n * crate::team::sheet_lockdown_seconds(a).min(fight_s) * on
+        })
+        .sum();
+    (locked / (fight_s * ENEMY_TEAM)).min(CONTROL_CAP)
+}
+
+/// A fight's worth with its lockdowns: while enemies are locked down they deal nothing back, so taking a share X
+/// of their fighting time is as good as X / (1 - X) more of everything the team's damage does.
+pub fn with_control(damage: f64, share: f64) -> f64 {
+    damage / (1.0 - share.min(CONTROL_CAP))
+}
+
 /// How the ability's area is described: "a 10 m half circle", for the combo's notes.
 pub fn describe(a: &AbilitySheet) -> Option<String> {
     let t = targets(a);
@@ -244,7 +271,10 @@ pub fn describe(a: &AbilitySheet) -> Option<String> {
         Line(width, length) => format!("a {:.1} m wide, {:.1} m long strip", size(a, width), size(a, length)),
         Chain(radius, count) => format!("{:.0} bounces within {:.1} m", size(a, count), size(a, radius)),
     };
-    Some(format!("In a team fight it hits about {t:.1} enemies ({what}); the combo shows one."))
+    let lock = crate::team::sheet_lockdown_seconds(a);
+    let on = if LOCKDOWN_ON_ONE.contains(&a.class_name.as_str()) { 1.0 } else { t };
+    let held = if lock > 0.0 { format!(" and locks {on:.1} of them down for {lock:.1}s") } else { String::new() };
+    Some(format!("In a team fight it hits about {t:.1} enemies ({what}){held}; the combo shows one."))
 }
 
 #[cfg(test)]

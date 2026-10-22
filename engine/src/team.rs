@@ -423,6 +423,20 @@ pub fn ability_lockdown_seconds(a: &Ability) -> f64 {
     ability_effect_seconds(a, Effect::Lockdown, &upgraded(a))
 }
 
+/// How long one cast of an ability stuns or locks enemies down at the build's numbers, seconds (0 when it does
+/// not): its durations as the sheet has them, after upgrades, items and ability duration.
+pub fn sheet_lockdown_seconds(a: &crate::calc::AbilitySheet) -> f64 {
+    let value = |key: &str| a.props.iter().find(|p| p.key == key).map(|p| p.value).unwrap_or(0.0);
+    let fix = ABILITY_FIXES.iter().find(|f| f.0 == a.class_name);
+    if fix.is_some_and(|f| f.2.contains(&Effect::Lockdown)) {
+        return 0.0;
+    }
+    match fix.and_then(|f| f.1.iter().find(|x| x.0 == Effect::Lockdown)) {
+        Some((_, key)) => value(key),
+        None => LOCKDOWN_KEYS.iter().map(|k| value(k)).fold(0.0, f64::max),
+    }
+}
+
 /// How long an item stuns, freezes or immobilizes an enemy, seconds (0 when it does not).
 pub fn item_lockdown_seconds(item: &Item) -> f64 {
     if !item_effects(item).contains(&Effect::Lockdown) {

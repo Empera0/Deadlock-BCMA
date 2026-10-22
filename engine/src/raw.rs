@@ -96,12 +96,14 @@ fn prop(key: &str, p: &Value) -> (Prop, bool) {
         .map(|sf| {
             let mut stats = vec![text(sf, "specific_stat_scale_type")];
             stats.extend(sf.get("scaling_stats").and_then(Value::as_array).into_iter().flatten().filter_map(Value::as_str).map(String::from));
-            // The tech range scale functions grow with ability range without naming the stat.
-            let tech_range = text(sf, "class_name").starts_with("scale_function_tech_range");
+            // The tech range and tech duration scale functions grow with their stat without naming it.
+            let class = text(sf, "class_name");
             if stats.iter().any(|s| s == "ETechRadius") {
                 "radius"
-            } else if tech_range || stats.iter().any(|s| s == "ETechRange") {
+            } else if class.starts_with("scale_function_tech_range") || stats.iter().any(|s| s == "ETechRange") {
                 "range"
+            } else if class.starts_with("scale_function_tech_duration") || stats.iter().any(|s| s == "ETechDuration") {
+                "duration"
             } else {
                 ""
             }

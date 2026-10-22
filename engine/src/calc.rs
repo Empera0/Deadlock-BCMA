@@ -316,10 +316,11 @@ fn scaled(p: &Prop, c: &Ctx) -> ScaledProp {
         value *= 1.0 - c.charge_reduction / 100.0;
         formula = format!("({formula}) × (1 − {}% faster charges)", fmt(c.charge_reduction));
     }
-    if p.key == "AbilityDuration" && c.duration_bonus != 0.0 {
+    if (p.key == "AbilityDuration" || p.grows == "duration") && c.duration_bonus != 0.0 {
         value *= 1.0 + c.duration_bonus / 100.0;
         formula = format!("({formula}) × (1 + {}%)", fmt(c.duration_bonus));
     }
+    // Sizes marked to grow with ability range or radius.
     let size = match p.grows.as_str() {
         "range" => c.range_bonus,
         "radius" => c.radius_bonus,

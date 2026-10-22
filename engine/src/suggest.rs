@@ -291,10 +291,20 @@ fn measure_with(data: &GameData, b: &BuildInput, conditions: bool, windows: &[Wi
         .map(|(w, _)| {
             if windows.contains(w) {
                 // A team fight: an ability that hits an area hurts every enemy in it.
-                combo::simulate(data, &b, &window_input(data, &b, sheet.abilities.len(), *w))
+                // Its lockdowns count too: an enemy stunned deals nothing back.
+                let input = window_input(data, &b, sheet.abilities.len(), *w);
+                let casts: Vec<(&calc::AbilitySheet, f64)> = sheet
+                    .abilities
+                    .iter()
+                    .enumerate()
+                    .map(|(i, a)| (a, input.actions.iter().filter(|x| matches!(x, Action::Ability { index, .. } if *index == i)).count() as f64))
+                    .collect();
+                let control = area::control_share(&casts, area::TEAM_FIGHT_S);
+                combo::simulate(data, &b, &input)
                     .map(|r| {
                         let extra = area::extra_damage(&sheet.abilities, &r);
-                        if *w == Window::Melee { melee_weighted(data, &b, &r) + extra * MELEE_OTHER } else { r.total + extra }
+                        let damage = if *w == Window::Melee { melee_weighted(data, &b, &r) + extra * MELEE_OTHER } else { r.total + extra };
+                        area::with_control(damage, control)
                     })
                     .unwrap_or(0.0)
             } else {

@@ -725,7 +725,13 @@ pub fn master_build(data: &GameData, input: &MasterInput) -> Result<MasterBuild,
                 if stun <= 0.0 {
                     return (ctr, jobs, why, 0.0);
                 }
-                let (worth, casts) = stun_gain(item, stun, &style, !by.is_empty());
+                // A second cast of the hero's own ability is already in the engine's fight, lockdown on every enemy
+                // it catches included; only an item's own stun is added here.
+                if !by.is_empty() {
+                    why.insert(0, format!("Stuns{by} for {stun:.2}s: counted in what it adds to your fight"));
+                    return ((ctr + STUN_WEIGHT * (stun / STUN_FULL).min(1.0)).min(1.0), jobs, why, 0.0);
+                }
+                let (worth, casts) = stun_gain(item, stun, &style, false);
                 let times = if casts > 1.0 { format!(", {casts:.0} times a fight") } else { String::new() };
                 why.insert(0, format!("Stuns{by} for {stun:.2}s{times}: the enemy cannot fight back meanwhile, worth +{:.0}% to your fight", worth * 100.0));
                 ((ctr + STUN_WEIGHT * (stun / STUN_FULL).min(1.0)).min(1.0), jobs, why, worth)

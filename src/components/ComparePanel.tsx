@@ -219,7 +219,8 @@ export default function ComparePanel({ heroes, items, build, sheet }: { heroes: 
               </div>
               <p className="muted">
                 Solid: this build; dashed: the other. Each build's items are bought in its own order as the souls allow, with its own ability
-                upgrades throughout. Fight damage is every ability and active item once and six seconds of shooting.
+                upgrades throughout. Fight damage is a team fight: every ability and active item once and six seconds of shooting, area abilities on
+                every enemy they catch and stuns for the time the enemies cannot fight back.
               </p>
             </div>
           )}

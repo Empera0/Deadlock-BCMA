@@ -62,6 +62,16 @@ fn sustained(data: &GameData, b: &BuildInput) -> Option<f64> {
     let sheet = calc::compute(data, b).ok()?;
     let fight = suggest::fight_for(data, b, SHOOTING_S)?;
     let mut total = 0.0;
+    // The sustained fight's lockdowns: every cast the cooldown allows.
+    let casts: Vec<(&calc::AbilitySheet, f64)> = sheet
+        .abilities
+        .iter()
+        .map(|a| {
+            let cooldown = a.props.iter().find(|p| p.key == "AbilityCooldown").map(|p| p.value).unwrap_or(0.0);
+            (a, if cooldown > 0.0 { (SUSTAINED_S / cooldown).floor().max(1.0) } else { 1.0 })
+        })
+        .collect();
+    let control = area::control_share(&casts, SUSTAINED_S);
     for s in &fight.sources {
         let ability = sheet.abilities.iter().find(|a| s.source == a.name || s.source.starts_with(&format!("{} (", a.name)));
         let casts = ability
@@ -72,7 +82,7 @@ fn sustained(data: &GameData, b: &BuildInput) -> Option<f64> {
         // On every enemy it hits in a team fight: an upgrade that widens an area counts for the enemies it adds.
         total += s.damage * casts * ability.map(area::targets).unwrap_or(1.0);
     }
-    Some(total)
+    Some(area::with_control(total, control))
 }
 
 /// The best order for the build's items at its souls: each step the upgrade that adds the most to the sustained
