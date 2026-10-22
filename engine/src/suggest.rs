@@ -121,9 +121,19 @@ enum Window {
     Spirit,
     /// Every ability and active item once, then a string of heavy and light melee hits.
     Melee,
+    /// The full kit as a spirit build fights: every ability and active item once, then shooting, with the gun's
+    /// damage counted at `SPIRIT_GUN_WEIGHT`. A hero whose abilities hit softly (Shiv) would otherwise be built
+    /// for the gun however spirit the build was asked to be.
+    SpiritFight,
 }
 
-const WINDOWS: [(Window, &str); 4] = [(Window::Hybrid, "Full kit"), (Window::Gun, "Gun"), (Window::Spirit, "Abilities"), (Window::Melee, "Melee")];
+const WINDOWS: [(Window, &str); 5] =
+    [(Window::Hybrid, "Full kit"), (Window::Gun, "Gun"), (Window::Spirit, "Abilities"), (Window::Melee, "Melee"), (Window::SpiritFight, "Spirit fight")];
+/// The windows the suggestions list: the spirit fight is the master builder's own.
+const SHOWN_WINDOWS: usize = 4;
+/// In a spirit fight, bullet and melee damage count this much: about the share of a spirit build's damage that
+/// is its gun.
+const SPIRIT_GUN_WEIGHT: f64 = 0.25;
 
 fn window_index(w: Window) -> usize {
     WINDOWS.iter().position(|x| x.0 == w).unwrap_or(0)
@@ -154,7 +164,7 @@ const PLAYSTYLES: [(&str, &str, &str, &[Window], bool); 5] = [
 /// so gun items still earn their place but count for less than spirit items. Used by the master builder, whose
 /// spirit builds are for whole matches rather than a single burst.
 const SPIRIT_FIGHT: (&str, &str, &str, &[Window], bool) =
-    ("spirit_fight", "Spirit fight", "Abilities first, with the shooting between casts", &[Window::Spirit, Window::Hybrid], false);
+    ("spirit_fight", "Spirit fight", "Abilities first, with the shooting between casts", &[Window::Spirit, Window::SpiritFight], false);
 
 /// Souls assumed when the build has none set.
 const DEFAULT_BUDGET: u32 = 30_000;
@@ -247,7 +257,7 @@ fn window_input(data: &GameData, b: &BuildInput, abilities: usize, window: Windo
         }
     }
     match window {
-        Window::Hybrid => actions.push(Action::Shoot { seconds: SHOOT_SECONDS }),
+        Window::Hybrid | Window::SpiritFight => actions.push(Action::Shoot { seconds: SHOOT_SECONDS }),
         Window::Gun => actions.push(Action::Shoot { seconds: GUN_SECONDS }),
         Window::Spirit => {}
         Window::Melee => actions.extend(MELEE_STRING.iter().map(|heavy| Action::Melee { heavy: *heavy })),
@@ -279,6 +289,11 @@ fn melee_weighted(data: &GameData, b: &BuildInput, r: &combo::ComboResult) -> f6
         .sum()
 }
 
+/// A fight's damage as a spirit build values it: spirit and pure damage in full, the gun's at `SPIRIT_GUN_WEIGHT`.
+fn spirit_weighted(r: &combo::ComboResult) -> f64 {
+    r.sources.iter().map(|s| if matches!(s.kind, combo::Kind::Bullet | combo::Kind::Melee) { s.damage * SPIRIT_GUN_WEIGHT } else { s.damage }).sum()
+}
+
 /// The numbers of a build with its conditional effects switched on or off, for the windows asked for.
 fn measure_with(data: &GameData, b: &BuildInput, conditions: bool, windows: &[Window]) -> Option<Measured> {
     let mut b = b.clone();
@@ -303,7 +318,11 @@ fn measure_with(data: &GameData, b: &BuildInput, conditions: bool, windows: &[Wi
                 combo::simulate(data, &b, &input)
                     .map(|r| {
                         let extra = area::extra_damage(&sheet.abilities, &r);
-                        let damage = if *w == Window::Melee { melee_weighted(data, &b, &r) + extra * MELEE_OTHER } else { r.total + extra };
+                        let damage = match w {
+                            Window::Melee => melee_weighted(data, &b, &r) + extra * MELEE_OTHER,
+                            Window::SpiritFight => spirit_weighted(&r) + extra,
+                            _ => r.total + extra,
+                        };
                         area::with_control(damage, control)
                     })
                     .unwrap_or(0.0)
@@ -448,7 +467,7 @@ fn put_together(data: &GameData, start: &BuildInput, budget: u32, stages_souls: 
             min_cost,
             spent: paid_total,
             sold,
-            damage: end.damage,
+            damage: end.damage[..SHOWN_WINDOWS].to_vec(),
             effective_health: end.effective_health,
         });
     }
@@ -486,8 +505,8 @@ fn put_together(data: &GameData, start: &BuildInput, budget: u32, stages_souls: 
         purchases,
         spent: paid_total,
         budget,
-        damage_before: bare.damage.clone(),
-        damage_after: after.damage.clone(),
+        damage_before: bare.damage[..SHOWN_WINDOWS].to_vec(),
+        damage_after: after.damage[..SHOWN_WINDOWS].to_vec(),
         effective_health_before: bare.effective_health,
         effective_health_after: after.effective_health,
         stages,
@@ -637,8 +656,8 @@ pub fn suggest(data: &GameData, b: &BuildInput, styles: &[String], stage_souls: 
     let (hybrid, gun) = (bare.damage[window_index(Window::Hybrid)], bare.damage[window_index(Window::Gun)]);
     let shooting = gun * SHOOT_SECONDS / GUN_SECONDS;
     Ok(Suggestions {
-        windows: WINDOWS.iter().map(|w| w.1.to_string()).collect(),
-        bare: bare.damage.clone(),
+        windows: WINDOWS[..SHOWN_WINDOWS].iter().map(|w| w.1.to_string()).collect(),
+        bare: bare.damage[..SHOWN_WINDOWS].to_vec(),
         ability_share: if hybrid > 0.0 { ((hybrid - shooting) / hybrid * 100.0).clamp(0.0, 100.0) } else { 0.0 },
         stage_souls: stages,
         playstyles: playstyles(),
