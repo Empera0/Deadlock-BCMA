@@ -1,6 +1,6 @@
 [package]
 name = "engine"
-version = "0.2.49"
+version = "0.3.0"
 edition = "2021"
 description = "Deadlock stat/build calculation engine (UI independent)"
 

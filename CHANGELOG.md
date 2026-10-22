@@ -2,6 +2,27 @@
 
 All notable changes to Deadlock BCMA are listed here. Versions follow [semantic versioning](https://semver.org).
 
+## [0.3.0] – 2026-10-23
+
+This release reads your matches from their replays: the last seconds before each death and what each of your abilities caught. It adds a Settings screen, readable errors, automatic checks and a monthly refresh of the numbers the app measures.
+
+### Added
+
+1. **From the replay.** When Valve kept a match's replay, Match analysis reads it (about a minute the first time, then kept on this computer):
+   - The last ten seconds before each death, hit by hit: who, with which ability, item, gun or melee, how much, and the health you had left, with every stun, sleep, silence or hold put on you and by what.
+   - Each of your abilities: the casts that reached an enemy hero, how many enemies a cast caught and held, against what a cast of it catches on average at your build. Casts are judged by what they did, never by how long the ability waited.
+2. **Settings.** A new screen keeps what you set once: your Steam account ID (short or long; the one the game is signed in to is offered from the console log), the Draft screen's rank, the Master builder's role and damage, watching for your match and sharing finished matches, with the console log's state and the game data. Draft uses your account without asking, the Build generator starts on your defaults, and Match analysis opens on your account; typing someone else's ID there looks at their matches without changing yours, with a button back to your own.
+3. **Monthly data.** Once a month the game data, the gun share of each hero's damage and the enemies each ability hits are measured again on recent matches and replays, checked by the tests and proposed as an update.
+
+### Changed
+
+1. **Readable errors.** Errors are no longer shown as raw text: they say what went wrong in plain words (the statistics service is busy, cannot be reached, answered in an unknown form, had a problem of its own; the console log is missing), what to do about it, and have a Try again button. The raw message is under Details.
+2. **Automatic checks.** Every change is now tested before it reaches a release: the engine's tests, the interface, and the app compiling on Windows.
+
+### Fixed
+
+1. **The guide's ?** now shows on every screen; it was missing on Draft and Match analysis.
+
 ## [0.2.49] – 2026-10-23
 
 This release holds every item you bought against the minute top players of your hero buy it.
@@ -524,6 +545,7 @@ This release adds the **Build generator**, with builds read from top-ranked matc
   - trends across your last matches.
 - Windows installer with a desktop shortcut and automatic updates from GitHub releases.
 
+[0.3.0]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.49...v0.3.0
 [0.2.49]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.48...v0.2.49
 [0.2.48]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.47...v0.2.48
 [0.2.47]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.46...v0.2.47
