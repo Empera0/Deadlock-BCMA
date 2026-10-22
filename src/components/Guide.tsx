@@ -115,7 +115,7 @@ const TOPICS: { key: GuideTopic; title: string; intro: string; steps: Step[] }[]
       },
       {
         title: "Against top players",
-        body: "Each item you bought, against the minute top players of your hero buy it: early, on time, late or very late, and the items most of them buy that you never did. Big items coming late is where most souls are lost.",
+        body: "Each item you bought, against the minute top players of your hero buy it: early, on time, late or very late, and the items most of them buy that you never did. An item rushed ahead of its time (a counter) pushes back the ones after it; that delay is worked out from your soul income and not held against you.",
       },
       { title: "Why you die over many matches", body: "From the recent matches list: who kills you most, with what kind of damage, and the item that would have helped most often." },
       { title: "Open the build", body: "Open final build in the builder loads a player's build of that match into the Build maker." },

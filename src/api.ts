@@ -382,6 +382,9 @@ export interface ItemTiming {
   buyers: number;
   tone: string;
   minutes_off: number;
+  /** Minutes the purchase was pushed back by items bought ahead of their time, and those items. */
+  shift_min: number;
+  shifted_by: string[];
   win_pp_then: number | null;
 }
 

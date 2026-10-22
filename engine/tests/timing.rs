@@ -26,7 +26,8 @@ fn purchases_are_held_against_top_players_minutes() {
         bought(&data, "Spirit Burn", 40 * 60, None),
         bought(&data, "Superior Cooldown", 30 * 60, Some(30 * 60 + 2)),
     ];
-    let r = timing::compare(&data, &stats, &purchases, 45 * 60);
+    let worth: Vec<(u32, u32)> = (0..=15).map(|i| (i * 180, i * 180 * 20)).collect();
+    let r = timing::compare(&data, &stats, &purchases, 45 * 60, &worth);
     let burn = r.items.iter().find(|i| i.name == "Spirit Burn").unwrap();
     assert_eq!(burn.tone, "very late");
     assert!(burn.median_s >= 24 * 60 && burn.median_s <= 27 * 60 + 59, "{}", burn.median_s);
@@ -36,4 +37,24 @@ fn purchases_are_held_against_top_players_minutes() {
     // Extra Spirit is what most top players buy, and the player never did.
     assert_eq!(r.missing.first().map(|m| m.name.as_str()), Some("Extra Spirit"));
     assert!(r.summary.contains("Extra Spirit"));
+}
+
+#[test]
+fn an_item_rushed_ahead_of_its_time_pushes_back_the_ones_after_it() {
+    let data = data();
+    let id = |name: &str| data.items.iter().find(|i| i.name == name).unwrap().id;
+    // Top players buy Extra Spirit at 3 to 5 minutes and Spirit Burn at 24 to 27.
+    let mut stats: Vec<ItemStat> = (24..=27).map(|m| row(id("Spirit Burn"), m, 100, 50)).collect();
+    stats.extend((3..=5).map(|m| row(id("Extra Spirit"), m, 300, 150)));
+    // The player rushes Spirit Burn at 6:00, earning 20 souls a second, and only then buys Extra Spirit, at 12:00.
+    let purchases = vec![bought(&data, "Spirit Burn", 6 * 60, None), bought(&data, "Extra Spirit", 12 * 60, None)];
+    let worth: Vec<(u32, u32)> = (0..=15).map(|i| (i * 180, i * 180 * 20)).collect();
+    let r = timing::compare(&data, &stats, &purchases, 40 * 60, &worth);
+    let spirit = r.items.iter().find(|i| i.name == "Extra Spirit").unwrap();
+    // 6,400 souls at 20 a second is 5.3 minutes of the delay.
+    assert!((spirit.shift_min - 6400.0 / 20.0 / 60.0).abs() < 0.2, "{}", spirit.shift_min);
+    assert_eq!(spirit.shifted_by, vec!["Spirit Burn".to_string()]);
+    // Rushed itself, Spirit Burn is early and shifted by nothing.
+    let burn = r.items.iter().find(|i| i.name == "Spirit Burn").unwrap();
+    assert_eq!((burn.tone.as_str(), burn.shift_min), ("early", 0.0));
 }

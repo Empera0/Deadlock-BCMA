@@ -57,6 +57,11 @@ export default function ItemTimingPanel({ matchId, slot, hero }: { matchId: numb
                   </td>
                   <td className={"timing-" + (TONE[i.tone] ?? "info")}>
                     {Math.abs(i.minutes_off) < 0.5 ? "–" : `${i.minutes_off > 0 ? "+" : "−"}${fmt(Math.abs(i.minutes_off), 0)} min`} · {i.tone}
+                    {i.shift_min >= 0.5 && (
+                      <small className="muted shifted" title="Souls that went to items bought ahead of when top players buy them, at your income then">
+                        {fmt(i.shift_min, 1)} min of it: {i.shifted_by.join(", ")} bought first
+                      </small>
+                    )}
                   </td>
                   <td className={i.win_pp_then === null ? "muted" : i.win_pp_then >= 1 ? "up" : i.win_pp_then <= -1 ? "down" : "muted"}>
                     {i.win_pp_then === null ? "–" : `${i.win_pp_then > 0 ? "+" : ""}${fmt(i.win_pp_then, 1)} pts`}
@@ -83,7 +88,9 @@ export default function ItemTimingPanel({ matchId, slot, hero }: { matchId: numb
           )}
           <p className="muted">
             Top players are those of the last 14 days at Ascendant and above. The minute they buy each item is the median of their purchases;
-            most of them buy it between the two times shown. Early is before the first quarter of them, late after the last quarter. Wins then
+            most of them buy it between the two times shown. Early is before the first quarter of them, late after the last quarter. An item
+            bought ahead of when top players buy it (a counter rushed early) takes the souls of the items that usually come before it: that delay
+            is worked out from your own soul income at the time, shown under the item, and taken out before it is called late. Wins then
             compares those who bought it within two minutes of your purchase with everyone who bought it; it follows how the match was going as
             much as the item.
           </p>

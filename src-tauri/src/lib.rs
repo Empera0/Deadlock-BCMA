@@ -675,7 +675,8 @@ async fn item_timing(app: AppHandle, state: State<'_, AppState>, match_id: u64, 
         let hero = data.hero(&player.hero).ok_or("Unknown hero")?;
         let rows = analytics(&cache, "item-stats", &format!("hero_id={}&bucket=game_time_min", hero.id), ASCENDANT)?;
         let stats: Vec<popular::ItemStat> = serde_json::from_str(&rows).map_err(|e| format!("The statistics service answered in an unexpected form: {e}"))?;
-        Ok(engine::timing::compare(&data, &stats, &player.purchases, report.duration_s))
+        let worth: Vec<(u32, u32)> = player.timeline.iter().map(|s| (s.time, s.net_worth)).collect();
+        Ok(engine::timing::compare(&data, &stats, &player.purchases, report.duration_s, &worth))
     })
     .await
     .map_err(|e| e.to_string())?
