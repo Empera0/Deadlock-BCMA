@@ -1,0 +1,63 @@
+# Refreshes the measurements the engine reads, once a month and on demand: the game data snapshot, the gun share of
+# each hero's damage (300 recent high-rank matches) and the enemies each ability hits in team fights (150 match
+# replays). The result is opened as a pull request to look over and merge, never pushed straight to main.
+name: Monthly data
+
+on:
+  schedule:
+    - cron: "17 4 1 * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    env:
+      CARGO_TARGET_DIR: ${{ github.workspace }}/target
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: ". -> target"
+          key: monthly-data
+
+      - name: Game data snapshot
+        run: |
+          mkdir -p raw
+          for f in heroes items client-versions; do curl -sf --max-time 180 -o raw/$f.json "https://api.deadlock-api.com/v1/assets/$f"; done
+          cargo run --release -p engine --example snapshot -- raw src-tauri/data/snapshot.json
+
+      - name: Gun share of each hero's damage
+        run: cargo run --release -p engine --example damage_split -- measure/damage 300
+
+      - name: Enemies each ability hits, from match replays
+        run: |
+          cargo run --release -p engine --example replay_fetch -- measure/replays 150
+          cargo run --release -p engine --example area_calibrate -- measure/replays
+
+      - name: Engine tests on the new numbers
+        run: cargo test -p engine
+
+      - uses: peter-evans/create-pull-request@v6
+        with:
+          branch: data/monthly-refresh
+          delete-branch: true
+          add-paths: |
+            src-tauri/data/snapshot.json
+            engine/data/gun-share.json
+            engine/data/area-density.json
+          commit-message: "Monthly data: game snapshot, gun shares and area densities"
+          title: "Monthly data refresh"
+          body: |
+            The measurements the engine reads, taken again:
+
+            - `src-tauri/data/snapshot.json`: heroes and items of the current game version.
+            - `engine/data/gun-share.json`: the gun share of each hero's damage, from 300 recent high-rank matches.
+            - `engine/data/area-density.json`: the enemies each ability hits in team fights, from 150 match replays.
+
+            The engine's tests ran on the new numbers. Merge, then release, for the app to carry them.
