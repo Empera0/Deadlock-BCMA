@@ -2,6 +2,27 @@
 
 All notable changes to Deadlock BCMA are listed here. Versions follow [semantic versioning](https://semver.org).
 
+## [0.2.47] – 2026-10-22
+
+This release judges builds by team fights: area abilities count for every enemy they hit, measured on match replays, and stuns count for the time they hold the enemy. The death study becomes a duel, and finished matches can be shared with deadlock-api.
+
+### Added
+
+1. **Area abilities in team fights.** Every damaging ability of the 44 heroes has its shape (a circle, a cone, a strip, a bolt bouncing between enemies), and counts for every enemy it hits in a team fight. How many is measured, not guessed: 150,369 casts in 154 high-rank replays of this patch, with a figure of its own for 97 abilities (Lash's Death Slam 1.8 enemies a cast, Ground Strike 1.3, Seven's Storm Cloud 3.2). A bigger area still catches more. This counts in the Master builder, item suggestions, the upgrade order, the power curve and build comparison, and the combo notes say how many enemies each ability hits.
+2. **Stuns count.** Stuns, sleeps, holds and fears count for the time the enemies they catch cannot fight back, in every place above.
+3. **Share my finished matches.** When a match ends, the app asks deadlock-api for it, which keeps the match and, when Valve kept one, its replay for anyone to study. It reads the match number from the game's console log (`-condebug`), tries again for the replay after 30 minutes and 3 hours, and sends nothing but the match number. A switch at the bottom of the side bar turns it off.
+
+### Changed
+
+1. **The death study is a duel.** Each death sets the killer's full fight against yours: how fast they kill you and how fast you would have killed them, with the builds of the time. Weapon and spirit items are tried beside vitality ones, on both sides: an item that lets you kill first comes first, then the ones that change the fight most. An item that only keeps you alive under two seconds longer is no longer suggested, and each suggestion says the seconds it buys or how fast you kill with it.
+2. **Ability range, radius and duration items work on abilities.** Greater Expansion, Mystic Expansion and the like now grow ability ranges and areas, and ability duration items lengthen stuns, slows and channels too, as the game marks them. The sheet has an ability radius stat beside ability range.
+
+### Fixed
+
+1. **Caught alone.** A death outnumbered in your own lane while it is still being laned (until the later of its two guardians falls) no longer counts as being caught alone; it reads "outnumbered in lane".
+2. **Slots in the death study.** With every slot taken, a suggested item comes in place of the cheapest one you held, and says so.
+3. **Zipline damage** shows as "Zip line" instead of its class name.
+
 ## [0.2.46] – 2026-10-21
 
 This release adds Nurse Harrow, with her kit read the way the game plays it.
@@ -482,6 +503,7 @@ This release adds the **Build generator**, with builds read from top-ranked matc
   - trends across your last matches.
 - Windows installer with a desktop shortcut and automatic updates from GitHub releases.
 
+[0.2.47]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.46...v0.2.47
 [0.2.46]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.45...v0.2.46
 [0.2.45]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.44...v0.2.45
 [0.2.44]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.43...v0.2.44
