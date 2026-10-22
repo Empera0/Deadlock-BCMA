@@ -849,8 +849,15 @@ fn death_analysis_studies_each_death() {
         assert!(d.fight_damage > 0.0 && d.my_health > 0.0, "{d:?}");
         assert!(d.window_from < d.window_to && d.time <= d.window_to);
         assert!(!d.verdict.is_empty());
+        assert!(d.their_time_to_kill > 0.0 && d.my_time_to_kill > 0.0);
         for f in &d.fixes {
-            assert!(f.health_taken < d.health_taken);
+            // Every fix turns the duel or changes it by a second or more; one that only keeps the player alive
+            // keeps them alive at least two seconds longer.
+            let change = (d.their_time_to_kill + f.seconds_gained - f.my_time_to_kill) - (d.their_time_to_kill - d.my_time_to_kill);
+            assert!(f.wins_duel || change >= 1.0 - 1e-9, "{f:?}");
+            if f.kind == "defense" && !f.wins_duel && f.my_time_to_kill >= d.my_time_to_kill - 1.0 {
+                assert!(f.seconds_gained >= 2.0 - 1e-9, "{f:?}");
+            }
         }
     }
 }

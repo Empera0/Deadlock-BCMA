@@ -438,6 +438,14 @@ export interface DeathFix {
   kill_time: number | null;
   /** With every slot taken, the item sold to make room for it. */
   replaces: string | null;
+  /** `defense` or `offense`. */
+  kind: string;
+  /** Seconds more alive through the killer's fight. */
+  seconds_gained: number;
+  /** Seconds the player's own fight takes to kill the killer with the item. */
+  my_time_to_kill: number;
+  /** The player kills the killer first with it. */
+  wins_duel: boolean;
 }
 
 export interface DeathStudy {
@@ -456,6 +464,9 @@ export interface DeathStudy {
   health_taken: number;
   kill_time: number | null;
   fight_bullet_share: number;
+  /** The duel, seconds: the killer's fight to kill the player, and the player's to kill the killer. */
+  their_time_to_kill: number;
+  my_time_to_kill: number;
   fixes: DeathFix[];
   verdict: string;
 }

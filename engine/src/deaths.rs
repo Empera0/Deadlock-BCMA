@@ -1,5 +1,8 @@
-//! Why a player died: who killed them with what build, what hit them around the death, how fast the killer's
-//! full fight takes the player's health, and which defensive items would have slowed it down or stopped it.
+//! Why a player died: who killed them with what build, what hit them around the death, and the duel between the
+//! two: how fast the killer's full fight takes the player's health and how fast the player's would have taken the
+//! killer's. Items are tried on both sides of it, defensive and offensive alike: an item that keeps the player
+//! alive a second longer is worth little when the fight was lost by ten, and one that lets the player kill first
+//! is worth more than any amount of health.
 
 use std::collections::BTreeMap;
 
@@ -22,6 +25,12 @@ const NOT_IN_SHOP: u32 = 9_999;
 /// Fixes listed per death, and over the whole match.
 const FIXES: usize = 3;
 const MATCH_FIXES: usize = 4;
+/// An item that only keeps the player alive is worth listing from this many more seconds alive.
+const MIN_SECONDS_BOUGHT: f64 = 2.0;
+/// An item that changes the duel by less than this, seconds, is not worth listing.
+const MIN_MARGIN: f64 = 1.0;
+/// Time-to-kill estimates are held to this many seconds: past it the fight is simply lost or won.
+const LONG_FIGHT_S: f64 = 30.0;
 
 #[derive(Debug, Clone, Serialize)]
 pub struct Hit {
@@ -44,6 +53,14 @@ pub struct Fix {
     pub kill_time: Option<f64>,
     /// With every slot taken, the item held that is sold to make room for it: the cheapest one.
     pub replaces: Option<String>,
+    /// `defense` for a vitality item or an owned defensive active, `offense` for a weapon or spirit item.
+    pub kind: String,
+    /// Seconds more the player lives through the killer's fight (estimated past the fight's end).
+    pub seconds_gained: f64,
+    /// Seconds the player's own fight takes to kill the killer with the item (estimated past the fight's end).
+    pub my_time_to_kill: f64,
+    /// The player kills the killer first with it, where without it the killer won.
+    pub wins_duel: bool,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -67,6 +84,10 @@ pub struct DeathStudy {
     pub health_taken: f64,
     pub kill_time: Option<f64>,
     pub fight_bullet_share: f64,
+    /// The duel at the time, seconds (estimated past the fights' end): the killer's fight to kill the player, and
+    /// the player's to kill the killer.
+    pub their_time_to_kill: f64,
+    pub my_time_to_kill: f64,
     pub fixes: Vec<Fix>,
     pub verdict: String,
 }
@@ -156,17 +177,32 @@ fn pct(v: f64) -> String {
     format!("{:.0}%", v * 100.0)
 }
 
-/// The fixes for one death: the player's own defensive actives used at the start, then each shop item tried.
-fn fixes(data: &GameData, killer: &BuildInput, me: &BuildInput, time: u32, before: f64) -> Vec<Fix> {
+/// The seconds a fight takes to kill its target: when it does within the fight, else the fight's pace carried on.
+fn time_to_kill(r: &ComboResult) -> f64 {
+    if let Some(t) = r.kill_time {
+        return t.min(LONG_FIGHT_S);
+    }
+    let taken = health_taken(r);
+    if taken <= 0.0 {
+        return LONG_FIGHT_S;
+    }
+    (r.full_duration.max(r.duration).max(1.0) / taken).min(LONG_FIGHT_S)
+}
+
+/// The fixes for one death: the player's own defensive actives used at the start, then each shop item tried in
+/// both fights, the killer's against the player and the player's against the killer.
+fn fixes(data: &GameData, killer: &BuildInput, me: &BuildInput, time: u32, theirs: f64, mine: f64) -> Vec<Fix> {
     let cap = ITEM_CAPS.iter().find(|(until, _)| time < *until).map(|c| c.1).unwrap_or(6_400);
     let usable = |class: &str| data.item(class).is_some_and(|i| i.active && suggest::DEFENSIVE_ACTIVES.contains(&i.name.as_str()));
     let mut trials: Vec<(String, bool)> = me.purchases.iter().filter(|c| usable(c)).map(|c| (c.clone(), true)).collect();
     trials.extend(
         data.items
             .iter()
-            .filter(|i| i.category == "vitality" && i.cost <= cap && i.cost < NOT_IN_SHOP && !me.purchases.contains(&i.class_name))
+            .filter(|i| ["vitality", "weapon", "spirit"].contains(&i.category.as_str()))
+            .filter(|i| i.cost <= cap && i.cost < NOT_IN_SHOP && !me.purchases.contains(&i.class_name))
             .map(|i| (i.class_name.clone(), false)),
     );
+    let margin = theirs - mine;
     let mut out: Vec<Fix> = trials
         .into_iter()
         .filter_map(|(class, owned)| {
@@ -191,28 +227,48 @@ fn fixes(data: &GameData, killer: &BuildInput, me: &BuildInput, time: u32, befor
                 }
             }
             let actives: Vec<String> = if usable(&class) { vec![class.clone()] } else { vec![] };
-            let r = suggest::fight_against(data, killer, &trial, &actives, SHOOTING)?;
-            let after = health_taken(&r);
-            (after < before - 0.01).then(|| Fix {
+            let defense = owned || item.category == "vitality" || usable(&class);
+            // The killer's fight against the player with the item, and the player's against the killer. The side the
+            // item is for is tried first; when it changes nothing there, the other fight is not run at all.
+            let (against, back) = if defense {
+                let against = suggest::fight_against(data, killer, &trial, &actives, SHOOTING)?;
+                if time_to_kill(&against) - theirs < MIN_MARGIN {
+                    return None;
+                }
+                (against, suggest::fight_against(data, &trial, killer, &[], SHOOTING)?)
+            } else {
+                let back = suggest::fight_against(data, &trial, killer, &[], SHOOTING)?;
+                if mine - time_to_kill(&back) < MIN_MARGIN {
+                    return None;
+                }
+                (suggest::fight_against(data, killer, &trial, &actives, SHOOTING)?, back)
+            };
+            let (their, my) = (time_to_kill(&against), time_to_kill(&back));
+            let gained = their - theirs;
+            let wins = margin <= 0.0 && my < their;
+            let better = (their - my) - margin;
+            // Worth listing: it turns the duel, or changes it by a second or more, and a defensive item that only
+            // keeps the player alive has to keep them alive a while.
+            let worth = wins || (better >= MIN_MARGIN && (!defense || gained >= MIN_SECONDS_BOUGHT || my < mine - MIN_MARGIN));
+            worth.then(|| Fix {
                 item: class.clone(),
                 name: item.name.clone(),
                 icon: item.icon.clone(),
                 cost: if owned { 0 } else { item.cost },
                 owned,
-                health_taken: after,
-                kill_time: r.kill_time,
+                health_taken: health_taken(&against),
+                kill_time: against.kill_time,
                 replaces,
+                kind: if defense { "defense" } else { "offense" }.into(),
+                seconds_gained: gained,
+                my_time_to_kill: my,
+                wins_duel: wins,
             })
         })
         .collect();
-    // Owned actives first: they cost nothing. Then the most health saved per soul, where items that keep the
-    // player alive come before those that only slow the death.
-    out.sort_by(|a, b| {
-        b.owned
-            .cmp(&a.owned)
-            .then((a.health_taken >= 1.0).cmp(&(b.health_taken >= 1.0)))
-            .then(((before - b.health_taken) / b.cost.max(1) as f64).total_cmp(&((before - a.health_taken) / a.cost.max(1) as f64)))
-    });
+    // Owned actives first: they cost nothing. Then whatever turns the duel, then the most it changes.
+    let change = |f: &Fix| (theirs + f.seconds_gained - f.my_time_to_kill) - margin;
+    out.sort_by(|a, b| b.owned.cmp(&a.owned).then(b.wins_duel.cmp(&a.wins_duel)).then(change(b).total_cmp(&change(a))).then(a.cost.cmp(&b.cost)));
     out.truncate(FIXES + out.iter().filter(|f| f.owned).count());
     out
 }
@@ -220,6 +276,11 @@ fn fixes(data: &GameData, killer: &BuildInput, me: &BuildInput, time: u32, befor
 /// ", in place of Extra Charge" when the slots were full.
 fn instead(f: &Fix) -> String {
     f.replaces.as_ref().map(|r| format!(", in place of {r}")).unwrap_or_default()
+}
+
+/// Seconds as said in a verdict: "4.1s", or "over 30s" for a fight that never ends.
+fn secs(t: f64) -> String {
+    if t >= LONG_FIGHT_S { format!("over {LONG_FIGHT_S:.0}s") } else { format!("{t:.1}s") }
 }
 
 fn verdict(s: &DeathStudy) -> String {
@@ -234,13 +295,27 @@ fn verdict(s: &DeathStudy) -> String {
         Some(t) => format!("{}'s full fight kills you on its own in {:.1}s ({kind})", s.killer_hero, t),
         None => format!("{}'s full fight takes {} of your health ({kind}): someone else helped", s.killer_hero, pct(s.health_taken)),
     };
-    let fix = match s.fixes.first() {
-        Some(f) if f.owned => format!(" Using your {} at the start would leave it at {} of your health.", f.name, pct(f.health_taken)),
-        Some(f) if f.health_taken < 1.0 && s.health_taken >= 1.0 => format!(" {} ({} souls{}) would have kept you alive through it.", f.name, f.cost, instead(f)),
-        Some(f) => format!(" {} ({} souls{}) cuts it to {} of your health.", f.name, f.cost, instead(f), pct(f.health_taken)),
-        None => String::new(),
+    let duel = if s.my_time_to_kill < s.their_time_to_kill {
+        format!(" Your own fight kills {} in {}, first: the duel was yours to win", s.killer_hero, secs(s.my_time_to_kill))
+    } else {
+        format!(" Your own fight needs {} to kill {}, against {} for theirs: the duel was lost", secs(s.my_time_to_kill), s.killer_hero, secs(s.their_time_to_kill))
     };
-    format!("{fight}.{fix}")
+    let fix = match s.fixes.first() {
+        Some(f) if f.owned => format!(" Using your {} at the start keeps you alive {:.1}s longer.", f.name, f.seconds_gained),
+        Some(f) if f.wins_duel => format!(
+            " {} ({} souls{}) turns it: you kill {} in {} and live {}.",
+            f.name,
+            f.cost,
+            instead(f),
+            s.killer_hero,
+            secs(f.my_time_to_kill),
+            secs(s.their_time_to_kill + f.seconds_gained)
+        ),
+        Some(f) if f.kind == "offense" => format!(" {} ({} souls{}) kills {} faster, in {}.", f.name, f.cost, instead(f), s.killer_hero, secs(f.my_time_to_kill)),
+        Some(f) => format!(" {} ({} souls{}) keeps you alive {:.1}s longer.", f.name, f.cost, instead(f), f.seconds_gained),
+        None => " No item within reach changes it by much: the fight was lost before it started.".into(),
+    };
+    format!("{fight}.{duel}.{fix}")
 }
 
 /// Studies every death of the player in the given slot.
@@ -273,7 +348,9 @@ pub fn analyze(data: &GameData, json: &str, slot: u32) -> Result<DeathAnalysis, 
                     let (me, _) = build_of(data, player, time)?;
                     let (window_from, window_to, taken, share) = taken_around(data, matrix, heroes, slot, time);
                     let r = suggest::fight_against(data, &killer_build, &me, &[], SHOOTING)?;
+                    let back = suggest::fight_against(data, &me, &killer_build, &[], SHOOTING)?;
                     let before = health_taken(&r);
+                    let (theirs, mine) = (time_to_kill(&r), time_to_kill(&back));
                     let mut s = DeathStudy {
                         time,
                         killer_slot,
@@ -290,7 +367,9 @@ pub fn analyze(data: &GameData, json: &str, slot: u32) -> Result<DeathAnalysis, 
                         health_taken: before,
                         kill_time: r.kill_time,
                         fight_bullet_share: bullet_share(&r),
-                        fixes: fixes(data, &killer_build, &me, time, before),
+                        their_time_to_kill: theirs,
+                        my_time_to_kill: mine,
+                        fixes: fixes(data, &killer_build, &me, time, theirs, mine),
                         verdict: String::new(),
                     };
                     s.verdict = verdict(&s);

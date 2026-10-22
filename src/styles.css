@@ -4017,6 +4017,9 @@ header.draft {
 .death-fix.owned {
   border-color: var(--accent);
 }
+.death-fix.wins {
+  border-color: var(--vitality);
+}
 .death-fix img {
   width: 24px;
   height: 24px;
