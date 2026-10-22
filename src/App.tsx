@@ -10,6 +10,7 @@ import HeroPicker from "./components/HeroPicker";
 import MatchView from "./components/MatchView";
 import Shop from "./components/Shop";
 import StatsPanel from "./components/StatsPanel";
+import Guide, { GuideButton, useFirstStart, useGuide } from "./components/Guide";
 import ShareMatches from "./components/ShareMatches";
 import UpdateBanner from "./components/UpdateBanner";
 import WhatsNew from "./components/WhatsNew";
@@ -66,6 +67,8 @@ export default function App() {
   const [status, setStatus] = useState("");
   const [tab, setTab] = useState<"stats" | "combo" | "misc" | "compare">("stats");
   const [mode, setMode] = useState<"build" | "generator" | "draft" | "match">("build");
+  const guide = useGuide();
+  useFirstStart(() => guide.show("start"));
   /** A match player handed to the master builder. */
   const [masterPreset, setMasterPreset] = useState<MatchPreset | null>(null);
   const [navOpen, setNavOpen] = useState(() => {
@@ -228,6 +231,9 @@ export default function App() {
           <UpdateBanner />
           <WhatsNew />
           <ShareMatches />
+          <button className="ghost" onClick={() => guide.show("start")} title="How to use the app">
+            Guide
+          </button>
           <small>
             Game {data.client_version ?? "?"} · {new Date(data.fetched_at * 1000).toLocaleDateString("en-US")}
           </small>
@@ -296,7 +302,9 @@ export default function App() {
           </button>
         </div>
         <div className="data-info">{status && <small className="status">{status}</small>}</div>
+        <GuideButton onOpen={() => guide.show(mode)} />
       </header>
+      <Guide open={guide.open} topic={guide.topic} onClose={guide.close} onTopic={guide.setTopic} />
 
       {/* Kept mounted while the builder is shown so a loaded match stays loaded. */}
       <div style={{ display: mode === "match" ? "contents" : "none" }}>

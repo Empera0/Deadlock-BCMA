@@ -4529,3 +4529,56 @@ header.draft {
   color: var(--muted);
   opacity: 0.8;
 }
+
+.guide {
+  width: min(860px, 94vw);
+}
+.guide-body {
+  display: flex;
+  gap: 16px;
+  min-height: 0;
+  overflow: hidden;
+  padding: 10px 0 0 14px;
+}
+.guide-topics {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 0 0 150px;
+}
+.guide-topics button {
+  text-align: left;
+}
+.guide-topics button.on {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.guide-body .whats-new-body {
+  flex: 1;
+}
+.guide-steps {
+  padding-left: 20px;
+}
+.guide-steps li {
+  margin-bottom: 10px;
+}
+.guide-steps p {
+  margin: 2px 0 0;
+}
+.guide-button {
+  margin-left: auto;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  font-weight: 700;
+}
+@media (max-width: 640px) {
+  .guide-body {
+    flex-direction: column;
+  }
+  .guide-topics {
+    flex-direction: row;
+    flex-wrap: wrap;
+    flex-basis: auto;
+  }
+}
