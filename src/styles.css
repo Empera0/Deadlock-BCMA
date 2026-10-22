@@ -4640,3 +4640,7 @@ header.settings {
   font-size: 11px;
   opacity: 0.8;
 }
+
+.replay-status td {
+  background: color-mix(in srgb, var(--danger) 8%, transparent);
+}

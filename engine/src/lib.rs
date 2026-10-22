@@ -19,6 +19,7 @@ pub mod order;
 pub mod popular;
 pub mod master;
 pub mod raw;
+pub mod replay;
 pub mod scout;
 pub mod suggest;
 pub mod timing;

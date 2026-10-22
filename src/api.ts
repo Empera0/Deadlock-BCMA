@@ -370,6 +370,28 @@ export interface ConsoleState {
   finished: number[];
 }
 
+export interface ReplayStudy {
+  deaths: {
+    time: number;
+    killer: string;
+    health_start: number | null;
+    hits: { at: number; until: number; hero: string; source: string; damage: number; hits: number; health_after: number }[];
+    statuses: { at: number; hero: string; source: string; statuses: string[] }[];
+    by_hero: [string, number, [string, number][]][];
+    summary: string;
+  }[];
+  abilities: {
+    ability: string;
+    icon: string;
+    casts: number;
+    enemies_per_cast: number;
+    usual: number | null;
+    damage_per_cast: number;
+    held_per_cast: number;
+    verdict: string;
+  }[];
+}
+
 export interface ItemTiming {
   item: string;
   name: string;
@@ -536,6 +558,7 @@ export const api = {
   consoleMatch: () => invoke<ConsoleState>("console_match"),
   shareMatch: (matchId: number) => invoke<SharedMatch>("share_match", { matchId }),
   itemTiming: (matchId: number, slot: number) => invoke<ItemTimingReport>("item_timing", { matchId, slot }),
+  replayStudy: (matchId: number, slot: number) => invoke<ReplayStudy>("replay_study", { matchId, slot }),
   matchTeams: (matchId: number, accountId: string) => invoke<LiveMatch>("match_teams", { matchId, accountId }),
   scoutLobby: (players: LivePlayer[]) => invoke<Scout[]>("scout_lobby", { players }),
   adviseBuild: (build: Build, style: string) => invoke<Advice>("advise_build", { build, style }),

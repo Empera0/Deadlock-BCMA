@@ -5,6 +5,7 @@ import { Bars, clock, FightStrip, LineChart, Marker, Series } from "./MatchChart
 import MatchCompare from "./MatchCompare";
 import DeathAnalysisPanel, { DeathTrendView } from "./DeathAnalysisPanel";
 import ItemTimingPanel from "./ItemTimingPanel";
+import ReplayPanel from "./ReplayPanel";
 import { readSetting, SETTINGS, useSetting } from "../settings";
 import ErrorNote from "./ErrorNote";
 
@@ -648,6 +649,8 @@ function PlayerDetail({
           </table>
         </div>
       )}
+
+      <ReplayPanel key={`replay-${report.match_id}-${player.slot}`} matchId={report.match_id} slot={player.slot} hero={player.hero_name} />
 
       {report.mid_boss.length > 0 && (
         <div className="group">

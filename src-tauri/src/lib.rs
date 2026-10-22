@@ -662,6 +662,72 @@ async fn console_match() -> Result<ConsoleState, String> {
     .map_err(|e| e.to_string())
 }
 
+/// How long a replay query may take before giving up, and how often its state is asked for.
+const DEMO_WAIT: Duration = Duration::from_secs(240);
+const DEMO_POLL: Duration = Duration::from_secs(4);
+
+/// The answer to a query against a match's replay, from the statistics service (it downloads and parses the
+/// replay, about a minute), kept on this computer once read.
+fn demo_answer(dir: &std::path::Path, match_id: u64, name: &str, query: &str) -> Result<String, String> {
+    let path = dir.join(format!("{match_id}-{name}.ndjson"));
+    if let Ok(text) = fs::read_to_string(&path) {
+        return Ok(text);
+    }
+    let body = serde_json::json!({ "match_id": match_id, "query": query, "format": "ndjson" }).to_string();
+    let submitted = match ureq::post(&format!("{MATCH_API}/matches/demo/query")).set("content-type", "application/json").timeout(Duration::from_secs(60)).send_string(&body) {
+        Ok(resp) => resp.into_string().map_err(|e| format!("Download failed: {e}"))?,
+        Err(ureq::Error::Status(404, _)) => return Err("This match has no replay: Valve keeps the replays of only some matches.".into()),
+        Err(ureq::Error::Status(429, _)) => return Err("The replay service is rate limiting requests. Try again in a moment.".into()),
+        Err(e) => return Err(format!("Download failed: {e}")),
+    };
+    let job: serde_json::Value = serde_json::from_str(&submitted).map_err(|e| format!("The statistics service answered in an unexpected form: {e}"))?;
+    let id = job.get("job_id").and_then(serde_json::Value::as_str).ok_or("The statistics service answered in an unexpected form: no job")?.to_string();
+    let started = std::time::Instant::now();
+    let url = loop {
+        let state: serde_json::Value = serde_json::from_str(&get(&format!("{MATCH_API}/matches/demo/query/{id}"), "The replay query was lost.")?)
+            .map_err(|e| format!("The statistics service answered in an unexpected form: {e}"))?;
+        match state.get("status").and_then(serde_json::Value::as_str) {
+            Some("done") => break state.get("result_url").and_then(serde_json::Value::as_str).ok_or("The replay query finished without a result.")?.to_string(),
+            Some("failed") | Some("error") => return Err(format!("The replay could not be read: {}", state.get("error").map(|e| e.to_string()).unwrap_or_default())),
+            _ if started.elapsed() > DEMO_WAIT => return Err("The replay took too long to read. Try again in a few minutes.".into()),
+            _ => std::thread::sleep(DEMO_POLL),
+        }
+    };
+    let mut bytes = vec![];
+    ureq::get(&url).timeout(Duration::from_secs(120)).call().map_err(|e| format!("Download failed: {e}"))?.into_reader().read_to_end(&mut bytes).map_err(|e| format!("Download failed: {e}"))?;
+    let text = engine::replay::decompress(&bytes)?;
+    let _ = fs::create_dir_all(dir);
+    let _ = fs::write(&path, &text);
+    Ok(text)
+}
+
+/// One player of a match studied from its replay: the last seconds before each death, and what each ability's
+/// casts caught and held. The first look reads the replay (about a minute); it is kept for the next.
+#[tauri::command]
+async fn replay_study(app: AppHandle, state: State<'_, AppState>, match_id: u64, slot: u32) -> Result<engine::replay::ReplayStudy, String> {
+    let data = state.data.read().unwrap().clone();
+    let json = match_json(&app, match_id).await?;
+    let dir = data_dir(&app)?.join("replays");
+    tauri::async_runtime::spawn_blocking(move || {
+        let (hits, notes, kills) = std::thread::scope(|scope| {
+            let ask = |name: &'static str, query: &'static str| {
+                let dir = &dir;
+                scope.spawn(move || demo_answer(dir, match_id, name, query))
+            };
+            let (h, n, k) = (
+                ask("hits", engine::replay::QUERY_HITS),
+                ask("notes", engine::replay::QUERY_NOTES),
+                ask("kills", engine::replay::QUERY_KILLS),
+            );
+            let join = |t: std::thread::ScopedJoinHandle<'_, Result<String, String>>| t.join().map_err(|_| "Reading the replay failed.".to_string()).and_then(|r| r);
+            (join(h), join(n), join(k))
+        });
+        engine::replay::study(&data, &json, slot, &hits?, &notes?, &kills?)
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
 /// When a player of a match bought each item, against when top players of the hero buy it, and the items most of
 /// them buy that the player never did.
 #[tauri::command]
@@ -996,6 +1062,7 @@ pub fn run() {
             match_teams,
             share_match,
             item_timing,
+            replay_study,
             scout_lobby,
             ability_order,
             match_history,
