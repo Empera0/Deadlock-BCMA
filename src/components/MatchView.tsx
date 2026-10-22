@@ -5,6 +5,7 @@ import { Bars, clock, FightStrip, LineChart, Marker, Series } from "./MatchChart
 import MatchCompare from "./MatchCompare";
 import DeathAnalysisPanel, { DeathTrendView } from "./DeathAnalysisPanel";
 import ItemTimingPanel from "./ItemTimingPanel";
+import { readSetting, SETTINGS, useSetting } from "../settings";
 
 interface Props {
   /** Opens a build from the match in the builder. */
@@ -1547,22 +1548,11 @@ function Report({
 
 export default function MatchView({ onOpenBuild, onOpenMaster }: Props) {
   const [matchId, setMatchId] = useState("");
-  // The account is shared with the Draft screen.
-  const [accountId, setAccountIdState] = useState(() => {
-    try {
-      return localStorage.getItem("account-id") ?? "";
-    } catch {
-      return "";
-    }
-  });
-  const setAccountId = (v: string) => {
-    setAccountIdState(v);
-    try {
-      localStorage.setItem("account-id", v);
-    } catch {
-      /* Only a convenience. */
-    }
-  };
+  // Starts on the player's own account from Settings; another player's typed here is looked at without
+  // changing it.
+  const [mine] = useSetting(SETTINGS.account);
+  const [accountId, setAccountId] = useState(() => readSetting(SETTINGS.account));
+  useEffect(() => setAccountId(mine), [mine]);
   const [deaths, setDeaths] = useState<DeathTrend | null>(null);
   const [showDeaths, setShowDeaths] = useState(false);
   const [report, setReport] = useState<MatchReport | null>(null);
@@ -1677,6 +1667,11 @@ export default function MatchView({ onOpenBuild, onOpenMaster }: Props) {
           Steam account ID
           <input value={accountId} onChange={(e) => setAccountId(e.target.value)} onKeyDown={(e) => e.key === "Enter" && loadHistory()} />
         </label>
+        {mine.trim() && accountId.trim() !== mine.trim() && (
+          <button className="ghost small" onClick={() => setAccountId(mine)} title="Back to your own account, from Settings">
+            My account
+          </button>
+        )}
         <button disabled={busy} onClick={loadHistory}>
           Recent matches
         </button>

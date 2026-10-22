@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "../api";
+import { SETTINGS, useSetting } from "../settings";
 
-const ON_KEY = "share-matches";
 const STATE_KEY = "shared-matches";
 /** How often the console log is read for a match that ended, ms. */
 const EVERY_MS = 60_000;
@@ -51,21 +51,12 @@ function due(e: Entry | undefined, now: number): boolean {
  * default; the switch is remembered.
  */
 export default function ShareMatches() {
-  const [on, setOn] = useState(() => {
-    try {
-      return localStorage.getItem(ON_KEY) !== "0";
-    } catch {
-      return true;
-    }
-  });
+  const [setting, setSetting] = useSetting(SETTINGS.shareMatches);
+  const on = setting !== "0";
+  const setOn = (v: boolean) => setSetting(v ? "1" : "0");
   const [last, setLast] = useState<string>("");
 
   useEffect(() => {
-    try {
-      localStorage.setItem(ON_KEY, on ? "1" : "0");
-    } catch {
-      /* Not remembered. */
-    }
     if (!on) return;
     let busy = false;
     const tick = async () => {

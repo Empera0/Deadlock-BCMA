@@ -1,12 +1,9 @@
 import { api, LiveMatch } from "./api";
+import { readSetting, SETTINGS } from "./settings";
 
-/** The account typed on the Draft or Match analysis screen. */
+/** The player's own account, from Settings. */
 export function savedAccount(): string {
-  try {
-    return (localStorage.getItem("account-id") ?? "").trim();
-  } catch {
-    return "";
-  }
+  return readSetting(SETTINGS.account).trim();
 }
 
 export const CONDEBUG_HELP =
@@ -21,7 +18,7 @@ export async function findLiveMatch(): Promise<LiveMatch> {
   const c = await api.consoleMatch();
   const account = c.account_id ? String(c.account_id) : savedAccount();
   if (c.found && c.match_id) {
-    if (!account) throw new Error("The console log names no account: set your Steam account ID on the Draft or Match analysis screen.");
+    if (!account) throw new Error("The console log names no account: set your Steam account ID in Settings.");
     return api.matchTeams(c.match_id, account);
   }
   if (account) {

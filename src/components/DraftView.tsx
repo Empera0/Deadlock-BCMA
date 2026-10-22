@@ -1,17 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { findLiveMatch } from "../live";
+import { RANKS, SETTINGS, useSetting } from "../settings";
 import LobbyScout from "./LobbyScout";
 import { api, LiveMatch, DraftPick, DraftReason, DraftReport, fmt, Hero, MatchPreset } from "../api";
 
-/** Ranks the statistics can be read at: the lowest average badge of the matches. */
-const RANKS: [number, string][] = [
-  [0, "All ranks"],
-  [71, "Archon and above"],
-  [81, "Oracle and above"],
-  [91, "Phantom and above"],
-  [101, "Ascendant and above"],
-  [111, "Eternus"],
-];
+
 const TEAM_SIZE = 6;
 /** With an account, "my heroes" are the ones played at least this often. */
 const MY_HERO_MATCHES = 3;
@@ -23,21 +16,6 @@ const SIDES: [Side, string][] = [
   ["enemies", "Enemy team"],
   ["banned", "Bans"],
 ];
-
-const load = (key: string, fallback: string) => {
-  try {
-    return localStorage.getItem(key) ?? fallback;
-  } catch {
-    return fallback;
-  }
-};
-const store = (key: string, value: string) => {
-  try {
-    localStorage.setItem(key, value);
-  } catch {
-    /* The setting is only a convenience. */
-  }
-};
 
 const signed = (v: number, digits = 1) => `${v >= 0 ? "+" : "−"}${fmt(Math.abs(v), digits)}`;
 
@@ -87,8 +65,9 @@ export default function DraftView({ heroes, onPlan }: { heroes: Hero[]; onPlan: 
   const [teams, setTeams] = useState<Record<Side, number[]>>({ allies: [], enemies: [], banned: [] });
   const [lane, setLane] = useState<number[]>([]);
   const [side, setSide] = useState<Side>("enemies");
-  const [badge, setBadge] = useState(() => Number(load("draft-badge", "101")) || 0);
-  const [account, setAccount] = useState(() => load("account-id", ""));
+  const [badgeSetting, setBadgeSetting] = useSetting(SETTINGS.draftBadge);
+  const badge = Number(badgeSetting) || 0;
+  const [account] = useSetting(SETTINGS.account);
   const [onlyMine, setOnlyMine] = useState(false);
   const [liveNote, setLiveNote] = useState("");
   const [live, setLive] = useState<LiveMatch | null>(null);
@@ -160,10 +139,7 @@ export default function DraftView({ heroes, onPlan }: { heroes: Hero[]; onPlan: 
           Rank
           <select
             value={badge}
-            onChange={(e) => {
-              setBadge(Number(e.target.value));
-              store("draft-badge", e.target.value);
-            }}
+            onChange={(e) => setBadgeSetting(e.target.value)}
           >
             {RANKS.map(([b, label]) => (
               <option key={b} value={b}>
@@ -172,17 +148,9 @@ export default function DraftView({ heroes, onPlan }: { heroes: Hero[]; onPlan: 
             ))}
           </select>
         </label>
-        <label className="field inline" title="Your SteamID: adds your own record on each hero. Optional.">
-          Steam account ID
-          <input
-            value={account}
-            placeholder="optional"
-            onChange={(e) => {
-              setAccount(e.target.value);
-              store("account-id", e.target.value);
-            }}
-          />
-        </label>
+        <span className="muted" title="Your own record on each hero comes from this account. Set it in Settings.">
+          {account.trim() ? `Your account: ${account.trim()}` : "No account set: add it in Settings for your own record"}
+        </span>
         <button className="ghost" onClick={() => (setTeams({ allies: [], enemies: [], banned: [] }), setLane([]))}>
           Clear
         </button>

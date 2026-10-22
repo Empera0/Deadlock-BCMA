@@ -3,6 +3,7 @@ import { api, Build, EMPTY_MAP, fmt, Hero, JudgedItem, LiveMatch, MasterBuild, M
 import PowerCurve from "./PowerCurve";
 import LobbyScout from "./LobbyScout";
 import { CONDEBUG_HELP, findLiveMatch, savedAccount } from "../live";
+import { readSetting, SETTINGS, useSetting } from "../settings";
 import SuggestPanel from "./SuggestPanel";
 
 interface Props {
@@ -123,14 +124,14 @@ function PopularPanel({ hero, onUse }: { hero: Hero; onUse: Props["onUse"] }) {
 }
 
 /** The roles and damage the master builder can build for. */
-const FOCUSES: [string, string, string][] = [
+export const FOCUSES: [string, string, string][] = [
   ["auto", "Auto", "Picked from the teams: tempo when a teammate carries late, carry otherwise"],
   ["carry", "Carry", "Your own damage first: bigger items that scale into the late game"],
   ["tempo", "Tempo", "Power early in the mid game, to fight before their carries come online"],
   ["support", "Support", "Items that answer their team and help yours"],
   ["frontline", "Frontline", "Staying alive at the front while your carries deal the damage"],
 ];
-const DAMAGES: [string, string][] = [
+export const DAMAGES: [string, string][] = [
   ["auto", "Auto"],
   ["gun", "Gun"],
   ["spirit", "Spirit"],
@@ -316,8 +317,9 @@ function MasterPanel({
       setFighting("");
     }
   };
-  const [focus, setFocus] = useState("auto");
-  const [damage, setDamage] = useState("auto");
+  // The defaults come from Settings; a change here holds for this screen only.
+  const [focus, setFocus] = useState(() => readSetting(SETTINGS.masterFocus));
+  const [damage, setDamage] = useState(() => readSetting(SETTINGS.masterDamage));
   const [enemies, setEnemies] = useState<number[]>([]);
   const [mine, setMine] = useState(hero.class_name);
   useEffect(() => {
@@ -397,7 +399,7 @@ function MasterPanel({
     const id = Number(typedMatch.trim());
     const account = savedAccount();
     if (!Number.isInteger(id) || id <= 0) return setLiveNote("Enter the match number (numbers only).");
-    if (!account) return setLiveNote("Set your Steam account ID on the Draft or Match analysis screen first.");
+    if (!account) return setLiveNote("Set your Steam account ID in Settings first.");
     setLiveBusy(true);
     setLiveNote(`Getting the teams of match ${id}… about a minute.`);
     api
@@ -409,21 +411,9 @@ function MasterPanel({
   // Watching: while this screen is open, the game's console log is read every 20 seconds; a new match in it has
   // its teams fetched (about a minute), and is built for. A failed fetch is tried again after two minutes, at most
   // three times a match: the spectating service takes only a few matches an hour from one computer.
-  const [watching, setWatching] = useState(() => {
-    try {
-      return localStorage.getItem("watch-live") === "1";
-    } catch {
-      return false;
-    }
-  });
-  const toggleWatch = (on: boolean) => {
-    setWatching(on);
-    try {
-      localStorage.setItem("watch-live", on ? "1" : "0");
-    } catch {
-      /* Only a convenience. */
-    }
-  };
+  const [watchSetting, setWatchSetting] = useSetting(SETTINGS.watchLive);
+  const watching = watchSetting === "1";
+  const toggleWatch = (on: boolean) => setWatchSetting(on ? "1" : "0");
   const tries = useRef<{ match: number; count: number; next: number }>({ match: 0, count: 0, next: 0 });
   const pending = useRef(false);
   useEffect(() => {
@@ -442,7 +432,7 @@ function MasterPanel({
         if (t.match !== c.match_id) tries.current = { match: c.match_id, count: 0, next: 0 };
         if (tries.current.count >= LIVE_TRIES || Date.now() < tries.current.next) return;
         const account = c.account_id ? String(c.account_id) : savedAccount();
-        if (!account) return setLiveNote("Watching: the console log names no account. Set your Steam account ID on the Draft or Match analysis screen.");
+        if (!account) return setLiveNote("Watching: the console log names no account. Set your Steam account ID in Settings.");
         pending.current = true;
         tries.current.count += 1;
         setLiveNote(`Match ${c.match_id} started: getting the teams… about a minute.`);

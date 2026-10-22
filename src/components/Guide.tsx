@@ -2,7 +2,7 @@ import { ReactNode, useEffect, useState } from "react";
 
 const SEEN_KEY = "guide-seen";
 
-export type GuideTopic = "start" | "build" | "generator" | "draft" | "match" | "setup";
+export type GuideTopic = "start" | "build" | "generator" | "draft" | "match" | "setup" | "settings";
 
 interface Step {
   title: string;
@@ -135,7 +135,10 @@ const TOPICS: { key: GuideTopic; title: string; intro: string; steps: Step[] }[]
           </>
         ),
       },
-      { title: "Steam account ID", body: "The Draft and Match analysis screens take your Steam account ID (the short number, or the long 7656… one). With -condebug the app finds it in the log." },
+      {
+        title: "Settings",
+        body: "Everything you set once is on the Settings screen, kept on this computer: your Steam account ID (the short number or the long 7656… one; with -condebug the app offers the one the game is signed in to), the Draft screen's rank, the Master builder's role and damage, and what runs in the background. To look at someone else's matches, type their ID on Match analysis: your own stays as it is.",
+      },
       {
         title: "Share my finished matches",
         body: "At the bottom of the side bar. When a match ends, the app asks deadlock-api for it, which keeps the match and, when Valve kept one, its replay, so it can be studied. Only the match number is sent; untick it to stop.",
@@ -148,7 +151,8 @@ const TOPICS: { key: GuideTopic; title: string; intro: string; steps: Step[] }[]
 /** The guide: how to use each screen, opened on the first start and from the side bar or a screen's ? any time. */
 export default function Guide({ open, topic, onClose, onTopic }: { open: boolean; topic: GuideTopic; onClose: () => void; onTopic: (t: GuideTopic) => void }) {
   if (!open) return null;
-  const t = TOPICS.find((x) => x.key === topic) ?? TOPICS[0];
+  // The Settings screen is explained under Setup.
+  const t = TOPICS.find((x) => x.key === (topic === "settings" ? "setup" : topic)) ?? TOPICS[0];
   return (
     <div className="overlay" onClick={onClose}>
       <div className="whats-new guide" role="dialog" aria-label="Guide" onClick={(e) => e.stopPropagation()}>

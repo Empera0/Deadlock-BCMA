@@ -11,6 +11,7 @@ import MatchView from "./components/MatchView";
 import Shop from "./components/Shop";
 import StatsPanel from "./components/StatsPanel";
 import Guide, { GuideButton, useFirstStart, useGuide } from "./components/Guide";
+import SettingsView from "./components/SettingsView";
 import ShareMatches from "./components/ShareMatches";
 import UpdateBanner from "./components/UpdateBanner";
 import WhatsNew from "./components/WhatsNew";
@@ -66,7 +67,7 @@ export default function App() {
   const [name, setName] = useState("");
   const [status, setStatus] = useState("");
   const [tab, setTab] = useState<"stats" | "combo" | "misc" | "compare">("stats");
-  const [mode, setMode] = useState<"build" | "generator" | "draft" | "match">("build");
+  const [mode, setMode] = useState<"build" | "generator" | "draft" | "match" | "settings">("build");
   const guide = useGuide();
   useFirstStart(() => guide.show("start"));
   /** A match player handed to the master builder. */
@@ -218,6 +219,7 @@ export default function App() {
             ["generator", "Build generator", "M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9zM19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"],
             ["draft", "Draft", "M4 5h6v6H4zM14 5h6v6h-6zM4 15h6v4H4zM14 15h6v4h-6z"],
             ["match", "Match analysis", "M4 20V10M10 20V4M16 20v-7M22 20H2"],
+            ["settings", "Settings", "M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"],
           ] as const
         ).map(([key, label, icon]) => (
           <button key={key} className={"nav-item" + (mode === key ? " on" : "")} onClick={() => setMode(key)} title={label}>
@@ -302,8 +304,8 @@ export default function App() {
           </button>
         </div>
         <div className="data-info">{status && <small className="status">{status}</small>}</div>
-        <GuideButton onOpen={() => guide.show(mode)} />
       </header>
+      <GuideButton onOpen={() => guide.show(mode)} />
       <Guide open={guide.open} topic={guide.topic} onClose={guide.close} onTopic={guide.setTopic} />
 
       {/* Kept mounted while the builder is shown so a loaded match stays loaded. */}
@@ -321,6 +323,10 @@ export default function App() {
           }}
         />
       </div>
+
+      {mode === "settings" && (
+        <SettingsView version={data.client_version ?? null} fetchedAt={data.fetched_at} onRefresh={refresh} onGuide={() => guide.show("setup")} />
+      )}
 
       {/* Kept mounted so the draft stays filled in while a build is planned. */}
       <div style={{ display: mode === "draft" ? "contents" : "none" }}>
