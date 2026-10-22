@@ -115,6 +115,9 @@ pub struct Prop {
     /// The game's display class, e.g. `tech_damage`, `bullet_damage`, `melee_damage`.
     #[serde(default)]
     pub css: String,
+    /// `range` or `radius` for a size that grows with ability range or ability radius bonuses.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub grows: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

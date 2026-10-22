@@ -4,6 +4,7 @@
 use serde::Serialize;
 use serde_json::Value;
 
+use crate::area;
 use crate::build::BuildInput;
 use crate::calc;
 use crate::data::GameData;
@@ -62,15 +63,14 @@ fn sustained(data: &GameData, b: &BuildInput) -> Option<f64> {
     let fight = suggest::fight_for(data, b, SHOOTING_S)?;
     let mut total = 0.0;
     for s in &fight.sources {
-        let casts = sheet
-            .abilities
-            .iter()
-            .find(|a| s.source == a.name || s.source.starts_with(&format!("{} (", a.name)))
+        let ability = sheet.abilities.iter().find(|a| s.source == a.name || s.source.starts_with(&format!("{} (", a.name)));
+        let casts = ability
             .and_then(|a| a.props.iter().find(|p| p.key == "AbilityCooldown").map(|p| p.value))
             .filter(|cd| *cd > 0.0)
             .map(|cd| (SUSTAINED_S / cd).max(1.0))
             .unwrap_or(1.0);
-        total += s.damage * casts;
+        // On every enemy it hits in a team fight: an upgrade that widens an area counts for the enemies it adds.
+        total += s.damage * casts * ability.map(area::targets).unwrap_or(1.0);
     }
     Some(total)
 }

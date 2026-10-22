@@ -209,3 +209,19 @@ fn map_buffs_raise_the_stats() {
     assert!(close(s.stat("fire_rate_pct").unwrap() - plain.stat("fire_rate_pct").unwrap(), 35.0));
     assert!(close(s.stat("max_health").unwrap() - plain.stat("max_health").unwrap(), 60.0));
 }
+
+#[test]
+fn ability_range_and_radius_items_grow_ability_sizes_and_the_enemies_hit() {
+    let data = data();
+    let bare = BuildInput { hero: "hero_lash".into(), ability_tiers: vec![1, 1, 1, 1], ..Default::default() };
+    let mut wide = bare.clone();
+    wide.purchases.push("upgrade_tech_range".into());
+    let (a, b) = (calc::compute(&data, &bare).unwrap(), calc::compute(&data, &wide).unwrap());
+    let radius = |s: &calc::Sheet| s.abilities[0].props.iter().find(|p| p.key == "Radius").unwrap().value;
+    // Greater Expansion: +30% ability radius on Ground Strike's stomp.
+    assert!((radius(&b) / radius(&a) - 1.3).abs() < 1e-6, "{} -> {}", radius(&a), radius(&b));
+    assert_eq!(b.stat("ability_radius"), Some(30.0));
+    assert!(engine::area::targets(&b.abilities[0]) > engine::area::targets(&a.abilities[0]));
+    // A single-target ability hits one enemy whatever the items.
+    assert_eq!(engine::area::targets(&b.abilities[1]), 1.0);
+}

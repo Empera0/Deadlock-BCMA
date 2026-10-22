@@ -90,6 +90,24 @@ fn prop(key: &str, p: &Value) -> (Prop, bool) {
             coef,
         })
     });
+    // A size that grows with the ability range or ability radius stat, alone or among several.
+    let grows = p
+        .get("scale_function")
+        .map(|sf| {
+            let mut stats = vec![text(sf, "specific_stat_scale_type")];
+            stats.extend(sf.get("scaling_stats").and_then(Value::as_array).into_iter().flatten().filter_map(Value::as_str).map(String::from));
+            // The tech range scale functions grow with ability range without naming the stat.
+            let tech_range = text(sf, "class_name").starts_with("scale_function_tech_range");
+            if stats.iter().any(|s| s == "ETechRadius") {
+                "radius"
+            } else if tech_range || stats.iter().any(|s| s == "ETechRange") {
+                "range"
+            } else {
+                ""
+            }
+        })
+        .unwrap_or("")
+        .to_string();
     let modifier = Some(text(p, "provided_property_type"))
         .filter(|m| !m.is_empty() && m != "MODIFIER_VALUE_INVALID");
     (
@@ -102,6 +120,7 @@ fn prop(key: &str, p: &Value) -> (Prop, bool) {
             modifier,
             scale,
             css: text(p, "css_class"),
+            grows,
         },
         disabled,
     )

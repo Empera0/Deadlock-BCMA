@@ -1,6 +1,7 @@
 //! Deadlock calculation engine. Independent of the UI: data and formulas only.
 
 pub mod advisor;
+pub mod area;
 pub mod build;
 pub mod calc;
 pub mod combo;

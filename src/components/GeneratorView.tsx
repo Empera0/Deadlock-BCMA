@@ -698,7 +698,7 @@ function MasterPanel({
                           <th title="The item's score: popularity, own numbers and the answer to their team, weighed by the role">Score</th>
                           <th title="Share of your hero's top players who buy it at this point">Top players</th>
                           <th title="Win rate when bought at this point, against everything bought at this point (points, shrunk for small samples)">Wins</th>
-                          <th title="What it adds to your own damage">Own numbers</th>
+                          <th title="What it adds to your own damage in a team fight: an ability that hits an area counts for every enemy it hits, so range and radius items count">Own numbers</th>
                           <th title="Its answer to the enemy team, against the best answer at this point">Answer</th>
                           <th className="left">Why</th>
                         </tr>

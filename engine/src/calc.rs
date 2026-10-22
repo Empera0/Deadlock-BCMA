@@ -249,6 +249,9 @@ struct Ctx {
     charged_cdr: f64,
     charged_spirit: f64,
     duration_bonus: f64,
+    /// Ability range and ability radius bonuses, percent: sizes marked to grow with them.
+    range_bonus: f64,
+    radius_bonus: f64,
     spirit_taken: f64,
     weapon_damage_pct: f64,
     light_melee: f64,
@@ -317,6 +320,15 @@ fn scaled(p: &Prop, c: &Ctx) -> ScaledProp {
         value *= 1.0 + c.duration_bonus / 100.0;
         formula = format!("({formula}) × (1 + {}%)", fmt(c.duration_bonus));
     }
+    let size = match p.grows.as_str() {
+        "range" => c.range_bonus,
+        "radius" => c.radius_bonus,
+        _ => 0.0,
+    };
+    if size != 0.0 && value > 0.0 {
+        value *= 1.0 + size / 100.0;
+        formula = format!("({formula}) × (1 + {}% ability {})", fmt(size), p.grows);
+    }
     ScaledProp {
         key: p.key.clone(),
         label: p.label.clone(),
@@ -346,6 +358,8 @@ struct Imbue {
     /// Omnicharge Signet: bonus charges for an ability that has charges, and for one that has none.
     enable: Option<(f64, f64)>,
     duration: f64,
+    range: f64,
+    radius: f64,
     items: Vec<String>,
 }
 
@@ -428,6 +442,7 @@ fn abilities(hero: &Hero, b: &BuildInput, c: &Ctx, imbues: &[Imbue], copied: Opt
                     modifier: None,
                     scale: None,
                     css: String::new(),
+                    grows: String::new(),
                 }),
             };
             // Omnicharge Signet gives its ability charges, and more of them if it already had some.
@@ -456,6 +471,8 @@ fn abilities(hero: &Hero, b: &BuildInput, c: &Ctx, imbues: &[Imbue], copied: Opt
                     if i == 3 { c.ult_cooldown_reduction } else { 0.0 },
                 ),
                 duration_bonus: c.duration_bonus + imbue.duration,
+                range_bonus: c.range_bonus + imbue.range,
+                radius_bonus: c.radius_bonus + imbue.radius,
                 ..*c
             };
             let mut sheet = AbilitySheet {
@@ -592,16 +609,22 @@ fn compute_at(data: &GameData, b: &BuildInput, force_level: Option<u32>) -> Resu
     }
     for item in &r.owned {
         let on = b.active.iter().any(|a| a == &item.class_name);
+        // The data leaves the ability radius bonus without a section; it goes with the item's ability range bonus.
+        let range_section = item.props.iter().find(|p| p.modifier.as_deref() == Some("MODIFIER_VALUE_TECH_RANGE_PERCENT")).map(|p| p.section.as_str());
         for p in &item.props {
             let Some(m) = &p.modifier else { continue };
-            if !item.imbue.is_empty() && p.section != "innate" && IMBUE_MODIFIERS.contains(&m.as_str()) {
+            let section = match (p.section.as_str(), m.as_str(), range_section) {
+                ("", "MODIFIER_VALUE_TECH_RADIUS_PERCENT", Some(s)) => s,
+                (s, _, _) => s,
+            };
+            if !item.imbue.is_empty() && section != "innate" && IMBUE_MODIFIERS.contains(&m.as_str()) {
                 continue;
             }
             // Bonuses for charged abilities only are applied per ability, not hero-wide.
             if p.key.ends_with("ChargedAbilities") {
                 continue;
             }
-            if p.section == "innate" || (p.value > 0.0 && ALWAYS_ON.contains(&m.as_str())) {
+            if section == "innate" || (p.value > 0.0 && ALWAYS_ON.contains(&m.as_str())) {
                 bag.push(m, &item.name, p.value, &p.label, &p.postfix);
             } else if on {
                 let source = format!("{} (conditional)", item.name);
@@ -1044,11 +1067,12 @@ fn compute_at(data: &GameData, b: &BuildInput, force_level: Option<u32>) -> Resu
         "(boons × per-level gain + investment + Σ items) × Π(1 + spirit power %ᵢ), not below 0",
         sp_terms,
     );
-    let mut spirit_mods = [0.0; 3];
+    let mut spirit_mods = [0.0; 4];
     for (i, (key, label, modifier)) in [
         ("cooldown_reduction", "Cooldown reduction", "MODIFIER_VALUE_COOLDOWN_REDUCTION_PERCENTAGE"),
         ("ability_duration", "Ability duration bonus", "MODIFIER_VALUE_BONUS_ABILITY_DURATION_PERCENTAGE"),
         ("ability_range", "Ability range bonus", "MODIFIER_VALUE_TECH_RANGE_PERCENT"),
+        ("ability_radius", "Ability radius bonus", "MODIFIER_VALUE_TECH_RADIUS_PERCENT"),
     ]
     .into_iter()
     .enumerate()
@@ -1272,6 +1296,8 @@ fn compute_at(data: &GameData, b: &BuildInput, force_level: Option<u32>) -> Resu
         charged_cdr,
         charged_spirit,
         duration_bonus: spirit_mods[1],
+        range_bonus: spirit_mods[2],
+        radius_bonus: spirit_mods[3],
         spirit_taken,
         weapon_damage_pct: wd,
         light_melee: (base("light_melee_damage") + boons * melee_growth) * (1.0 + melee_pct / 100.0),
@@ -1290,6 +1316,8 @@ fn compute_at(data: &GameData, b: &BuildInput, force_level: Option<u32>) -> Resu
                 Some("MODIFIER_VALUE_TECH_POWER") => slot.spirit += p.value,
                 Some("MODIFIER_VALUE_COOLDOWN_REDUCTION_PERCENTAGE") => slot.cooldown += p.value,
                 Some("MODIFIER_VALUE_BONUS_ABILITY_DURATION_PERCENTAGE") => slot.duration += p.value,
+                Some("MODIFIER_VALUE_TECH_RANGE_PERCENT") => slot.range += p.value,
+                Some("MODIFIER_VALUE_TECH_RADIUS_PERCENT") => slot.radius += p.value,
                 _ => {}
             }
         }

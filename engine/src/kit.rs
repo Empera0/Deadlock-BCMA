@@ -835,6 +835,9 @@ pub fn plan(ability: &AbilitySheet, ctx: &Context, duration: Option<f64>, hit_ov
     let mut plan = generic(ability, duration, hit_override);
     customize(ability, &mut plan, ctx, duration, hit_override);
     healing(ability, &mut plan, ctx, duration);
+    if plan.has_damage() {
+        plan.notes.extend(crate::area::describe(ability));
+    }
     plan
 }
 

@@ -10,6 +10,7 @@
 //! What "best" means depends on the playstyle: the gun, the abilities, melee, all of it together, or staying
 //! alive at the front.
 
+use crate::area;
 use crate::build::BuildInput;
 use crate::calc;
 use crate::combo::{self, Action, ComboInput};
@@ -289,8 +290,12 @@ fn measure_with(data: &GameData, b: &BuildInput, conditions: bool, windows: &[Wi
         .iter()
         .map(|(w, _)| {
             if windows.contains(w) {
+                // A team fight: an ability that hits an area hurts every enemy in it.
                 combo::simulate(data, &b, &window_input(data, &b, sheet.abilities.len(), *w))
-                    .map(|r| if *w == Window::Melee { melee_weighted(data, &b, &r) } else { r.total })
+                    .map(|r| {
+                        let extra = area::extra_damage(&sheet.abilities, &r);
+                        if *w == Window::Melee { melee_weighted(data, &b, &r) + extra * MELEE_OTHER } else { r.total + extra }
+                    })
                     .unwrap_or(0.0)
             } else {
                 0.0
