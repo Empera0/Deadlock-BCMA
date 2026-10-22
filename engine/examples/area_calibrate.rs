@@ -27,8 +27,10 @@ use serde_json::Value;
 const CAST_GAP_S: f64 = 2.0;
 /// A cast counts as part of a team fight from this many seconds before it starts to this many after it ends.
 const FIGHT_MARGIN_S: f64 = 3.0;
-/// Casts in team fights an ability needs for a density of its own.
-const MIN_CASTS: usize = 15;
+/// Casts in team fights an ability needs for a density of its own, and how many casts' worth of the density over
+/// all abilities its own average is pulled toward: with 20 casts it is half its own, with 200 nearly all.
+const MIN_CASTS: usize = 10;
+const PRIOR_CASTS: f64 = 20.0;
 /// The caster's build is read once per this many seconds of the match.
 const BUILD_STEP_S: u32 = 15;
 
@@ -150,8 +152,11 @@ fn main() {
     let mut own: BTreeMap<String, f64> = BTreeMap::new();
     for (class, list) in &by {
         let model = |d: f64| mean(&list.iter().map(|c| c.area.map(|(a, m)| area::enemies_in(a, m, d)).unwrap_or(1.0)).collect::<Vec<_>>());
-        let hits = mean(&list.iter().map(|c| c.hit).collect::<Vec<_>>());
-        // The density at which the model's average over these casts is the enemies they really hit.
+        let seen = mean(&list.iter().map(|c| c.hit).collect::<Vec<_>>());
+        // Few casts say little: their average is pulled toward what the density over all abilities gives them.
+        let n = list.len() as f64;
+        let hits = (n * seen + PRIOR_CASTS * model(best)) / (n + PRIOR_CASTS);
+        // The density at which the model's average over these casts is that many enemies.
         let (mut lo, mut hi) = (0.0, 1.0);
         for _ in 0..60 {
             let mid = (lo + hi) / 2.0;
@@ -162,7 +167,7 @@ fn main() {
             own.insert(class.clone(), (d * 1e5).round() / 1e5);
         }
         println!(
-            "{:<14} {:<24} {:>4} casts: hits {hits:.2}, model {:.2} at the fit; own density {d:.4}{}",
+            "{:<14} {:<24} {:>4} casts: hits {seen:.2} (kept {hits:.2}), model {:.2} at the fit; own density {d:.4}{}",
             list[0].hero,
             list[0].ability,
             list.len(),
