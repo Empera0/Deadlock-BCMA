@@ -261,7 +261,7 @@ pub fn enemies_in(area: f64, most: f64, density: f64) -> f64 {
 }
 
 /// The ability a combo source belongs to: its name, or its name with a part in brackets.
-fn ability_of<'a>(abilities: &'a [AbilitySheet], source: &str) -> Option<&'a AbilitySheet> {
+pub fn ability_of<'a>(abilities: &'a [AbilitySheet], source: &str) -> Option<&'a AbilitySheet> {
     abilities.iter().find(|a| source == a.name || source.starts_with(&format!("{} (", a.name)))
 }
 

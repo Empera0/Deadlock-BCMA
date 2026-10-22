@@ -289,9 +289,17 @@ fn melee_weighted(data: &GameData, b: &BuildInput, r: &combo::ComboResult) -> f6
         .sum()
 }
 
-/// A fight's damage as a spirit build values it: spirit and pure damage in full, the gun's at `SPIRIT_GUN_WEIGHT`.
-fn spirit_weighted(r: &combo::ComboResult) -> f64 {
-    r.sources.iter().map(|s| if matches!(s.kind, combo::Kind::Bullet | combo::Kind::Melee) { s.damage * SPIRIT_GUN_WEIGHT } else { s.damage }).sum()
+/// A fight's damage as a spirit build values it: the abilities in full whatever damage they deal (Venator's and
+/// Rat King's deal weapon damage), the rest of the spirit damage in full, and the shooting and melee at
+/// `SPIRIT_GUN_WEIGHT`.
+fn spirit_weighted(abilities: &[calc::AbilitySheet], r: &combo::ComboResult) -> f64 {
+    r.sources
+        .iter()
+        .map(|s| {
+            let gun = matches!(s.kind, combo::Kind::Bullet | combo::Kind::Melee) && area::ability_of(abilities, &s.source).is_none();
+            if gun { s.damage * SPIRIT_GUN_WEIGHT } else { s.damage }
+        })
+        .sum()
 }
 
 /// The numbers of a build with its conditional effects switched on or off, for the windows asked for.
@@ -320,7 +328,7 @@ fn measure_with(data: &GameData, b: &BuildInput, conditions: bool, windows: &[Wi
                         let extra = area::extra_damage(&sheet.abilities, &r);
                         let damage = match w {
                             Window::Melee => melee_weighted(data, &b, &r) + extra * MELEE_OTHER,
-                            Window::SpiritFight => spirit_weighted(&r) + extra,
+                            Window::SpiritFight => spirit_weighted(&sheet.abilities, &r) + extra,
                             _ => r.total + extra,
                         };
                         area::with_control(damage, control)
