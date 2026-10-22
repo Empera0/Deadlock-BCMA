@@ -4621,3 +4621,22 @@ header.settings {
   flex-direction: column;
   gap: 2px;
 }
+
+.error-note {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.error-note .error-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.error-note details code {
+  display: block;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 11px;
+  opacity: 0.8;
+}

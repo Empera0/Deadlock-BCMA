@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { api, Build, EMPTY_MAP, fmt, MasterBuild, PowerPoint } from "../api";
+import ErrorNote from "./ErrorNote";
 
 /** Ability upgrade tiers the master builder assumes in each phase. */
 const PHASE_TIERS = [
@@ -130,6 +131,7 @@ export default function PowerCurve({ master }: { master: MasterBuild }) {
   const [points, setPoints] = useState<Point[] | null>(null);
   const [hover, setHover] = useState<number | null>(null);
   const [error, setError] = useState("");
+  const [attempt, setAttempt] = useState(0);
   useEffect(() => {
     let stale = false;
     setPoints(null);
@@ -152,9 +154,9 @@ export default function PowerCurve({ master }: { master: MasterBuild }) {
     return () => {
       stale = true;
     };
-  }, [steps]);
+  }, [steps, attempt]);
 
-  if (error) return <div className="error">{error}</div>;
+  if (error) return <ErrorNote error={error} onRetry={() => setAttempt((a) => a + 1)} />;
   if (!points) return <p className="muted">Working out the power curve…</p>;
   const h = hover !== null ? points[hover] : null;
   const spikes = points.filter((p) => p.spike);

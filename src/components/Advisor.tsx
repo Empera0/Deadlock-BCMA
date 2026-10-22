@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Advice, AdviceMove, api, Build, fmt } from "../api";
+import ErrorNote from "./ErrorNote";
 
 const STYLES: [string, string][] = [
   ["hybrid", "Full kit"],
@@ -81,7 +82,7 @@ export default function Advisor({ build, onChange }: { build: Build; onChange: (
           {busy ? "Working…" : advice ? "Again" : "Advise"}
         </button>
       </div>
-      {error && <div className="error">{error}</div>}
+      <ErrorNote error={error} onRetry={run} />
       {advice && (
         <>
           <p className="muted">

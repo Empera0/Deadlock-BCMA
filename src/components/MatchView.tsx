@@ -6,6 +6,7 @@ import MatchCompare from "./MatchCompare";
 import DeathAnalysisPanel, { DeathTrendView } from "./DeathAnalysisPanel";
 import ItemTimingPanel from "./ItemTimingPanel";
 import { readSetting, SETTINGS, useSetting } from "../settings";
+import ErrorNote from "./ErrorNote";
 
 interface Props {
   /** Opens a build from the match in the builder. */
@@ -1561,6 +1562,8 @@ export default function MatchView({ onOpenBuild, onOpenMaster }: Props) {
   const [trend, setTrend] = useState<{ rows: MatchSummary[]; skipped: number } | null>(null);
   const [showTrend, setShowTrend] = useState(false);
   const [status, setStatus] = useState("");
+  // The last thing that failed, with what tries it again.
+  const [failure, setFailure] = useState<{ error: unknown; retry: () => void } | null>(null);
   const [busy, setBusy] = useState(false);
 
   const loadMatch = async (id: string) => {
@@ -1570,13 +1573,15 @@ export default function MatchView({ onOpenBuild, onOpenMaster }: Props) {
       return;
     }
     setBusy(true);
+    setFailure(null);
     setStatus("Loading match…");
     try {
       setReport(await api.fetchMatch(value));
       setMatchId(String(value));
       setStatus("");
     } catch (e) {
-      setStatus(String(e));
+      setStatus("");
+      setFailure({ error: e, retry: () => loadMatch(id) });
     } finally {
       setBusy(false);
     }
@@ -1589,12 +1594,14 @@ export default function MatchView({ onOpenBuild, onOpenMaster }: Props) {
       return;
     }
     setBusy(true);
+    setFailure(null);
     setStatus("Loading match history…");
     try {
       setHistory(await api.matchHistory(id));
       setStatus("");
     } catch (e) {
-      setStatus(String(e));
+      setStatus("");
+      setFailure({ error: e, retry: loadHistory });
     } finally {
       setBusy(false);
     }
@@ -1607,6 +1614,7 @@ export default function MatchView({ onOpenBuild, onOpenMaster }: Props) {
       return;
     }
     setBusy(true);
+    setFailure(null);
     setStatus("Analyzing the last 10 matches… the first time this downloads each of them.");
     try {
       setTrend(await api.analyzeHistory(id, 10));
@@ -1614,7 +1622,8 @@ export default function MatchView({ onOpenBuild, onOpenMaster }: Props) {
       setShowDeaths(false);
       setStatus("");
     } catch (e) {
-      setStatus(String(e));
+      setStatus("");
+      setFailure({ error: e, retry: analyze });
     } finally {
       setBusy(false);
     }
@@ -1627,6 +1636,7 @@ export default function MatchView({ onOpenBuild, onOpenMaster }: Props) {
       return;
     }
     setBusy(true);
+    setFailure(null);
     setStatus("Studying the deaths of the last 10 matches… the first time this downloads each of them.");
     try {
       setDeaths(await api.deathTrend(id, 10));
@@ -1634,7 +1644,8 @@ export default function MatchView({ onOpenBuild, onOpenMaster }: Props) {
       setShowTrend(false);
       setStatus("");
     } catch (e) {
-      setStatus(String(e));
+      setStatus("");
+      setFailure({ error: e, retry: whyDie });
     } finally {
       setBusy(false);
     }
@@ -1642,12 +1653,14 @@ export default function MatchView({ onOpenBuild, onOpenMaster }: Props) {
 
   const findLocal = async () => {
     setBusy(true);
+    setFailure(null);
     setStatus("Reading Steam's cache…");
     try {
       setLocal(await api.findLocalMatches());
       setStatus("");
     } catch (e) {
-      setStatus(String(e));
+      setStatus("");
+      setFailure({ error: e, retry: findLocal });
     } finally {
       setBusy(false);
     }
@@ -1704,6 +1717,7 @@ export default function MatchView({ onOpenBuild, onOpenMaster }: Props) {
         </button>
         {status && <span className="status">{status}</span>}
       </div>
+      {failure && <ErrorNote error={failure.error} onRetry={failure.retry} />}
 
       <div className="match-body">
         {local && (

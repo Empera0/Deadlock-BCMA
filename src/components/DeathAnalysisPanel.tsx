@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { api, DeathAnalysis, DeathFix, DeathTrend, fmt } from "../api";
 import { clock } from "./MatchCharts";
+import ErrorNote from "./ErrorNote";
 
 const pct = (v: number) => `${fmt(v * 100, 0)}%`;
 
@@ -49,7 +50,7 @@ export default function DeathAnalysisPanel({ matchId, slot, hero }: { matchId: n
         <button disabled={busy} onClick={run}>
           {busy ? "Studying the deaths…" : `Why did ${hero} die?`}
         </button>
-        {error && <div className="error">{error}</div>}
+        <ErrorNote error={error} onRetry={run} />
       </div>
     );
   }

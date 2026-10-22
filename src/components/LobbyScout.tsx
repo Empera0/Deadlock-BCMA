@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { api, fmt, Hero, LiveMatch, Scout } from "../api";
+import ErrorNote from "./ErrorNote";
 
 function PlayerCard({ s, icon, myLane, me }: { s: Scout; icon?: string; myLane: number; me: boolean }) {
   return (
@@ -47,6 +48,7 @@ function PlayerCard({ s, icon, myLane, me }: { s: Scout; icon?: string; myLane: 
 export default function LobbyScout({ live, heroes }: { live: LiveMatch; heroes: Hero[] }) {
   const [scouts, setScouts] = useState<Scout[] | null>(null);
   const [error, setError] = useState("");
+  const [attempt, setAttempt] = useState(0);
   useEffect(() => {
     let stale = false;
     setScouts(null);
@@ -58,14 +60,14 @@ export default function LobbyScout({ live, heroes }: { live: LiveMatch; heroes: 
     return () => {
       stale = true;
     };
-  }, [live.match_id, live.players]);
+  }, [live.match_id, live.players, attempt]);
   const icon = (id: number) => heroes.find((h) => h.id === id)?.icon;
 
   if (!live.players.length) return null;
   return (
     <div className="group lobby-scout">
       <h3>Lobby · match {live.match_id}</h3>
-      {error && <div className="error">{error}</div>}
+      <ErrorNote error={error} onRetry={() => setAttempt((a) => a + 1)} />
       {!scouts && !error && <p className="muted">Looking up the players…</p>}
       {scouts && (
         <div className="lobby-teams">

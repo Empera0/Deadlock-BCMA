@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { api, Build, fmt, OrderReport, Sheet } from "../api";
+import ErrorNote from "./ErrorNote";
 
 const ROMAN = ["", "I", "II", "III"];
 
@@ -37,7 +38,7 @@ export default function AbilityOrderPanel({ build, sheet, onTiers }: { build: Bu
           {busy ? "Working…" : report ? "Again" : "Work it out"}
         </button>
       </h3>
-      {error && <div className="error">{error}</div>}
+      <ErrorNote error={error} onRetry={run} />
       {!report && !error && <p className="muted">Which upgrade to put each ability point into with this build, and what top players do.</p>}
       {report && (
         <>

@@ -5,6 +5,7 @@ import LobbyScout from "./LobbyScout";
 import { CONDEBUG_HELP, findLiveMatch, savedAccount } from "../live";
 import { readSetting, SETTINGS, useSetting } from "../settings";
 import SuggestPanel from "./SuggestPanel";
+import ErrorNote from "./ErrorNote";
 
 interface Props {
   heroes: Hero[];
@@ -63,6 +64,7 @@ function PopularPanel({ hero, onUse }: { hero: Hero; onUse: Props["onUse"] }) {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [counter, setCounter] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
   useEffect(() => {
     setBusy(true);
     setError("");
@@ -75,10 +77,10 @@ function PopularPanel({ hero, onUse }: { hero: Hero; onUse: Props["onUse"] }) {
         setError(String(e));
       })
       .finally(() => setBusy(false));
-  }, [hero.id]);
+  }, [hero.id, attempt]);
 
   if (busy) return <p className="muted">Reading what players build with {hero.name}…</p>;
-  if (error) return <div className="error">{error}</div>;
+  if (error) return <ErrorNote error={error} onRetry={() => setAttempt((a) => a + 1)} />;
   if (!report) return null;
   const b = report.build;
   const picked = b.situational.find((s) => s.item === counter);
@@ -586,7 +588,7 @@ function MasterPanel({
           {liveNote && <span className="muted">{liveNote}</span>}
         </div>
       </div>
-      {error && <div className="error">{error}</div>}
+      <ErrorNote error={error} onRetry={find} />
       {lastLive && <LobbyScout live={lastLive} heroes={heroes} />}
 
       {report && (

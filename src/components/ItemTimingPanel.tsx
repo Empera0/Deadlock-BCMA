@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api, fmt, ItemTimingReport } from "../api";
 import { clock } from "./MatchCharts";
+import ErrorNote from "./ErrorNote";
 
 const TONE: Record<string, string> = { early: "good", "on time": "good", late: "info", "very late": "bad" };
 
@@ -8,6 +9,7 @@ const TONE: Record<string, string> = { early: "good", "on time": "good", late: "
 export default function ItemTimingPanel({ matchId, slot, hero }: { matchId: number; slot: number; hero: string }) {
   const [report, setReport] = useState<ItemTimingReport | null>(null);
   const [error, setError] = useState("");
+  const [attempt, setAttempt] = useState(0);
   useEffect(() => {
     let stale = false;
     setReport(null);
@@ -19,12 +21,12 @@ export default function ItemTimingPanel({ matchId, slot, hero }: { matchId: numb
     return () => {
       stale = true;
     };
-  }, [matchId, slot]);
+  }, [matchId, slot, attempt]);
 
   return (
     <div className="group">
       <h3>Against top players</h3>
-      {error && <div className="error">{error}</div>}
+      <ErrorNote error={error} onRetry={() => setAttempt((a) => a + 1)} />
       {!report && !error && <div className="muted">Reading when top {hero} players buy each item…</div>}
       {report && (
         <>

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { api, Build, fmt, Hero, Item, PowerPoint, Sheet, Stat } from "../api";
 import { readShareCode } from "../share";
+import ErrorNote from "./ErrorNote";
 
 const STEP = 1000;
 
@@ -67,6 +68,7 @@ export default function ComparePanel({ heroes, items, build, sheet }: { heroes: 
     api.listBuilds().then(setSaved).catch(() => setSaved([]));
   }, []);
 
+  const [attempt, setAttempt] = useState(0);
   useEffect(() => {
     if (!other) return;
     let stale = false;
@@ -86,7 +88,7 @@ export default function ComparePanel({ heroes, items, build, sheet }: { heroes: 
     return () => {
       stale = true;
     };
-  }, [other, build, sheet.souls, items]);
+  }, [other, build, sheet.souls, items, attempt]);
 
   const loadSaved = (name: string) => {
     if (!name) return;
@@ -144,7 +146,7 @@ export default function ComparePanel({ heroes, items, build, sheet }: { heroes: 
             Load
           </button>
         </div>
-        {error && <div className="error">{error}</div>}
+        <ErrorNote error={error} onRetry={() => setAttempt((a) => a + 1)} />
         {!other && <p className="muted">Pick a saved build or paste a friend's build code to set it against this one.</p>}
       </div>
 

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { api, Build, fmt, Hero, Suggestions } from "../api";
+import ErrorNote from "./ErrorNote";
 
 interface Props {
   hero: Hero;
@@ -64,7 +65,7 @@ export default function SuggestPanel({ hero, build, souls, onUse }: Props) {
         <button disabled={busy || styles.length === 0} onClick={make}>
           {busy ? "Working…" : `Put builds together at ${fmt(souls)} souls`}
         </button>
-        {error && <div className="error">{error}</div>}
+        <ErrorNote error={error} onRetry={make} />
         {result && made !== key && <p className="muted">The builds below were made for different souls, upgrades, target or playstyles.</p>}
       </div>
 

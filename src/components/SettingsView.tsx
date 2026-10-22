@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { api, ConsoleState } from "../api";
 import { CONDEBUG_HELP } from "../live";
 import { accountFrom, RANKS, SETTINGS, useSetting } from "../settings";
+import ErrorNote from "./ErrorNote";
 import { DAMAGES, FOCUSES } from "./GeneratorView";
 
 /** What the player sets once: their account, the defaults of each screen, and what runs in the background. */
@@ -57,7 +58,7 @@ export default function SettingsView({ version, fetchedAt, onRefresh, onGuide }:
 
       <section className="group">
         <h3>The game's console log</h3>
-        {logError && <div className="error">{logError}</div>}
+        <ErrorNote error={logError} onRetry={readLog} />
         {log && log.found && (
           <div className="insight good">
             <strong>Found</strong>

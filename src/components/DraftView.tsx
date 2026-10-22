@@ -3,6 +3,7 @@ import { findLiveMatch } from "../live";
 import { RANKS, SETTINGS, useSetting } from "../settings";
 import LobbyScout from "./LobbyScout";
 import { api, LiveMatch, DraftPick, DraftReason, DraftReport, fmt, Hero, MatchPreset } from "../api";
+import ErrorNote from "./ErrorNote";
 
 
 const TEAM_SIZE = 6;
@@ -79,6 +80,7 @@ export default function DraftView({ heroes, onPlan }: { heroes: Hero[]; onPlan: 
   const placed = new Set([...teams.allies, ...teams.enemies, ...teams.banned]);
 
   // The statistics are cached, so the draft is worked out again on every change.
+  const [attempt, setAttempt] = useState(0);
   useEffect(() => {
     let stale = false;
     const timer = setTimeout(() => {
@@ -94,7 +96,7 @@ export default function DraftView({ heroes, onPlan }: { heroes: Hero[]; onPlan: 
       stale = true;
       clearTimeout(timer);
     };
-  }, [teams, lane, badge, account]);
+  }, [teams, lane, badge, account, attempt]);
 
   const add = (id: number) => {
     if (placed.has(id)) return;
@@ -228,7 +230,7 @@ export default function DraftView({ heroes, onPlan }: { heroes: Hero[]; onPlan: 
 
         <div className="draft-right">
           {live && <LobbyScout live={live} heroes={heroes} />}
-          {error && <div className="error">{error}</div>}
+          <ErrorNote error={error} onRetry={() => setAttempt((a) => a + 1)} />
           {report && (
             <>
               {report.team_rate !== null && (
