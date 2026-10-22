@@ -2,6 +2,18 @@
 
 All notable changes to Deadlock BCMA are listed here. Versions follow [semantic versioning](https://semver.org).
 
+## [0.2.48] – 2026-10-22
+
+This release adds a guide to every screen and fixes spirit builds that came out full of gun items.
+
+### Added
+
+1. **Guide.** A guide says how to use each screen step by step: getting started, the Build maker, the Build generator and Master builder, Draft, Match analysis, and the setup (`-condebug`, the Steam account ID, sharing matches). It opens on the first start, from the Guide button at the bottom of the side bar, and from the **?** beside each screen's title, at that screen.
+
+### Fixed
+
+1. **Spirit builds with gun items.** A spirit build was measured with the shooting counted in full, so heroes whose abilities hit softly got gun items: Shiv got Titanic Magazine, Swift Striker and Glass Cannon. The shooting and melee now count at a quarter, about the gun's share of a spirit build, while abilities count in full whatever damage they deal. Over all 44 heroes, those with four or more weapon items among the twelve best for a spirit build go from 21 to 6; the ones left are heroes whose abilities grow with weapon damage, such as Venator and Rat King.
+
 ## [0.2.47] – 2026-10-22
 
 This release judges builds by team fights: area abilities count for every enemy they hit, measured on match replays, and stuns count for the time they hold the enemy. The death study becomes a duel, and finished matches can be shared with deadlock-api.
@@ -503,6 +515,7 @@ This release adds the **Build generator**, with builds read from top-ranked matc
   - trends across your last matches.
 - Windows installer with a desktop shortcut and automatic updates from GitHub releases.
 
+[0.2.48]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.47...v0.2.48
 [0.2.47]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.46...v0.2.47
 [0.2.46]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.45...v0.2.46
 [0.2.45]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.44...v0.2.45
