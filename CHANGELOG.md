@@ -2,6 +2,15 @@
 
 All notable changes to Deadlock BCMA are listed here. Versions follow [semantic versioning](https://semver.org).
 
+## [0.2.49] – 2026-10-23
+
+This release holds every item you bought against the minute top players of your hero buy it.
+
+### Added
+
+1. **Against top players.** A new section of Match analysis, under Build timing: each item the player bought, against when top players of the hero buy it (the last 14 days, Ascendant and up): their median minute and the middle half of their purchases, and whether it came early, on time, late or very late. Items most top players buy that the player never did, nor anything built on them, are listed, and a summary says how the big items came. Wins then shows how much more often top players who bought the item around the same minute won; it follows how the match was going as much as the item. Items sold again within 30 seconds are misclicks and left out.
+2. **Items rushed ahead of their time.** A counter bought early takes the souls of the items top players buy before it, so the items after it come later without any souls being lost. For each purchase, the souls that went before it to items bought ahead of their time are turned into minutes at your own soul income then, shown under the item, and taken out before it is called late. An upgrade counts only what it cost on top of its components.
+
 ## [0.2.48] – 2026-10-22
 
 This release adds a guide to every screen and fixes spirit builds that came out full of gun items.
@@ -515,6 +524,7 @@ This release adds the **Build generator**, with builds read from top-ranked matc
   - trends across your last matches.
 - Windows installer with a desktop shortcut and automatic updates from GitHub releases.
 
+[0.2.49]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.48...v0.2.49
 [0.2.48]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.47...v0.2.48
 [0.2.47]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.46...v0.2.47
 [0.2.46]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.45...v0.2.46
