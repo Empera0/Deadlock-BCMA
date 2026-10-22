@@ -909,6 +909,9 @@ fn the_console_log_names_the_match_and_the_account() {
     assert_eq!((m.match_id, m.account_id), (Some(222), Some(123456)));
     let ended = engine::matches::console_match(&format!("{log}[Lobby] Lobby 10 for Match 222 destroyed\n"));
     assert_eq!(ended.match_id, None);
+    // Both matches are over: their lobbies were destroyed after they were created.
+    assert_eq!(m.finished, vec![111]);
+    assert_eq!(ended.finished, vec![111, 222]);
     assert_eq!(engine::matches::console_match("nothing here").match_id, None);
 }
 

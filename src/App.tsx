@@ -10,6 +10,7 @@ import HeroPicker from "./components/HeroPicker";
 import MatchView from "./components/MatchView";
 import Shop from "./components/Shop";
 import StatsPanel from "./components/StatsPanel";
+import ShareMatches from "./components/ShareMatches";
 import UpdateBanner from "./components/UpdateBanner";
 import WhatsNew from "./components/WhatsNew";
 
@@ -226,6 +227,7 @@ export default function App() {
         <div className="nav-foot">
           <UpdateBanner />
           <WhatsNew />
+          <ShareMatches />
           <small>
             Game {data.client_version ?? "?"} · {new Date(data.fetched_at * 1000).toLocaleDateString("en-US")}
           </small>

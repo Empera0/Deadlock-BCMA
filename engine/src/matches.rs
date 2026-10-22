@@ -3484,6 +3484,8 @@ pub struct ConsoleMatch {
     pub match_id: Option<u64>,
     /// The account signed in to the game.
     pub account_id: Option<u64>,
+    /// Matches whose lobby was created and then destroyed: played to the end (or left), oldest first.
+    pub finished: Vec<u64>,
 }
 
 /// The number that follows `prefix` in `line`.
@@ -3507,6 +3509,9 @@ pub fn console_match(log: &str) -> ConsoleMatch {
                 out.match_id = Some(id);
             } else if line.contains("destroyed") && out.match_id == Some(id) {
                 out.match_id = None;
+                if !out.finished.contains(&id) {
+                    out.finished.push(id);
+                }
             }
         }
     }

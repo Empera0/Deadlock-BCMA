@@ -662,6 +662,31 @@ async fn console_match() -> Result<ConsoleState, String> {
     .map_err(|e| e.to_string())
 }
 
+/// What the statistics service holds of a finished match once it is shared: its salts, which let anyone read its
+/// metadata and, when Valve kept one, its replay.
+#[derive(serde::Serialize)]
+struct Shared {
+    match_id: u64,
+    metadata: bool,
+    replay: bool,
+}
+
+/// Shares a finished match with the statistics service: asking for its salts makes the service fetch them from
+/// Steam and keep them, so the match and its replay can be read by anyone. The match's metadata is then downloaded
+/// and kept, as the Match analysis screen would.
+#[tauri::command]
+async fn share_match(app: AppHandle, match_id: u64) -> Result<Shared, String> {
+    let url = format!("{MATCH_API}/matches/{match_id}/salts");
+    let salts = tauri::async_runtime::spawn_blocking(move || get(&url, "The match is not known yet.")).await.map_err(|e| e.to_string())??;
+    let v: serde_json::Value = serde_json::from_str(&salts).map_err(|e| format!("The statistics service answered in an unexpected form: {e}"))?;
+    let has = |key: &str| v.get(key).and_then(serde_json::Value::as_u64).is_some();
+    let shared = Shared { match_id, metadata: has("metadata_salt"), replay: has("replay_salt") };
+    if shared.metadata {
+        let _ = match_json(&app, match_id).await;
+    }
+    Ok(shared)
+}
+
 /// Every player of a match being played, with team, hero and lane, from the statistics service's live query: it
 /// spectates the match and reads its broadcast, which takes about a minute the first time.
 #[tauri::command]
@@ -949,6 +974,7 @@ pub fn run() {
             live_match,
             console_match,
             match_teams,
+            share_match,
             scout_lobby,
             ability_order,
             match_history,

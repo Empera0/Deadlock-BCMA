@@ -366,6 +366,15 @@ export interface ConsoleState {
   found: boolean;
   match_id: number | null;
   account_id: number | null;
+  /** Matches the log shows created and then ended, oldest first. */
+  finished: number[];
+}
+
+/** A finished match shared with the statistics service: whether its metadata and replay can now be read. */
+export interface SharedMatch {
+  match_id: number;
+  metadata: boolean;
+  replay: boolean;
 }
 
 export interface DraftReason {
@@ -501,6 +510,7 @@ export const api = {
   deathTrend: (accountId: string, count: number) => invoke<DeathTrend>("death_trend", { accountId, count }),
   liveMatch: (accountId: string) => invoke<LiveMatch>("live_match", { accountId }),
   consoleMatch: () => invoke<ConsoleState>("console_match"),
+  shareMatch: (matchId: number) => invoke<SharedMatch>("share_match", { matchId }),
   matchTeams: (matchId: number, accountId: string) => invoke<LiveMatch>("match_teams", { matchId, accountId }),
   scoutLobby: (players: LivePlayer[]) => invoke<Scout[]>("scout_lobby", { players }),
   adviseBuild: (build: Build, style: string) => invoke<Advice>("advise_build", { build, style }),
