@@ -1,0 +1,62 @@
+# Checks every push and pull request: the engine's tests, the frontend build, and that the Tauri app compiles
+# on Windows, where it ships. The release workflow builds the installer; this one only says whether it would.
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  engine:
+    name: Engine tests
+    runs-on: ubuntu-latest
+    env:
+      CARGO_TARGET_DIR: ${{ github.workspace }}/target
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: ". -> target"
+          key: engine
+      - run: cargo test -p engine
+
+  frontend:
+    name: Frontend build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+
+  app:
+    name: App compiles (Windows)
+    runs-on: windows-latest
+    env:
+      # The local .cargo/config.toml points the build output at a folder on the developer's PC.
+      CARGO_TARGET_DIR: ${{ github.workspace }}/target
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: ". -> target"
+          key: app
+      - run: npm ci
+      # The app embeds the built frontend.
+      - run: npm run build
+      - run: cargo check -p deadlock-stat-calculator --all-targets
