@@ -2,6 +2,19 @@
 
 Uygulamanın Türkçe yenilik notları. Her sürümde neyin değiştiği, kısa ve sade.
 
+## [0.3.2] – 2026-10-28
+
+Kahraman seçimi ekranı artık istediğin rütbe aralığına bakıyor ve heroların birbiriyle uyumunu gösteriyor.
+
+### Eklenenler
+
+1. **Seçilen herolarla uyum.** Kahraman seçimi ekranında yeni bir tablo: eklediğin her hero için diğer her heronun onunla birlikteyken (takım arkadaşı) ya da ona karşı (rakip) nasıl gittiği. Heroların kendi gücüyle açıklanmayan farklar yeşil ve kırmızı. Tablodaki bir heroya tıklayınca eklenir. Önerilen seçimleri değiştirmez, ayrıca gösterilir.
+2. **Rütbe aralığı.** Seçim ekranı, seçtiğin rütbe aralığındaki (şundan şuna) maçlara bakar. Kahraman seçimi ekranında ya da Ayarlar'da varsayılan olarak seçilir. Kendi maçlarına hiç ihtiyacı yoktu; hesabın sadece her herodaki kendi sonucunu ekler.
+
+### Düzeltilenler
+
+1. Her hero seçime eklenebiliyor. Seçilen rütbelerde az maçı olan herolar gizleniyordu; artık sadece önerilen seçimlere girmiyorlar.
+
 ## [0.3.1] – 2026-10-28
 
 Uygulama artık Türkçe konuşuyor.

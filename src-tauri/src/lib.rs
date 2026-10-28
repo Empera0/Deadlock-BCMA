@@ -294,7 +294,7 @@ async fn draft_picks(
     let data = state.data.read().unwrap().clone();
     let cache = Cache::new(&app, &data)?;
     // A rank range: from `badge` up, and up to `max_badge` when one is given.
-    let upto = |query: &str| -> String {
+    let upto = move |query: &str| -> String {
         match max_badge {
             Some(max) if query.is_empty() => format!("max_average_badge={max}"),
             Some(max) => format!("{query}&max_average_badge={max}"),

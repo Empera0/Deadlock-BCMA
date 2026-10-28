@@ -2,6 +2,19 @@
 
 All notable changes to Deadlock BCMA are listed here. Versions follow [semantic versioning](https://semver.org).
 
+## [0.3.2] – 2026-10-28
+
+The Draft screen reads any rank range and shows how heroes fit together.
+
+### Added
+
+1. **Fit with the placed heroes.** A table on the Draft screen: for each hero you place, how every other hero has done beside it (an ally) or against it (an enemy), and which of those results the heroes' own win rates do not explain. Click a hero in it to add it. Shown apart from the picks, which it does not change.
+2. **Rank range.** The draft reads matches from a rank range you choose (from and to), on the Draft screen or as a default in Settings. It never needed your own matches; your account only adds your record on each hero.
+
+### Fixed
+
+1. Every hero can be placed in the draft. Heroes with few matches in the chosen ranks were hidden; now they are only left out of the suggested picks.
+
 ## [0.3.1] – 2026-10-28
 
 This release speaks Turkish: the whole app, the engine's sentences, and, if you like, the game's Turkish names.
@@ -558,6 +571,7 @@ This release adds the **Build generator**, with builds read from top-ranked matc
   - trends across your last matches.
 - Windows installer with a desktop shortcut and automatic updates from GitHub releases.
 
+[0.3.2]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.3.1...v0.3.2
 [0.3.1]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.49...v0.3.0
 [0.2.49]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.48...v0.2.49
