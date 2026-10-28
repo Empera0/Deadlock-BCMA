@@ -4644,3 +4644,59 @@ header.settings {
 .replay-status td {
   background: color-mix(in srgb, var(--danger) 8%, transparent);
 }
+
+/* How every hero fares with and against the placed heroes */
+.draft-fit-wrap {
+  max-height: 420px;
+  overflow: auto;
+}
+.draft-fit {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 12px;
+}
+.draft-fit th {
+  position: sticky;
+  top: 0;
+  background: var(--panel);
+  padding: 2px 4px;
+  font-weight: 500;
+}
+.draft-fit th img {
+  display: block;
+  width: 26px;
+  height: 26px;
+  margin: 0 auto;
+  border-radius: 4px;
+}
+.draft-fit th.ally img {
+  outline: 2px solid var(--vitality);
+}
+.draft-fit th.enemy img {
+  outline: 2px solid var(--danger);
+}
+.draft-fit td {
+  padding: 1px 4px;
+  text-align: center;
+  border-bottom: 1px solid var(--line);
+}
+.draft-fit td:first-child {
+  text-align: left;
+}
+.draft-fit td:first-child button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 1px 4px;
+}
+.draft-fit td:first-child img {
+  width: 20px;
+  height: 20px;
+  border-radius: 3px;
+}
+.draft-fit tr.ally td:first-child button {
+  color: var(--vitality);
+}
+.draft-fit th img {
+  background: var(--panel-2);
+}

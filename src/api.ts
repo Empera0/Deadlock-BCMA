@@ -464,6 +464,21 @@ export interface DraftReport {
   threats: { hero_id: number; name: string; icon: string; edge: number; reasons: DraftReason[] }[];
   team_rate: number | null;
   notes: string[];
+  /** Every placed hero, and how each other hero fares with it (an ally) or against it (an enemy). */
+  fits: DraftFocus[];
+}
+
+export interface DraftFit {
+  hero_id: number;
+  rate: number | null;
+  matches: number;
+  points: number;
+}
+
+export interface DraftFocus {
+  hero_id: number;
+  ally: boolean;
+  fits: DraftFit[];
 }
 
 export interface AdviceMove {
@@ -561,8 +576,8 @@ export const api = {
   suggestBuilds: (build: Build, styles: string[]) => call<Suggestions>("suggest_builds", { build, styles }),
   rankNext: (build: Build, metric: string, conditional: boolean) =>
     call<Ranked[]>("rank_next", { build, metric, conditional }),
-  draftPicks: (allies: number[], enemies: number[], lane: number[], banned: number[], badge: number, accountId: string | null) =>
-    call<DraftReport>("draft_picks", { allies, enemies, lane, banned, badge, accountId }),
+  draftPicks: (allies: number[], enemies: number[], lane: number[], banned: number[], badge: number, maxBadge: number | null, accountId: string | null) =>
+    call<DraftReport>("draft_picks", { allies, enemies, lane, banned, badge, maxBadge, accountId }),
   abilityOrder: (build: Build) => call<OrderReport>("ability_order", { build }),
   deathTrend: (accountId: string, count: number) => call<DeathTrend>("death_trend", { accountId, count }),
   liveMatch: (accountId: string) => call<LiveMatch>("live_match", { accountId }),

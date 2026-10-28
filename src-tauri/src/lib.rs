@@ -288,21 +288,31 @@ async fn draft_picks(
     lane: Vec<u64>,
     banned: Vec<u64>,
     badge: u32,
+    max_badge: Option<u32>,
     account_id: Option<String>,
 ) -> Result<engine::draft::DraftReport, String> {
     let data = state.data.read().unwrap().clone();
     let cache = Cache::new(&app, &data)?;
+    // A rank range: from `badge` up, and up to `max_badge` when one is given.
+    let upto = |query: &str| -> String {
+        match max_badge {
+            Some(max) if query.is_empty() => format!("max_average_badge={max}"),
+            Some(max) => format!("{query}&max_average_badge={max}"),
+            None => query.to_string(),
+        }
+    };
     tauri::async_runtime::spawn_blocking(move || {
         prefetch(
             &cache,
             vec![
-                ("hero-stats", String::new(), badge, DRAFT_DAYS),
-                ("hero-counter-stats", "same_lane_filter=false".into(), badge, DRAFT_DAYS),
-                ("hero-counter-stats", "same_lane_filter=true".into(), badge, DRAFT_DAYS),
-                ("hero-ban-stats", String::new(), badge, DRAFT_DAYS),
+                ("hero-stats", upto(""), badge, DRAFT_DAYS),
+                ("hero-counter-stats", upto("same_lane_filter=false"), badge, DRAFT_DAYS),
+                ("hero-counter-stats", upto("same_lane_filter=true"), badge, DRAFT_DAYS),
+                ("hero-ban-stats", upto(""), badge, DRAFT_DAYS),
+                ("hero-synergy-stats", upto("same_lane_filter=false"), badge, DRAFT_DAYS),
             ],
         );
-        let read = |endpoint: &str, query: &str| analytics_over(&cache, endpoint, query, badge, DRAFT_DAYS);
+        let read = |endpoint: &str, query: &str| analytics_over(&cache, endpoint, &upto(query), badge, DRAFT_DAYS);
         let account = match account_id.as_deref().map(str::trim).filter(|s| !s.is_empty()) {
             Some(text) => {
                 let id: u64 = text.parse().map_err(|_| "Enter a Steam account ID (numbers only)".to_string())?;
@@ -318,6 +328,7 @@ async fn draft_picks(
             heroes: parse(&read("hero-stats", "")?)?,
             counters: engine::draft::parse_counters(&read("hero-counter-stats", "same_lane_filter=false")?)?,
             lane_counters: engine::draft::parse_counters(&read("hero-counter-stats", "same_lane_filter=true")?)?,
+            synergies: engine::draft::parse_synergies(&read("hero-synergy-stats", "same_lane_filter=false")?)?,
             mine,
             bans: engine::draft::parse_bans(&read("hero-ban-stats", "")?)?,
         };

@@ -996,8 +996,8 @@ export const TR: Record<string, string> = {
   "No hero fits.": "Uyan kahraman yok.",
   "Enemy picks, the most dangerous first": "Rakip seçimleri, en tehlikeliden başlayarak",
   "{n}% of bans": "yasakların %{n} kadarı",
-  "Win rates from the last 30 days of matches at the chosen rank; your own record from your last 90 days. A pick counts its own win rate and its matchups against every enemy (and, in your lane, its lane results), weighted as fitted on 8,700 Ascendant+ matches: with these weights, drafts given 45% won 45% and drafts given 55% won 56%. Pairs of allies did not predict wins and are not counted. A draft moves a match by a few points at most.":
-    "Kazanma oranları seçilen rütbedeki son 30 günün maçlarından, kendi sonucun son 90 gününden. Bir seçim, kendi kazanma oranını ve her düşmana karşı eşleşmelerini (lane'inde ise lane sonuçlarını) sayar. Ağırlıklar 8.700 Ascendant+ maça göre ayarlandı: bu ağırlıklarla %45 verilen seçimler %45, %55 verilen seçimler %56 kazandı. Takım arkadaşı ikilileri galibiyeti tahmin etmedi ve sayılmaz. Bir seçim bir maçı en fazla birkaç puan değiştirir.",
+  "Win rates from the last 30 days of matches in the chosen ranks, from everyone who played them; your own record, only when an account is set, from your last 90 days. A pick counts its own win rate and its matchups against every enemy (and, in your lane, its lane results), weighted as fitted on 8,700 Ascendant+ matches: with these weights, drafts given 45% won 45% and drafts given 55% won 56%. Pairs of allies did not predict wins and are not counted in the picks; the fit table shows them apart. A draft moves a match by a few points at most.":
+    "Kazanma oranları seçilen rütbelerdeki son 30 günün maçlarından, o maçları oynayan herkesten. Kendi sonucun, sadece hesap ayarlıysa, son 90 gününden. Bir seçim, kendi kazanma oranını ve her düşmana karşı eşleşmelerini (lane'inde ise lane sonuçlarını) sayar. Ağırlıklar 8.700 Ascendant+ maça göre ayarlandı: bu ağırlıklarla %45 verilen seçimler %45, %55 verilen seçimler %56 kazandı. Takım arkadaşı ikilileri galibiyeti tahmin etmedi, o yüzden seçimlere sayılmaz; uyum tablosu onları ayrıca gösterir. Bir seçim bir maçı en fazla birkaç puan değiştirir.",
   "Builds for {hero}": "{hero} için build'ler",
   "These are not builds to play in a match.": "Bunlar maçta oynanacak build'ler değil.",
   "They are the items that push the hero's main stats as high as they can go, picked by the numbers alone. Please do not play these builds as they are. They can point you to items worth having in the builds you make, and for a newly released hero they give a general idea of what to buy for the late game.":
@@ -1206,4 +1206,21 @@ export const TR: Record<string, string> = {
   "Turkish (as in the Turkish game)": "Türkçe (Türkçe oyundaki gibi)",
   "The two are set apart: the app can speak Turkish while the names stay as the English game has them, or the other way round. Build codes work either way. The app starts again after a change.":
     "İkisi ayrı ayarlanır: uygulama Türkçe konuşurken adlar İngilizce oyundaki gibi kalabilir, ya da tersi. Build kodları iki durumda da çalışır. Değişiklikten sonra uygulama yeniden açılır.",
+
+  "Ranks from": "Rütbe aralığı:",
+  to: "ile",
+  "the lowest": "en düşük",
+  "the highest": "en yüksek",
+  "Win rate together, on the same team": "Aynı takımda birlikteyken kazanma oranı",
+  "Win rate against this enemy": "Bu düşmana karşı kazanma oranı",
+  with: "birlikte",
+  "Win rate points beyond what the heroes' own win rates make expected, added up": "Heroların kendi kazanma oranlarından beklenenin üstündeki puanlar, toplanmış",
+  Fit: "Uyum",
+  "Add {name} to the side you are adding to": "{name} heroyu şu an eklediğin tarafa ekle",
+  "{n} matches · {p} pts beyond expected": "{n} maç · beklenenden {p} puan",
+  "Fit with the placed heroes": "Seçilen herolarla uyum",
+  "Add heroes to either team: this table then shows how every other hero has done beside your allies and against the enemies.":
+    "Takımlardan birine hero ekle: bu tablo diğer her heronun senin takımındakilerle birlikte ve düşmanlara karşı nasıl gittiğini gösterir.",
+  "Each column is a placed hero: beside an ally, the win rate of the two together; against an enemy, the row hero's win rate into it. Green and red mark what the heroes' own win rates do not explain. Click a hero to add it.":
+    "Her sütun seçilen bir hero. Takım arkadaşında: ikisi birlikteyken kazanma oranı. Düşmanda: satırdaki heronun ona karşı kazanma oranı. Yeşil ve kırmızı, heroların kendi kazanma oranlarıyla açıklanmayan farkı gösterir. Eklemek için bir heroya tıkla.",
 };

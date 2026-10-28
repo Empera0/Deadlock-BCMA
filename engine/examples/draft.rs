@@ -12,6 +12,7 @@ fn main() {
         heroes: serde_json::from_str(&read("heroes.json")).unwrap(),
         counters: draft::parse_counters(&read("counters.json")).unwrap(),
         lane_counters: draft::parse_counters(&read("lane.json")).unwrap(),
+        synergies: std::fs::read_to_string(format!("{dir}/synergies.json")).map(|s| draft::parse_synergies(&s).unwrap()).unwrap_or_default(),
         mine: vec![],
         bans: draft::parse_bans(&read("bans.json")).unwrap(),
     };

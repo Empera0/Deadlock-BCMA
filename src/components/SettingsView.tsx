@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { api, ConsoleState } from "../api";
 import { CONDEBUG_HELP } from "../live";
 import { date, LANG, LANGUAGES, NAMES, setLang, setNames, t, tn } from "../i18n";
-import { accountFrom, RANKS, SETTINGS, useSetting } from "../settings";
+import { accountFrom, SETTINGS, useSetting } from "../settings";
+import RankRange from "./RankRange";
 import ErrorNote from "./ErrorNote";
 import { DAMAGES, FOCUSES } from "./GeneratorView";
 
@@ -11,7 +12,6 @@ export default function SettingsView({ version, fetchedAt, onRefresh, onGuide }:
   const [account, setAccount] = useSetting(SETTINGS.account);
   const [typed, setTyped] = useState(account);
   useEffect(() => setTyped(account), [account]);
-  const [badge, setBadge] = useSetting(SETTINGS.draftBadge);
   const [focus, setFocus] = useSetting(SETTINGS.masterFocus);
   const [damage, setDamage] = useSetting(SETTINGS.masterDamage);
   const [watch, setWatch] = useSetting(SETTINGS.watchLive);
@@ -116,16 +116,7 @@ export default function SettingsView({ version, fetchedAt, onRefresh, onGuide }:
       <section className="group">
         <h3>{t("Defaults")}</h3>
         <div className="fields">
-          <label className="field">
-            {t("Rank for the Draft screen")}
-            <select value={badge} onChange={(e) => setBadge(e.target.value)}>
-              {RANKS.map(([b, label]) => (
-                <option key={b} value={b}>
-                  {t(label)}
-                </option>
-              ))}
-            </select>
-          </label>
+          <RankRange />
           <label className="field">
             {t("Master builder role")}
             <select value={focus} onChange={(e) => setFocus(e.target.value)}>

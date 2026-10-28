@@ -4,8 +4,9 @@ import { useEffect, useState } from "react";
 export const SETTINGS = {
   /** The player's own Steam account ID. */
   account: "account-id",
-  /** The rank the Draft screen reads win rates at (lowest average badge). */
+  /** The ranks the Draft screen reads win rates at: the lowest average badge, and the highest ("" for no limit). */
   draftBadge: "draft-badge",
+  draftMaxBadge: "draft-max-badge",
   /** The Master builder's focus and damage to start with. */
   masterFocus: "master-focus",
   masterDamage: "master-damage",
@@ -18,21 +19,19 @@ export const SETTINGS = {
 export const DEFAULTS: Record<string, string> = {
   [SETTINGS.account]: "",
   [SETTINGS.draftBadge]: "101",
+  [SETTINGS.draftMaxBadge]: "",
   [SETTINGS.masterFocus]: "auto",
   [SETTINGS.masterDamage]: "auto",
   [SETTINGS.watchLive]: "0",
   [SETTINGS.shareMatches]: "1",
 };
 
-/** Ranks the statistics can be read at: the lowest average badge of the matches; translated where shown. */
-export const RANKS: [number, string][] = [
-  [0, "All ranks"],
-  [71, "Archon and above"],
-  [81, "Oracle and above"],
-  [91, "Phantom and above"],
-  [101, "Ascendant and above"],
-  [111, "Eternus"],
-];
+/** The ranks, by their badge tier (badge = tier × 10 + subrank 1–6); the names are the game's own, shown as they are (not translated where shown). */
+export const TIERS = ["Initiate", "Seeker", "Alchemist", "Arcanist", "Ritualist", "Emissary", "Archon", "Oracle", "Phantom", "Ascendant", "Eternus"];
+
+/** The lowest badge of a tier, and the highest. */
+export const tierFrom = (i: number) => (i + 1) * 10 + 1;
+export const tierTo = (i: number) => (i + 1) * 10 + 6;
 
 const EVENT = "bcma-setting";
 

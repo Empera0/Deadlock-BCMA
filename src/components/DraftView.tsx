@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { findLiveMatch } from "../live";
-import { RANKS, SETTINGS, useSetting } from "../settings";
+import { SETTINGS, useSetting } from "../settings";
+import RankRange from "./RankRange";
 import LobbyScout from "./LobbyScout";
-import { api, LiveMatch, DraftPick, DraftReason, DraftReport, fmt, Hero, MatchPreset } from "../api";
+import { api, LiveMatch, DraftFocus, DraftPick, DraftReason, DraftReport, fmt, Hero, MatchPreset } from "../api";
 import ErrorNote from "./ErrorNote";
 import { t } from "../i18n";
 
@@ -20,6 +21,70 @@ const SIDES: [Side, string][] = [
 ];
 
 const signed = (v: number, digits = 1) => `${v >= 0 ? "+" : "−"}${fmt(Math.abs(v), digits)}`;
+/** A fit smaller than this (in win rate points) is shown plain. */
+const FIT_PP = 0.5;
+
+/** How every other hero has done beside the placed allies and against the placed enemies, the best fit first. */
+function FitTable({ fits, byId, placed, onAdd }: { fits: DraftFocus[]; byId: Map<number, Hero>; placed: Set<number>; onAdd: (id: number) => void }) {
+  const rows = useMemo(() => {
+    const ids = new Set(fits.flatMap((f) => f.fits.map((x) => x.hero_id)));
+    const allies = new Set(fits.filter((f) => f.ally).map((f) => f.hero_id));
+    // The heroes still free, and the allies with each other; enemies and bans have no row.
+    return [...ids]
+      .filter((id) => byId.has(id) && (!placed.has(id) || allies.has(id)))
+      .map((id) => {
+        const cells = fits.map((f) => (f.hero_id === id ? null : (f.fits.find((x) => x.hero_id === id) ?? null)));
+        return { id, ally: allies.has(id), cells, total: cells.reduce((sum, c) => sum + (c?.points ?? 0), 0) };
+      })
+      .sort((a, b) => Number(b.ally) - Number(a.ally) || b.total - a.total);
+  }, [fits, byId, placed]);
+  return (
+    <div className="draft-fit-wrap">
+      <table className="draft-fit">
+        <thead>
+          <tr>
+            <th />
+            {fits.map((f) => (
+              <th key={f.hero_id} className={f.ally ? "ally" : "enemy"} title={f.ally ? t("Win rate together, on the same team") : t("Win rate against this enemy")}>
+                <img src={byId.get(f.hero_id)?.icon} alt="" />
+                <small>{f.ally ? t("with") : t("against")}</small>
+              </th>
+            ))}
+            <th title={t("Win rate points beyond what the heroes' own win rates make expected, added up")}>{t("Fit")}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r) => {
+            const h = byId.get(r.id)!;
+            const used = placed.has(r.id);
+            return (
+              <tr key={r.id} className={r.ally ? "ally" : ""}>
+                <td>
+                  <button className="ghost small" disabled={used} onClick={() => onAdd(r.id)} title={used ? h.name : t("Add {name} to the side you are adding to", { name: h.name })}>
+                    <img src={h.icon} alt="" />
+                    {h.name}
+                  </button>
+                </td>
+                {r.cells.map((c, i) => (
+                  <td
+                    key={fits[i].hero_id}
+                    className={c && c.points >= FIT_PP ? "good" : c && c.points <= -FIT_PP ? "bad" : "muted"}
+                    title={c?.rate != null ? t("{n} matches · {p} pts beyond expected", { n: fmt(c.matches), p: signed(c.points, 1) }) : undefined}
+                  >
+                    {c === null ? "" : c.rate === null ? "–" : `${fmt(c.rate, 0)}%`}
+                  </td>
+                ))}
+                <td className={r.total >= FIT_PP ? "good" : r.total <= -FIT_PP ? "bad" : "muted"}>
+                  <b>{signed(r.total, 1)}</b>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
 
 /** Reasons colored for the player's team: what helps an enemy hero is bad news. */
 function Reasons({ reasons, enemy = false }: { reasons: DraftReason[]; enemy?: boolean }) {
@@ -67,8 +132,10 @@ export default function DraftView({ heroes, onPlan }: { heroes: Hero[]; onPlan: 
   const [teams, setTeams] = useState<Record<Side, number[]>>({ allies: [], enemies: [], banned: [] });
   const [lane, setLane] = useState<number[]>([]);
   const [side, setSide] = useState<Side>("enemies");
-  const [badgeSetting, setBadgeSetting] = useSetting(SETTINGS.draftBadge);
+  const [badgeSetting] = useSetting(SETTINGS.draftBadge);
   const badge = Number(badgeSetting) || 0;
+  const [maxSetting] = useSetting(SETTINGS.draftMaxBadge);
+  const maxBadge = maxSetting ? Number(maxSetting) : null;
   const [account] = useSetting(SETTINGS.account);
   const [onlyMine, setOnlyMine] = useState(false);
   const [liveNote, setLiveNote] = useState("");
@@ -88,7 +155,7 @@ export default function DraftView({ heroes, onPlan }: { heroes: Hero[]; onPlan: 
       setBusy(true);
       setError("");
       api
-        .draftPicks(teams.allies, teams.enemies, lane, teams.banned, badge, account.trim() || null)
+        .draftPicks(teams.allies, teams.enemies, lane, teams.banned, badge, maxBadge, account.trim() || null)
         .then((r) => !stale && setReport(r))
         .catch((e) => !stale && setError(String(e)))
         .finally(() => !stale && setBusy(false));
@@ -97,7 +164,7 @@ export default function DraftView({ heroes, onPlan }: { heroes: Hero[]; onPlan: 
       stale = true;
       clearTimeout(timer);
     };
-  }, [teams, lane, badge, account, attempt]);
+  }, [teams, lane, badge, maxBadge, account, attempt]);
 
   const add = (id: number) => {
     if (placed.has(id)) return;
@@ -131,26 +198,13 @@ export default function DraftView({ heroes, onPlan }: { heroes: Hero[]; onPlan: 
     const mine = onlyMine ? picks.filter((p) => (p.mine?.[0] ?? 0) >= MY_HERO_MATCHES) : picks;
     return mine.slice(0, SHOWN);
   }, [report, onlyMine]);
-  // Heroes with too few matches to be in the game yet are left out once the statistics are in.
-  const playable = report ? new Set([...report.picks.map((p) => p.hero_id), ...placed]) : null;
-  const grid = heroes.filter((h) => (!playable || playable.has(h.id)) && (!query || h.name.toLowerCase().includes(query.toLowerCase())));
+  // Every hero can be placed; heroes with too few matches are only left out of the picks.
+  const grid = heroes.filter((h) => !query || h.name.toLowerCase().includes(query.toLowerCase()));
 
   return (
     <div className="draft-view">
       <div className="draft-bar">
-        <label className="field inline">
-          {t("Rank")}
-          <select
-            value={badge}
-            onChange={(e) => setBadgeSetting(e.target.value)}
-          >
-            {RANKS.map(([b, label]) => (
-              <option key={b} value={b}>
-                {t(label)}
-              </option>
-            ))}
-          </select>
-        </label>
+        <RankRange inline />
         <span className="muted" title={t("Your own record on each hero comes from this account. Set it in Settings.")}>
           {account.trim() ? t("Your account: {id}", { id: account.trim() }) : t("No account set: add it in Settings for your own record")}
         </span>
@@ -254,6 +308,20 @@ export default function DraftView({ heroes, onPlan }: { heroes: Hero[]; onPlan: 
               ))}
 
               <div className="group">
+                <h3>{t("Fit with the placed heroes")}</h3>
+                {report.fits.length === 0 ? (
+                  <p className="muted">{t("Add heroes to either team: this table then shows how every other hero has done beside your allies and against the enemies.")}</p>
+                ) : (
+                  <>
+                    <p className="muted">
+                      {t("Each column is a placed hero: beside an ally, the win rate of the two together; against an enemy, the row hero's win rate into it. Green and red mark what the heroes' own win rates do not explain. Click a hero to add it.")}
+                    </p>
+                    <FitTable fits={report.fits} byId={byId} placed={placed} onAdd={add} />
+                  </>
+                )}
+              </div>
+
+              <div className="group">
                 <h3>
                   {t("Best picks")}
                   {account.trim() && (
@@ -299,7 +367,7 @@ export default function DraftView({ heroes, onPlan }: { heroes: Hero[]; onPlan: 
               )}
 
               <p className="muted">
-                {t("Win rates from the last 30 days of matches at the chosen rank; your own record from your last 90 days. A pick counts its own win rate and its matchups against every enemy (and, in your lane, its lane results), weighted as fitted on 8,700 Ascendant+ matches: with these weights, drafts given 45% won 45% and drafts given 55% won 56%. Pairs of allies did not predict wins and are not counted. A draft moves a match by a few points at most.")}
+                {t("Win rates from the last 30 days of matches in the chosen ranks, from everyone who played them; your own record, only when an account is set, from your last 90 days. A pick counts its own win rate and its matchups against every enemy (and, in your lane, its lane results), weighted as fitted on 8,700 Ascendant+ matches: with these weights, drafts given 45% won 45% and drafts given 55% won 56%. Pairs of allies did not predict wins and are not counted in the picks; the fit table shows them apart. A draft moves a match by a few points at most.")}
               </p>
             </>
           )}

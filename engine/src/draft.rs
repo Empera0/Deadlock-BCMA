@@ -9,7 +9,7 @@
 //! The weights were fitted on 8,700 Ascendant+ matches against statistics from the 30 days before them: added up
 //! at full weight the factors made the predictions far too sure of themselves. With these weights the predicted
 //! chances match what happened (teams given 45% won 45%, teams given 55% won 56%). Pairs of allies did not predict
-//! wins at all and are left out. A draft decides little at this level: the best pick moves the chance by a few
+//! wins at all and are left out of the chances; how heroes fare beside and against the placed ones is shown apart. A draft decides little at this level: the best pick moves the chance by a few
 //! points.
 
 use std::collections::BTreeMap;
@@ -30,6 +30,8 @@ const W_COUNTER: f64 = 0.47;
 const W_LANE: f64 = 0.46;
 /// A hero needs this many matches in the window to be offered at all: fewer means it is not in the game yet.
 const MIN_HERO_MATCHES: u64 = 200;
+/// Matches of prior in the fit table, which shows what happened rather than what to expect: pulled far less.
+const PRIOR_SHOWN: f64 = 200.0;
 /// Factors smaller than this (in win rate points) are not listed as reasons.
 const NOTEWORTHY_PP: f64 = 0.1;
 /// Bans and reasons listed.
@@ -53,6 +55,8 @@ pub struct DraftData {
     pub counters: Vec<Pair>,
     /// Hero against enemy hero, when both were in the same lane.
     pub lane_counters: Vec<Pair>,
+    /// Two heroes on the same team: the team's wins.
+    pub synergies: Vec<Pair>,
     /// The player's own matches on each hero; empty without an account.
     pub mine: Vec<HeroStat>,
     /// How often each hero is banned.
@@ -125,6 +129,26 @@ pub struct Threat {
     pub reasons: Vec<Reason>,
 }
 
+/// How a hero fares beside or against one hero placed in the draft.
+#[derive(Debug, Clone, Serialize)]
+pub struct Fit {
+    pub hero_id: u64,
+    /// Win rate in those matches, percent; `None` without matches.
+    pub rate: Option<f64>,
+    pub matches: u64,
+    /// Win rate points beyond what the two heroes' own strengths make expected.
+    pub points: f64,
+}
+
+/// A hero placed in the draft and how every other hero fares with it (an ally) or against it (an enemy). Shown, not
+/// counted: pairs of allies did not predict wins.
+#[derive(Debug, Clone, Serialize)]
+pub struct Focus {
+    pub hero_id: u64,
+    pub ally: bool,
+    pub fits: Vec<Fit>,
+}
+
 #[derive(Debug, Clone, Serialize)]
 pub struct DraftReport {
     pub picks: Vec<Pick>,
@@ -134,6 +158,8 @@ pub struct DraftReport {
     pub team_rate: Option<f64>,
     /// What the allies' hero types say about the team (no frontline, all spirit damage, ...). Not counted.
     pub notes: Vec<String>,
+    /// Every placed ally and enemy, with how each other hero fares with or against it.
+    pub fits: Vec<Focus>,
 }
 
 fn logit(p: f64) -> f64 {
@@ -339,7 +365,42 @@ pub fn draft(data: &GameData, d: &DraftData, input: &DraftInput) -> DraftReport 
         .collect();
     threats.sort_by(|a, b| b.edge.total_cmp(&a.edge));
 
-    DraftReport { picks, bans, threats, team_rate, notes: team_notes(data, &input.allies) }
+    // Pairs on the same team, either way round.
+    let mut together: BTreeMap<(u64, u64), (u64, u64)> = BTreeMap::new();
+    for r in d.synergies.iter().filter(|r| r.matches > 0 && r.a != r.b) {
+        together.entry((r.a.min(r.b), r.a.max(r.b))).or_insert((r.wins, r.matches));
+    }
+    let fit = |hero: u64, row: Option<(u64, u64)>, expected: f64| match row {
+        Some((wins, n)) => Fit {
+            hero_id: hero,
+            rate: Some(wins as f64 / n as f64 * 100.0),
+            matches: n,
+            points: points(logit(shrunk(wins, n, sigmoid(expected), PRIOR_SHOWN)) - expected),
+        },
+        None => Fit { hero_id: hero, rate: None, matches: 0, points: 0.0 },
+    };
+    let placed = input.allies.iter().map(|h| (*h, true)).chain(input.enemies.iter().map(|h| (*h, false)));
+    let fits = placed
+        .map(|(focus, ally)| Focus {
+            hero_id: focus,
+            ally,
+            fits: data
+                .heroes
+                .iter()
+                .filter(|h| h.id != focus)
+                .map(|h| {
+                    let (a, b) = (m.strength(h.id).0, m.strength(focus).0);
+                    if ally {
+                        fit(h.id, together.get(&(h.id.min(focus), h.id.max(focus))).copied(), a + b)
+                    } else {
+                        fit(h.id, m.counters.get(&(h.id, focus)).copied(), a - b)
+                    }
+                })
+                .collect(),
+        })
+        .collect();
+
+    DraftReport { picks, bans, threats, team_rate, notes: team_notes(data, &input.allies), fits }
 }
 
 fn rows(json: &str) -> Result<Vec<serde_json::Value>, String> {
@@ -355,6 +416,14 @@ pub fn parse_counters(json: &str) -> Result<Vec<Pair>, String> {
     Ok(rows(json)?
         .iter()
         .map(|r| Pair { a: field(r, "hero_id"), b: field(r, "enemy_hero_id"), wins: field(r, "wins"), matches: field(r, "matches_played") })
+        .collect())
+}
+
+/// The API's hero-synergy-stats rows.
+pub fn parse_synergies(json: &str) -> Result<Vec<Pair>, String> {
+    Ok(rows(json)?
+        .iter()
+        .map(|r| Pair { a: field(r, "hero_id1"), b: field(r, "hero_id2"), wins: field(r, "wins"), matches: field(r, "matches_played") })
         .collect())
 }
 
