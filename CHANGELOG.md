@@ -2,6 +2,19 @@
 
 All notable changes to Deadlock BCMA are listed here. Versions follow [semantic versioning](https://semver.org).
 
+## [0.3.1] – 2026-10-28
+
+This release speaks Turkish: the whole app, the engine's sentences, and, if you like, the game's Turkish names.
+
+### Added
+
+1. **Turkish.** Settings has a language: English or Türkçe. In Turkish, every screen, the guide, the errors and the engine's sentences (the match story, why you died, the build notes, the combo log) are written in plain Turkish, and numbers and dates are written the Turkish way. Item and ability descriptions and the names of their values come from the game's own Turkish.
+2. **Names apart from the language.** Hero, item and ability names have a setting of their own: as the English game names them, or as the Turkish game does (Haze is Duman, Metal Skin is Metal Deri). The app can speak Turkish with English names, or the other way round. Build codes work either way.
+
+### Changed
+
+1. **Automatic checks** now also fail when a text of the app has no Turkish, and the monthly refresh also takes the game's Turkish texts and names again.
+
 ## [0.3.0] – 2026-10-23
 
 This release reads your matches from their replays: the last seconds before each death and what each of your abilities caught. It adds a Settings screen, readable errors, automatic checks and a monthly refresh of the numbers the app measures.
@@ -545,6 +558,7 @@ This release adds the **Build generator**, with builds read from top-ranked matc
   - trends across your last matches.
 - Windows installer with a desktop shortcut and automatic updates from GitHub releases.
 
+[0.3.1]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.49...v0.3.0
 [0.2.49]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.48...v0.2.49
 [0.2.48]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.47...v0.2.48
