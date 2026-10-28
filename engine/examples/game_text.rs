@@ -1,6 +1,8 @@
 //! The game's own Turkish for its texts, read from the Turkish assets: item and ability descriptions and the labels
 //! of their values, by their English text. Hero, item and ability names are left out: the app keeps them as in the
-//! English data. `cargo run -p engine --example game_text -- <english assets dir> <turkish assets dir> <out json>`
+//! English data. With a fourth path, the game's Turkish names of heroes, items and abilities are written there too,
+//! as [class name, English name, Turkish name], for players who want the names as their game shows them.
+//! `cargo run -p engine --example game_text -- <english assets dir> <turkish assets dir> <out json> [names json]`
 //! with heroes.json and items.json in each directory.
 
 use std::collections::{BTreeMap, HashMap, HashSet};
@@ -60,4 +62,24 @@ fn main() {
         .collect();
     std::fs::write(&args[3], serde_json::to_string_pretty(&out).unwrap() + "\n").unwrap();
     println!("{} texts -> {}", out.len(), args[3]);
+    if let Some(path) = args.get(4) {
+        let mut rows: Vec<[&str; 3]> = vec![];
+        for item in &en.items {
+            if let Some(other) = tr.items.iter().find(|i| i.class_name == item.class_name) {
+                rows.push([&item.class_name, &item.name, &other.name]);
+            }
+        }
+        for hero in &en.heroes {
+            let Some(other) = tr.heroes.iter().find(|h| h.class_name == hero.class_name) else { continue };
+            rows.push([&hero.class_name, &hero.name, &other.name]);
+            for a in &hero.abilities {
+                if let Some(b) = other.abilities.iter().find(|b| b.class_name == a.class_name) {
+                    rows.push([&a.class_name, &a.name, &b.name]);
+                }
+            }
+        }
+        rows.retain(|r| !r[2].trim().is_empty());
+        std::fs::write(path, serde_json::to_string_pretty(&rows).unwrap() + "\n").unwrap();
+        println!("{} names -> {path}", rows.len());
+    }
 }

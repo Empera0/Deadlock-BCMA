@@ -1,6 +1,6 @@
 /** Turkish, looked up by the English text. Written plainly: short sentences, everyday words, and the game's own
- *  Turkish terms for its stats (Büyü, Silah, Dayanıklılık). Hero, item and ability names stay as in the game's English
- *  data, so builds, codes and searches match what players share. */
+ *  Turkish terms for its stats (Büyü, Silah, Dayanıklılık). Hero, item and ability names follow their own setting:
+ *  as the English game names them, or as the Turkish game does. */
 export const TR: Record<string, string> = {
   // App
   "Game data updated: new hero {names}": "Oyun verisi güncellendi: yeni kahraman {names}",
@@ -95,8 +95,6 @@ export const TR: Record<string, string> = {
   // Settings
   Language: "Dil",
   "Language of the app": "Uygulamanın dili",
-  "The app starts again in the new language. Hero, item and ability names stay as in the game's English data.":
-    "Uygulama yeni dille yeniden açılır. Kahraman, eşya ve yetenek adları oyunun İngilizce verisindeki gibi kalır.",
   "Your account": "Hesabın",
   "Your Steam account ID: the short number, or the long 7656… one. The Draft screen adds your own record on each hero with it, the live match and lobby scouting find you by it, and Match analysis opens on it. To look at someone else's matches, type their ID there instead.":
     "Steam hesap numaran: kısa numara ya da 7656… ile başlayan uzun numara. Kahraman seçimi ekranı bununla her kahramandaki kendi sonuçlarını da hesaba katar. Canlı maç ve lobi taraması seni bununla bulur. Maç analizi de bununla açılır. Başka birinin maçlarına bakmak istersen onun numarasını Maç analizi ekranına yaz.",
@@ -1202,4 +1200,10 @@ export const TR: Record<string, string> = {
   "Base Health": "Temel Sağlık",
   "Spirit Power": "Büyü Gücü",
   "How to use this screen": "Bu ekran nasıl kullanılır",
+
+  "Hero, item and ability names": "Kahraman, eşya ve yetenek adları",
+  "English (as in the English game)": "İngilizce (İngilizce oyundaki gibi)",
+  "Turkish (as in the Turkish game)": "Türkçe (Türkçe oyundaki gibi)",
+  "The two are set apart: the app can speak Turkish while the names stay as the English game has them, or the other way round. Build codes work either way. The app starts again after a change.":
+    "İkisi ayrı ayarlanır: uygulama Türkçe konuşurken adlar İngilizce oyundaki gibi kalabilir, ya da tersi. Build kodları iki durumda da çalışır. Değişiklikten sonra uygulama yeniden açılır.",
 };

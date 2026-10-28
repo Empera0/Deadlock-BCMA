@@ -26,6 +26,28 @@ export const LANG: Lang = readLang();
 /** The locale numbers and dates are written in. */
 export const LOCALE = LANG === "tr" ? "tr-TR" : "en-US";
 
+const NAMES_KEY = "game-names";
+
+/** The language hero, item and ability names are shown in, apart from the app's: as the English game names them, or
+ *  as the game names them in Turkish. It starts as the app's language. */
+export const NAMES: Lang = (() => {
+  try {
+    const v = localStorage.getItem(NAMES_KEY);
+    return v === "tr" || v === "en" ? v : LANG;
+  } catch {
+    return LANG;
+  }
+})();
+
+export function setNames(lang: Lang) {
+  try {
+    localStorage.setItem(NAMES_KEY, lang);
+  } catch {
+    /* Not kept: holds for this run only. */
+  }
+  window.location.reload();
+}
+
 export function setLang(lang: Lang) {
   try {
     localStorage.setItem(KEY, lang);

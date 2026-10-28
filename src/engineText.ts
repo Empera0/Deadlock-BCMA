@@ -1,6 +1,7 @@
-import { LANG } from "./i18n";
+import { LANG, NAMES } from "./i18n";
 import { PREFIXES, SENTENCES, WORDS } from "./locales/engine-tr";
 import GAME from "./locales/game-tr.json";
+import NAME_ROWS from "./locales/names-tr.json";
 
 /**
  * The engine writes its sentences in English, and also reads some of them back, so it keeps writing English. Its
@@ -10,7 +11,24 @@ import GAME from "./locales/game-tr.json";
  * A template is the engine's sentence with `{name}` for each part that changes. A part named `n`, `n1`, `n2`… is a
  * number and is written the Turkish way; any other part is put into Turkish on its own when it is a known word or
  * sentence, and kept as it is otherwise (hero and item names).
+ *
+ * Hero, item and ability names have a language of their own (NAMES): with Turkish names, the game's Turkish name takes
+ * the place of the English one, in the game data, in the engine's answers and inside its sentences, whatever the
+ * app's language. With an English app and Turkish names, the templates fill the English sentence again.
  */
+
+/** Sentences in Turkish. */
+const TEXT = LANG === "tr";
+
+/** The game's Turkish names: by class name, and by English name for the names inside sentences. */
+const byClass = new Map<string, string>();
+const byName = new Map<string, string>();
+if (NAMES === "tr") {
+  for (const [cls, en, tr] of NAME_ROWS as [string, string, string][]) {
+    byClass.set(cls, tr);
+    if (!byName.has(en)) byName.set(en, tr);
+  }
+}
 
 interface Rule {
   re: RegExp;
@@ -53,13 +71,14 @@ function firstWord(s: string): string {
 }
 
 function build() {
-  for (const [en, tr] of Object.entries(GAME as Record<string, string>)) exact.set(en, tr);
+  if (TEXT) for (const [en, tr] of Object.entries(GAME as Record<string, string>)) exact.set(en, tr);
   for (const [en, tr] of SENTENCES) {
     if (!en.includes("{")) {
-      exact.set(en, tr);
+      if (TEXT) exact.set(en, tr);
       continue;
     }
-    const rule = compile(en, tr);
+    // With English sentences the template fills the English again, with the names inside put into Turkish.
+    const rule = compile(en, TEXT ? tr : en);
     // Only a first word without a part in it can pick the template out.
     const head = /^\S+/.exec(en)?.[0] ?? "";
     const word = head.includes("{") ? "" : head;
@@ -69,13 +88,14 @@ function build() {
   for (const list of [...byWord.values(), open]) list.sort((a, b) => b.weight - a.weight);
 }
 
-if (LANG === "tr") build();
+if (TEXT || NAMES === "tr") build();
 
 /** Texts the templates did not cover in this run: the audit lists them. */
 export const missed = new Map<string, number>();
 
 /** A number as Turkish writes it: a comma for the decimal point, a dot between thousands. */
 function number(s: string): string {
+  if (!TEXT) return s;
   const sign = s.match(/^[−+-]/)?.[0] ?? "";
   const plain = s.slice(sign.length).replace(/,/g, "");
   const [whole, frac] = plain.split(".");
@@ -85,10 +105,15 @@ function number(s: string): string {
 
 /** A part of a sentence: a known word, a sentence of its own, a list of such, or a name kept as it is. */
 function part(s: string, depth: number): string {
-  const word = WORDS[s];
+  const named = byName.get(s);
+  if (named !== undefined) return named;
+  // "Violet's Abstract Landscape": a hero and one of its abilities.
+  const owned = byName.size ? /^(.+)'s (.+)$/.exec(s) : null;
+  if (owned && byName.has(owned[1]) && byName.has(owned[2])) return `${byName.get(owned[1])}: ${byName.get(owned[2])}`;
+  const word = TEXT ? WORDS[s] : undefined;
   if (word !== undefined) return word;
   // A time in seconds, "4.1s".
-  const seconds = /^([−+-]?\d+(?:\.\d+)?)s$/.exec(s);
+  const seconds = TEXT ? /^([−+-]?\d+(?:\.\d+)?)s$/.exec(s) : null;
   if (seconds) return `${number(seconds[1])} sn`;
   const template = match(s, depth + 1);
   if (template !== null) return template;
@@ -96,7 +121,7 @@ function part(s: string, depth: number): string {
     if (!s.includes(sep)) continue;
     const pieces = s.split(sep);
     const done = pieces.map((p) => part(p, depth + 1));
-    if (done.some((d, i) => d !== pieces[i])) return done.join(sep === " and " ? " ve " : sep === " or " ? " veya " : sep);
+    if (done.some((d, i) => d !== pieces[i])) return done.join(TEXT && sep === " and " ? " ve " : TEXT && sep === " or " ? " veya " : sep);
   }
   return text(s, depth + 1, false);
 }
@@ -141,6 +166,9 @@ const SPLITS = [/(\n)/, /((?<=[.!?])\s+)/, /(\s+·\s+)/, /((?<=;)\s+)/, /((?<=:)
 /** One text of the engine's in Turkish, or as it is when no template covers it. */
 function text(s: string, depth = 0, record = true, level = 0): string {
   if (depth > 24 || !/[A-Za-z]{2}/.test(s)) return s;
+  // A name, also as a label ("Haze:").
+  const named = byName.get(s) ?? (s.endsWith(":") && byName.has(s.slice(0, -1)) ? byName.get(s.slice(0, -1)) + ":" : undefined);
+  if (named !== undefined) return named;
   const whole = match(s, depth);
   if (whole !== null) return whole;
   // A sentence that ends with a full stop the template does not have, or the other way round.
@@ -202,7 +230,7 @@ const KEEP = new Set(["hero", "item", "class_name", "icon", "hero_icon", "key", 
 
 /** The engine's answer in the app's language: every text in it, at any depth. */
 export function translateDeep<T>(value: T): T {
-  if (LANG !== "tr") return value;
+  if (!TEXT && NAMES !== "tr") return value;
   return deep(value) as T;
 }
 
@@ -212,8 +240,11 @@ function deep(v: unknown): unknown {
   if (v && typeof v === "object") {
     const out: Record<string, unknown> = {};
     // The name of something the game defines (an item, a hero, an ability) stays as the game's data has it.
-    const defined = "class_name" in v;
-    for (const [k, x] of Object.entries(v)) out[k] = KEEP.has(k) || (defined && k === "name") ? x : deep(x);
+    const defined = typeof (v as { class_name?: unknown }).class_name === "string" ? (v as { class_name: string }).class_name : null;
+    for (const [k, x] of Object.entries(v)) {
+      if (defined !== null && k === "name") out[k] = byClass.get(defined) ?? x;
+      else out[k] = KEEP.has(k) ? x : deep(x);
+    }
     return out;
   }
   return v;
@@ -221,7 +252,7 @@ function deep(v: unknown): unknown {
 
 /** One text of the engine's in the app's language. */
 export function engineText(s: string): string {
-  return LANG === "tr" ? text(s) : s;
+  return TEXT || NAMES === "tr" ? text(s) : s;
 }
 
 /** The English an error was put into Turkish from: errors are sorted by their English words. */

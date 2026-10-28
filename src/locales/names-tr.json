@@ -1,0 +1,1967 @@
+[
+  [
+    "upgrade_close_range",
+    "Close Quarters",
+    "Yakın Mesafe"
+  ],
+  [
+    "upgrade_clip_size",
+    "Extended Magazine",
+    "Genişletilmiş Şarjör"
+  ],
+  [
+    "upgrade_extra_charge",
+    "Extra Charge",
+    "Ekstra Şarj"
+  ],
+  [
+    "upgrade_health",
+    "Extra Health",
+    "Ekstra Sağlık"
+  ],
+  [
+    "upgrade_endurance",
+    "Extra Regen",
+    "Ekstra Yenilenme"
+  ],
+  [
+    "upgrade_improved_spirit",
+    "Extra Spirit",
+    "Ekstra Büyü"
+  ],
+  [
+    "upgrade_improved_stamina",
+    "Extra Stamina",
+    "Ekstra Kuvvet"
+  ],
+  [
+    "upgrade_goose_egg",
+    "Golden Goose Egg",
+    "Altın Kaz Yumurtası"
+  ],
+  [
+    "upgrade_grit",
+    "Grit",
+    "Azim"
+  ],
+  [
+    "upgrade_headshot_booster",
+    "Headshot Booster",
+    "Kafadan Vuruş Güçlendiricisi"
+  ],
+  [
+    "upgrade_health_stimpak",
+    "Healing Rite",
+    "İyileştirme Ayini"
+  ],
+  [
+    "upgrade_high_velocity_mag",
+    "High-Velocity Rounds",
+    "Yüksek Hızlı Mermiler"
+  ],
+  [
+    "upgrade_lifestrike_gauntlets",
+    "Melee Lifesteal",
+    "Vampir Yumruklar"
+  ],
+  [
+    "upgrade_non_player_bonus",
+    "Monster Rounds",
+    "Anticanavar Mermileri"
+  ],
+  [
+    "upgrade_magic_burst",
+    "Mystic Burst",
+    "Mistik Patlama"
+  ],
+  [
+    "upgrade_magic_reach",
+    "Mystic Expansion",
+    "Mistik Genişleme"
+  ],
+  [
+    "upgrade_mystic_regeneration",
+    "Mystic Regeneration",
+    "Mistik Yenilenme"
+  ],
+  [
+    "upgrade_rapid_rounds",
+    "Rapid Rounds",
+    "Seri Atış"
+  ],
+  [
+    "upgrade_melee_rebuttal",
+    "Rebuttal",
+    "Karşı Saldırı"
+  ],
+  [
+    "upgrade_medic_bullets",
+    "Restorative Shot",
+    "Şifalı Atış"
+  ],
+  [
+    "upgrade_withering_whip",
+    "Rusted Barrel",
+    "Paslı Namlu"
+  ],
+  [
+    "upgrade_acolytes_glove",
+    "Spirit Strike",
+    "Büyülü Yumruk"
+  ],
+  [
+    "upgrade_sprint_booster",
+    "Sprint Boots",
+    "Hızlı Koşma Botları"
+  ],
+  [
+    "upgrade_active_reload",
+    "Active Reload",
+    "Aktif Şarjör Değiştirme"
+  ],
+  [
+    "upgrade_arcane_surge",
+    "Arcane Surge",
+    "Gizemli Dalgalanma"
+  ],
+  [
+    "upgrade_regenerating_bullet_shield",
+    "Battle Vest",
+    "Savaş Yeleği"
+  ],
+  [
+    "upgrade_vampire",
+    "Bullet Lifesteal",
+    "Mermi Can Çalması"
+  ],
+  [
+    "upgrade_bullet_resist_shredder",
+    "Bullet Resist Shredder",
+    "Mermi Direnci Kırıcı"
+  ],
+  [
+    "upgrade_cold_front",
+    "Cold Front",
+    "Soğuk Dalga"
+  ],
+  [
+    "upgrade_magic_tempo",
+    "Compress Cooldown",
+    "Kısa Dolum Süresi"
+  ],
+  [
+    "upgrade_debuff_reducer",
+    "Debuff Reducer",
+    "Zayıflatma Azaltıcı"
+  ],
+  [
+    "upgrade_arcane_extension",
+    "Duration Extender",
+    "Süre Uzatıcı"
+  ],
+  [
+    "upgrade_magic_shield",
+    "Enchanter's Emblem",
+    "Büyücü Amblemi"
+  ],
+  [
+    "upgrade_cardio_calibrator",
+    "Enduring Speed",
+    "Kalıcı Hız"
+  ],
+  [
+    "upgrade_fleetfoot_boots",
+    "Fleetfoot",
+    "Hızlı Adımlar"
+  ],
+  [
+    "upgrade_guardian_ward",
+    "Guardian Ward",
+    "Koruyucu Bariyer"
+  ],
+  [
+    "upgrade_healbane",
+    "Healbane",
+    "Şifakıran"
+  ],
+  [
+    "upgrade_healing_booster",
+    "Healing Booster",
+    "İyileştirme Güçlendirici"
+  ],
+  [
+    "upgrade_soaring_spirit",
+    "Improved Spirit",
+    "Geliştirilmiş Büyü"
+  ],
+  [
+    "upgrade_intensifying_clip",
+    "Intensifying Magazine",
+    "Şiddetlenen Şarjör"
+  ],
+  [
+    "upgrade_kinetic_sash",
+    "Kinetic Dash",
+    "Kinetik Atılma"
+  ],
+  [
+    "upgrade_long_range",
+    "Long Range",
+    "Uzun Menzil"
+  ],
+  [
+    "upgrade_melee_charge",
+    "Melee Charge",
+    "Yakın Dövüş Hücumu"
+  ],
+  [
+    "upgrade_crackshot",
+    "Mystic Shot",
+    "Mistik Atış"
+  ],
+  [
+    "upgrade_magic_slow",
+    "Mystic Slow",
+    "Mistik Yavaşlatma"
+  ],
+  [
+    "upgrade_magic_vulnerability",
+    "Mystic Vulnerability",
+    "Mistik Hassasiyet"
+  ],
+  [
+    "upgrade_pristine_emblem",
+    "Opening Rounds",
+    "Deşici Mermiler"
+  ],
+  [
+    "upgrade_quick_silver",
+    "Quicksilver Reload",
+    "Hızlı Şarjör Değiştirme"
+  ],
+  [
+    "upgrade_vex_barrier",
+    "Reactive Barrier",
+    "Reaktif Bariyer"
+  ],
+  [
+    "upgrade_rechargingbullets",
+    "Recharging Rush",
+    "Şarj Edici Mermiler"
+  ],
+  [
+    "upgrade_restorative_locket",
+    "Restorative Locket",
+    "Şifalı Madalyon"
+  ],
+  [
+    "upgrade_return_fire",
+    "Return Fire",
+    "İade-i Ateş"
+  ],
+  [
+    "upgrade_slowing_bullets",
+    "Slowing Bullets",
+    "Yavaşlatan Mermiler"
+  ],
+  [
+    "upgrade_containment",
+    "Slowing Hex",
+    "Yavaşlatma Büyüsü"
+  ],
+  [
+    "upgrade_health_stealing_magic",
+    "Spirit Lifesteal",
+    "Büyü Can Çalması"
+  ],
+  [
+    "upgrade_spirit_sap",
+    "Spirit Sap",
+    "Büyü Zayıflatma"
+  ],
+  [
+    "upgrade_spirit_bubble",
+    "Spirit Shielding",
+    "Büyü Kalkanı"
+  ],
+  [
+    "upgrade_tech_defense_shredders",
+    "Spirit Shredder",
+    "Büyü Parçalayan Mermiler"
+  ],
+  [
+    "upgrade_split_shot",
+    "Split Shot",
+    "Parçalı Atış"
+  ],
+  [
+    "upgrade_weapon_backstabber",
+    "Stalker",
+    "İz Sürücü"
+  ],
+  [
+    "upgrade_suppressor",
+    "Suppressor",
+    "Baskılayıcı"
+  ],
+  [
+    "upgrade_blitz_bullets",
+    "Swift Striker",
+    "Tempolu Atış"
+  ],
+  [
+    "upgrade_titan_round",
+    "Titanic Magazine",
+    "Devasa Şarjör"
+  ],
+  [
+    "upgrade_trophy_collector",
+    "Trophy Collector",
+    "Ganimet Avcısı"
+  ],
+  [
+    "upgrade_headshot_booster2",
+    "Weakening Headshot",
+    "Zayıflatan Kafadan Vuruş"
+  ],
+  [
+    "upgrade_weapon_shielding",
+    "Weapon Shielding",
+    "Silah Kalkanı"
+  ],
+  [
+    "upgrade_thermal_detonator",
+    "Alchemical Fire",
+    "Simya Alevi"
+  ],
+  [
+    "upgrade_bulletshredimbue",
+    "Ballistic Enchantment",
+    "Balistik Sihir"
+  ],
+  [
+    "upgrade_berserker",
+    "Berserker",
+    "Cinnetkâr"
+  ],
+  [
+    "upgrade_blood_tribute",
+    "Blood Tribute",
+    "Kanlı Haraç"
+  ],
+  [
+    "upgrade_improved_bullet_armor",
+    "Bullet Resilience",
+    "Mermi Dayanıklılığı"
+  ],
+  [
+    "upgrade_burst_fire",
+    "Burst Fire",
+    "Hızlı Atış"
+  ],
+  [
+    "upgrade_counterspell",
+    "Counterspell",
+    "Karşı Büyü"
+  ],
+  [
+    "upgrade_non_player_bonus_sacrifice",
+    "Cultist Sacrifice",
+    "Kült Kurbanı"
+  ],
+  [
+    "upgrade_rupture",
+    "Decay",
+    "Çürüme"
+  ],
+  [
+    "upgrade_greater_withering_whip",
+    "Disarming Hex",
+    "Etkisizleştirme Büyüsü"
+  ],
+  [
+    "upgrade_reduce_debuff_duration",
+    "Dispel Magic",
+    "Etki Geçirme Büyüsü"
+  ],
+  [
+    "upgrade_reinforcing_casings",
+    "Escalating Resilience",
+    "Artan Direnç"
+  ],
+  [
+    "upgrade_express_shot",
+    "Express Shot",
+    "Ekspres Atış"
+  ],
+  [
+    "upgrade_chonky",
+    "Fortitude",
+    "Metanet"
+  ],
+  [
+    "upgrade_fury_trance",
+    "Fury Trance",
+    "Öfke Transı"
+  ],
+  [
+    "upgrade_tech_range",
+    "Greater Expansion",
+    "Büyük Genişleme"
+  ],
+  [
+    "upgrade_headhunter",
+    "Headhunter",
+    "Kelle Avcısı"
+  ],
+  [
+    "upgrade_health_nova",
+    "Healing Nova",
+    "İyileştirme Dalgası"
+  ],
+  [
+    "upgrade_dps_aura",
+    "Heroic Aura",
+    "Kahramanlık Aurası"
+  ],
+  [
+    "upgrade_hollow_point_rounds",
+    "Hollow Point",
+    "Oyuklu Mermi"
+  ],
+  [
+    "upgrade_bullet_armor_reduction_aura",
+    "Hunter's Aura",
+    "Avcı Aurası"
+  ],
+  [
+    "upgrade_target_stun",
+    "Knockdown",
+    "Nakavt"
+  ],
+  [
+    "upgrade_boxing_glove",
+    "Lifestrike",
+    "İyileştiren Yumruk"
+  ],
+  [
+    "upgrade_rocket_booster",
+    "Majestic Leap",
+    "Görkemli Sıçrama"
+  ],
+  [
+    "upgrade_metal_skin",
+    "Metal Skin",
+    "Metal Deri"
+  ],
+  [
+    "upgrade_close_quarter_combat",
+    "Point Blank",
+    "Yakından Vuruş"
+  ],
+  [
+    "upgrade_resonant_healing",
+    "Radiant Regeneration",
+    "Parlak Yenilenme"
+  ],
+  [
+    "upgrade_rapid_recharge",
+    "Rapid Recharge",
+    "Hızlı Şarj"
+  ],
+  [
+    "upgrade_rescue_beam",
+    "Rescue Beam",
+    "Kurtarma Işını"
+  ],
+  [
+    "upgrade_cloaking_device_active",
+    "Shadow Weave",
+    "Gölge Pelerin"
+  ],
+  [
+    "upgrade_sharpshooter",
+    "Sharpshooter",
+    "Keskin Nişancı"
+  ],
+  [
+    "upgrade_targeted_silence",
+    "Silence Wave",
+    "Susturma Dalgası"
+  ],
+  [
+    "upgrade_spellslinger_headshots",
+    "Spirit Rend",
+    "Büyü Parçalama"
+  ],
+  [
+    "upgrade_tech_purge",
+    "Spirit Resilience",
+    "Büyü Dayanıklılığı"
+  ],
+  [
+    "upgrade_spirit_snatch",
+    "Spirit Snatch",
+    "Büyü Kapma"
+  ],
+  [
+    "upgrade_superior_stamina",
+    "Stamina Mastery",
+    "Kuvvet Ustalığı"
+  ],
+  [
+    "upgrade_cooldown_reduction",
+    "Superior Cooldown",
+    "Üstün Dolum Süresi"
+  ],
+  [
+    "upgrade_imbued_duration_extender",
+    "Superior Duration",
+    "Üstün Süre Uzatıcı"
+  ],
+  [
+    "upgrade_magic_storm",
+    "Surge of Power",
+    "Güç Artışı"
+  ],
+  [
+    "upgrade_magic_shock",
+    "Tankbuster",
+    "Tank Patlatan"
+  ],
+  [
+    "upgrade_chain_lightning",
+    "Tesla Bullets",
+    "Tesla Mermileri"
+  ],
+  [
+    "upgrade_tech_damage_pulse",
+    "Torment Pulse",
+    "Yayılan İşkence"
+  ],
+  [
+    "upgrade_toxic_bullets",
+    "Toxic Bullets",
+    "Toksik Mermiler"
+  ],
+  [
+    "upgrade_veil_walker",
+    "Veil Walker",
+    "Kozmik Seyahat"
+  ],
+  [
+    "upgrade_warp_stone",
+    "Warp Stone",
+    "Işınlanma Taşı"
+  ],
+  [
+    "upgrade_weighted_shots",
+    "Weighted Shots",
+    "Ağırlıklı Atışlar"
+  ],
+  [
+    "upgrade_arctic_blast",
+    "Arctic Blast",
+    "Kutup Patlaması"
+  ],
+  [
+    "upgrade_aprounds",
+    "Armor Piercer",
+    "Zırh Delen"
+  ],
+  [
+    "upgrade_boundless_spirit",
+    "Boundless Spirit",
+    "Sınırsız Büyü"
+  ],
+  [
+    "upgrade_capacitor",
+    "Capacitor",
+    "Kondansatör"
+  ],
+  [
+    "upgrade_cheat_death",
+    "Cheat Death",
+    "Kefen Yırtan"
+  ],
+  [
+    "upgrade_colossus",
+    "Colossus",
+    "Dev"
+  ],
+  [
+    "upgrade_banshee_slugs",
+    "Crippling Headshot",
+    "Sakatlayan Kafadan Vuruş"
+  ],
+  [
+    "upgrade_crushing_fists",
+    "Crushing Fists",
+    "Ezici Yumruklar"
+  ],
+  [
+    "upgrade_glitch",
+    "Cursed Relic",
+    "Lanetli Yadigâr"
+  ],
+  [
+    "upgrade_divine_barrier",
+    "Divine Barrier",
+    "İlahi Bariyer"
+  ],
+  [
+    "upgrade_diviners_kevlar",
+    "Diviner's Kevlar",
+    "Kâhin Zırhı"
+  ],
+  [
+    "upgrade_ability_power_shard",
+    "Echo Shard",
+    "Yankı Parçası"
+  ],
+  [
+    "upgrade_escalating_exposure",
+    "Escalating Exposure",
+    "Artan Hassasiyet"
+  ],
+  [
+    "upgrade_self_bubble",
+    "Ethereal Shift",
+    "Ruhani Değişim"
+  ],
+  [
+    "upgrade_focus_lens",
+    "Focus Lens",
+    "Odaklı Mercek"
+  ],
+  [
+    "upgrade_fervor",
+    "Frenzy",
+    "Savaş Çılgınlığı"
+  ],
+  [
+    "upgrade_glass_cannon",
+    "Glass Cannon",
+    "Kırılgan Kudret"
+  ],
+  [
+    "upgrade_healbuff",
+    "Healing Tempo",
+    "İyileştirici Tempo"
+  ],
+  [
+    "upgrade_auto_cleanse",
+    "Indomitable",
+    "Boyun Eğmez"
+  ],
+  [
+    "upgrade_infuser",
+    "Infuser",
+    "Aşılayıcı"
+  ],
+  [
+    "upgrade_inhibitor",
+    "Inhibitor",
+    "Köstek"
+  ],
+  [
+    "upgrade_juggernaut",
+    "Juggernaut",
+    "Yıkıcı Güç"
+  ],
+  [
+    "upgrade_damage_recycler",
+    "Leech",
+    "Sülük"
+  ],
+  [
+    "upgrade_ultimate_burst",
+    "Lightning Scroll",
+    "Yıldırım Parşömeni"
+  ],
+  [
+    "upgrade_critshot",
+    "Lucky Shot",
+    "Şanslı Atış"
+  ],
+  [
+    "upgrade_magic_carpet",
+    "Magic Carpet",
+    "Sihirli Halı"
+  ],
+  [
+    "upgrade_ethereal_bullets",
+    "Mercurial Magnum",
+    "Merkür Magnum"
+  ],
+  [
+    "upgrade_mystic_reverb",
+    "Mystic Reverb",
+    "Mistik Titreşimler"
+  ],
+  [
+    "upgrade_phantom_strike",
+    "Phantom Strike",
+    "Hayalet Saldırı"
+  ],
+  [
+    "upgrade_deflecting_armor",
+    "Plated Armor",
+    "Kaplamalı Zırh"
+  ],
+  [
+    "upgrade_ability_refresher",
+    "Refresher",
+    "Yenileyici"
+  ],
+  [
+    "upgrade_ricochet",
+    "Ricochet",
+    "Mermi Sekmesi"
+  ],
+  [
+    "upgrade_discord",
+    "Scourge",
+    "Bela"
+  ],
+  [
+    "upgrade_proc_silence",
+    "Silencer",
+    "Susturucu"
+  ],
+  [
+    "upgrade_siphon_bullets",
+    "Siphon Bullets",
+    "Can Çalma Mermileri"
+  ],
+  [
+    "upgrade_spellbreaker",
+    "Spellbreaker",
+    "Büyü Bozan"
+  ],
+  [
+    "upgrade_enchanted_holsters",
+    "Spellslinger",
+    "Büyü Silahşoru"
+  ],
+  [
+    "upgrade_spirit_burn",
+    "Spirit Burn",
+    "Yakıcı Büyü"
+  ],
+  [
+    "upgrade_tech_overflow",
+    "Spiritual Overflow",
+    "Büyülü Coşkunluk"
+  ],
+  [
+    "upgrade_transcendent_cooldown",
+    "Transcendent Cooldown",
+    "Muazzam Dolum Süresi"
+  ],
+  [
+    "upgrade_unstoppable",
+    "Unstoppable",
+    "Durdurulamaz"
+  ],
+  [
+    "upgrade_surging_power",
+    "Vampiric Burst",
+    "Vampir Coşkusu"
+  ],
+  [
+    "upgrade_aoe_root",
+    "Vortex Web",
+    "Girdap Ağı"
+  ],
+  [
+    "upgrade_absorbing_armor",
+    "Witchmail",
+    "Cadı Zırhı"
+  ],
+  [
+    "upgrade_celestial_guidance",
+    "Celestial Blessing",
+    "Göksel Lütuf"
+  ],
+  [
+    "upgrade_cloak_of_opportunity",
+    "Cloak of Opportunity",
+    "Fırsat Pelerini"
+  ],
+  [
+    "upgrade_electric_slippers",
+    "Electric Slippers",
+    "Elektrikli Terlikler"
+  ],
+  [
+    "upgrade_eternal_gift",
+    "Eternal Gift",
+    "Ebedi Hediye"
+  ],
+  [
+    "upgrade_shivas_bracelet",
+    "Frostbite Charm",
+    "Buz Tılsımı"
+  ],
+  [
+    "upgrade_eldritch_shot",
+    "Haunting Shot",
+    "Ürpertici Atış"
+  ],
+  [
+    "upgrade_infinite_rounds",
+    "Infinite Rounds",
+    "Sonsuz Cephane"
+  ],
+  [
+    "upgrade_patrons_blessing",
+    "Mystic Conduit",
+    "Mistik Kanal"
+  ],
+  [
+    "upgrade_mystical_piano",
+    "Mystical Piano",
+    "Mistik Piyano"
+  ],
+  [
+    "upgrade_nullification_aura",
+    "Nullification Burst",
+    "Etkisizleştirme Patlaması"
+  ],
+  [
+    "upgrade_omnicharge_pendant",
+    "Omnicharge Signet",
+    "Bol Şarj Mührü"
+  ],
+  [
+    "upgrade_prism_blast",
+    "Prism Blast",
+    "Prizma Patlaması"
+  ],
+  [
+    "upgrade_runed_gauntlets",
+    "Runed Gauntlets",
+    "Rünlü Eldivenler"
+  ],
+  [
+    "upgrade_icarus_wings",
+    "Seraphim Wings",
+    "Seraf Kanatları"
+  ],
+  [
+    "upgrade_shadow_strike",
+    "Shadow Strike",
+    "Gölge Saldırı"
+  ],
+  [
+    "upgrade_shrink_ray",
+    "Shrink Ray",
+    "Küçültme Işını"
+  ],
+  [
+    "upgrade_unstable_concoction",
+    "Unstable Concoction",
+    "Kararsız Karışım"
+  ],
+  [
+    "hero_atlas",
+    "Abrams",
+    "Abrams"
+  ],
+  [
+    "citadel_ability_bull_heal",
+    "Siphon Life",
+    "Hayat Emme"
+  ],
+  [
+    "citadel_ability_bull_charge",
+    "Shoulder Charge",
+    "Bodoslama"
+  ],
+  [
+    "citadel_ability_passive_beefy",
+    "Infernal Resilience",
+    "Şeytani Dayanıklılık"
+  ],
+  [
+    "citadel_ability_bull_leap",
+    "Seismic Impact",
+    "Sismik Darbe"
+  ],
+  [
+    "hero_fencer",
+    "Apollo",
+    "Apollo"
+  ],
+  [
+    "ability_fencer_throwblade",
+    "Disengaging Sigil",
+    "Sıyrılma Mührü"
+  ],
+  [
+    "ability_fencer_riposte",
+    "Riposte",
+    "Karşı Hamle"
+  ],
+  [
+    "ability_fencer_lunge",
+    "Flawless Advance",
+    "Kusursuz Saplama"
+  ],
+  [
+    "ability_fencer_ultimate",
+    "Itani Lo Sahn",
+    "Itani Lo Sahn"
+  ],
+  [
+    "hero_baba",
+    "Baba",
+    "Nene"
+  ],
+  [
+    "ability_baba_bubbling_brew",
+    "Threadsap",
+    "İplik Özü"
+  ],
+  [
+    "ability_baba_bench_run",
+    "Granny Long Legs",
+    "Uzun Bacaklı Nene"
+  ],
+  [
+    "ability_baba_hexing_brew",
+    "Baba's Brew",
+    "Nene'nin Çayı"
+  ],
+  [
+    "ability_baba_ultimate_2",
+    "Feed The Birds",
+    "Kuşları Besle"
+  ],
+  [
+    "hero_bebop",
+    "Bebop",
+    "Bebop"
+  ],
+  [
+    "citadel_ability_uppercut",
+    "Exploding Uppercut",
+    "Patlayıcı Aparkat"
+  ],
+  [
+    "citadel_ability_sticky_bomb",
+    "Sticky Bomb",
+    "Yapışkan Bomba"
+  ],
+  [
+    "citadel_ability_hook",
+    "Grapple Arm",
+    "Çengel Kol"
+  ],
+  [
+    "citadel_ability_bebop_laser_beam",
+    "Hyper Beam",
+    "Hiper Işın"
+  ],
+  [
+    "hero_punkgoat",
+    "Billy",
+    "Billy"
+  ],
+  [
+    "ability_punkgoat_ult",
+    "Bashdown",
+    "Ezici Darbe"
+  ],
+  [
+    "ability_punkgoat_goatflip",
+    "Rising Ram",
+    "Uçan Koçbaşı"
+  ],
+  [
+    "ability_punkgoat_blasted",
+    "Blasted",
+    "Sarhoş"
+  ],
+  [
+    "ability_punkgoat_tether",
+    "Chain Gang",
+    "Pranga"
+  ],
+  [
+    "hero_nano",
+    "Calico",
+    "Kaliko"
+  ],
+  [
+    "ability_nano_clustergrenade",
+    "Gloom Bombs",
+    "Kasvet Bombaları"
+  ],
+  [
+    "ability_nano_dash",
+    "Leaping Slash",
+    "Keskin Atılım"
+  ],
+  [
+    "ability_nano_catform",
+    "Ava",
+    "Ava"
+  ],
+  [
+    "ability_nano_shadow_pulse",
+    "Return to Shadows",
+    "Gölgeye Dönüş"
+  ],
+  [
+    "hero_unicorn",
+    "Celeste",
+    "Celeste"
+  ],
+  [
+    "ability_unicorn_radiantblast",
+    "Light Eater",
+    "Işık Darbesi"
+  ],
+  [
+    "ability_unicorn_prismaticguard",
+    "Dazzling Trick",
+    "Prizmatik Hile"
+  ],
+  [
+    "ability_unicorn_luminousstrike",
+    "Radiant Daggers",
+    "Işıltılı Hançerler"
+  ],
+  [
+    "ability_unicorn_dazzlingorb",
+    "Shining Wonder",
+    "Parıltılı Mucize"
+  ],
+  [
+    "hero_deadpack",
+    "Deadman Danny",
+    "Ölü Adam Danny"
+  ],
+  [
+    "ability_deadpack_chargeblast",
+    "Strix Salvo",
+    "Baykuş Salvosu"
+  ],
+  [
+    "ability_deadpack_rocketeer",
+    "Chimera Mk1",
+    "Kimera Mod. 1"
+  ],
+  [
+    "ability_deadpack_flamethrower",
+    "Jettison Fuel",
+    "Yakıt Tahliyesi"
+  ],
+  [
+    "ability_deadpack_ultimate",
+    "Close The Deal",
+    "İşi Bitir"
+  ],
+  [
+    "hero_drifter",
+    "Drifter",
+    "Serseri"
+  ],
+  [
+    "drifter_blood_blast",
+    "Rend",
+    "Parçalama"
+  ],
+  [
+    "drifter_shadow_mark",
+    "Stalker's Mark",
+    "İz Sürücü İşareti"
+  ],
+  [
+    "ability_drifter_hunger",
+    "Bloodscent",
+    "Kan kokusu"
+  ],
+  [
+    "drifter_darkness",
+    "Eternal Night",
+    "Ebedi Gece"
+  ],
+  [
+    "hero_dynamo",
+    "Dynamo",
+    "Dinamo"
+  ],
+  [
+    "citadel_ability_stomp",
+    "Kinetic Pulse",
+    "Kinetik Dalga"
+  ],
+  [
+    "citadel_ability_void_sphere",
+    "Quantum Entanglement",
+    "Kuantum Dolanıklık"
+  ],
+  [
+    "citadel_ability_nikuman",
+    "Rejuvenating Aurora",
+    "İyileştirici Aurora"
+  ],
+  [
+    "citadel_ability_self_vacuum",
+    "Singularity",
+    "Tekillik"
+  ],
+  [
+    "hero_necro",
+    "Graves",
+    "Graves"
+  ],
+  [
+    "ability_necro_hauntingskull",
+    "Jar of Dead",
+    "Ölüm Kavanozu"
+  ],
+  [
+    "ability_necro_zombiewall",
+    "Grasping Hands",
+    "Hortlak Eller"
+  ],
+  [
+    "ability_necro_fear",
+    "Essence Theft",
+    "Varlık Hırsızı"
+  ],
+  [
+    "ability_necro_gravestone",
+    "Borrowed Decree",
+    "Geçici Hüküm"
+  ],
+  [
+    "hero_orion",
+    "Grey Talon",
+    "Gri Pençe"
+  ],
+  [
+    "ability_charged_shot",
+    "Charged Shot",
+    "Güçlü Atış"
+  ],
+  [
+    "ability_power_jump",
+    "Rain of Arrows",
+    "Ok Yağmuru"
+  ],
+  [
+    "ability_immobilize_trap",
+    "Spirit Snare",
+    "Büyü Tuzağı"
+  ],
+  [
+    "ability_guided_arrow",
+    "Guided Owl",
+    "Güdümlü Baykuş"
+  ],
+  [
+    "hero_haze",
+    "Haze",
+    "Duman"
+  ],
+  [
+    "ability_sleep_dagger",
+    "Sleep Dagger",
+    "Uyku Hançeri"
+  ],
+  [
+    "ability_smoke_bomb",
+    "Smoke Bomb",
+    "Duman Bombası"
+  ],
+  [
+    "ability_stacking_damage",
+    "Fixation",
+    "Odaklanma"
+  ],
+  [
+    "ability_bullet_flurry",
+    "Bullet Dance",
+    "Mermi Dansı"
+  ],
+  [
+    "hero_astro",
+    "Holliday",
+    "Holliday"
+  ],
+  [
+    "ability_explosive_barrel",
+    "Powder Keg",
+    "Barut Fıçısı"
+  ],
+  [
+    "ability_bounce_pad",
+    "Bounce Pad",
+    "Trambolin"
+  ],
+  [
+    "ability_crackshot",
+    "Crackshot",
+    "Usta Nişancı"
+  ],
+  [
+    "ability_gravity_lasso",
+    "Spirit Lasso",
+    "Büyülü Kement"
+  ],
+  [
+    "hero_inferno",
+    "Infernus",
+    "Kundakçı"
+  ],
+  [
+    "ability_incendiary_projectile",
+    "Napalm",
+    "Napalm"
+  ],
+  [
+    "ability_flame_dash",
+    "Flame Dash",
+    "Alevli Atılma"
+  ],
+  [
+    "ability_afterburn",
+    "Afterburn",
+    "Yakıcı"
+  ],
+  [
+    "ability_fire_bomb",
+    "Concussive Combustion",
+    "Sersemletici Patlama"
+  ],
+  [
+    "hero_tengu",
+    "Ivy",
+    "Sarmaşık"
+  ],
+  [
+    "citadel_ability_tengu_urn",
+    "Entangling Thorns",
+    "Bağlayıcı Dikenler"
+  ],
+  [
+    "citadel_ability_tangotether",
+    "Kudzu Connection",
+    "Sarmaşık Bağlantı"
+  ],
+  [
+    "citadel_ability_tengu_stone_form",
+    "Stone Form",
+    "Taşa Dönüşme"
+  ],
+  [
+    "citadel_ability_tengu_airlift",
+    "Air Drop",
+    "Hava Taşımacılığı"
+  ],
+  [
+    "hero_kelvin",
+    "Kelvin",
+    "Kelvin"
+  ],
+  [
+    "ability_ice_grenade",
+    "Frost Grenade",
+    "Dondurucu Bomba"
+  ],
+  [
+    "ability_icepath",
+    "Ice Path",
+    "Buzlu Yol"
+  ],
+  [
+    "ability_icebeam",
+    "Arctic Beam",
+    "Arktik Işın"
+  ],
+  [
+    "ability_ice_dome",
+    "Frozen Shelter",
+    "Buz Kubbe"
+  ],
+  [
+    "hero_ghost",
+    "Lady Geist",
+    "Leydi Geist"
+  ],
+  [
+    "ability_blood_bomb",
+    "Essence Bomb",
+    "Öz Bombası"
+  ],
+  [
+    "ability_life_drain",
+    "Life Drain",
+    "Can Çekme"
+  ],
+  [
+    "ability_blood_shards",
+    "Malice",
+    "Hınç"
+  ],
+  [
+    "ability_health_swap",
+    "Soul Exchange",
+    "Ruh Değişimi"
+  ],
+  [
+    "hero_lash",
+    "Lash",
+    "Kırbaç"
+  ],
+  [
+    "citadel_ability_lash_down_strike",
+    "Ground Strike",
+    "Yer Saldırısı"
+  ],
+  [
+    "citadel_ability_lash",
+    "Grapple",
+    "Tutunma"
+  ],
+  [
+    "ability_lash_flog",
+    "Flog",
+    "Kamçı"
+  ],
+  [
+    "citadel_ability_lash_ultimate",
+    "Death Slam",
+    "Ölümcül Fırlatma"
+  ],
+  [
+    "hero_forge",
+    "McGinnis",
+    "McGinnis"
+  ],
+  [
+    "citadel_ability_shieldedsentry",
+    "Mini Turret",
+    "Mini Taret"
+  ],
+  [
+    "citadel_ability_mobile_resupply",
+    "Medicinal Specter",
+    "Şifalı Sprey"
+  ],
+  [
+    "citadel_ability_fissure_wall",
+    "Spectral Wall",
+    "Hayalet Duvar"
+  ],
+  [
+    "citadel_ability_rocket_barrage",
+    "Heavy Barrage",
+    "Yoğun Bombardıman"
+  ],
+  [
+    "hero_vampirebat",
+    "Mina",
+    "Mina"
+  ],
+  [
+    "ability_vampirebat_steallife",
+    "Rake",
+    "Tırmık"
+  ],
+  [
+    "ability_vampirebat_batblink",
+    "Sanguine Retreat",
+    "Kanlı İnziva"
+  ],
+  [
+    "ability_vampirebat_lovebites",
+    "Love Bites",
+    "Aşk Isırığı"
+  ],
+  [
+    "ability_vampirebat_batswarm",
+    "Nox Nostra",
+    "Nox Nostra"
+  ],
+  [
+    "hero_mirage",
+    "Mirage",
+    "Vaha"
+  ],
+  [
+    "mirage_fire_beetles",
+    "Fire Scarabs",
+    "Ateş Böcekleri"
+  ],
+  [
+    "mirage_tornado",
+    "Dust Devil",
+    "Kum Canavarı"
+  ],
+  [
+    "mirage_sand_phantom",
+    "Djinn's Mark",
+    "Cinin İşareti"
+  ],
+  [
+    "mirage_teleport",
+    "Traveler",
+    "Gezgin"
+  ],
+  [
+    "hero_krill",
+    "Mo & Krill",
+    "Mo ve Krill"
+  ],
+  [
+    "ability_intimidate",
+    "Scorn",
+    "Gözdağı"
+  ],
+  [
+    "ability_burrow",
+    "Burrow",
+    "Tünel"
+  ],
+  [
+    "ability_throw_sand",
+    "Sand Blast",
+    "Kum Fırlatma"
+  ],
+  [
+    "ability_ult_combo",
+    "Combo",
+    "Dayak"
+  ],
+  [
+    "hero_nurse",
+    "Nurse Harrow",
+    "Hemşire Harrow"
+  ],
+  [
+    "ability_nurse_leech_therapy",
+    "Leech Therapy",
+    "Sülük Tedavisi"
+  ],
+  [
+    "ability_nurse_adrenaline_rush",
+    "Wretched Vapors",
+    "Melun Buharlar"
+  ],
+  [
+    "ability_nurse_healing_needles",
+    "Healing Needles",
+    "Şifalı İğneler"
+  ],
+  [
+    "ability_nurse_fear",
+    "Lurking Terrors",
+    "Pusudaki Korkular"
+  ],
+  [
+    "hero_bookworm",
+    "Paige",
+    "Paige"
+  ],
+  [
+    "ability_bookworm_dragonfire",
+    "Bookwyrm",
+    "Kitap Ejderi"
+  ],
+  [
+    "ability_bookworm_knightbarrier",
+    "Plot Armor",
+    "Kurgu Zırhı"
+  ],
+  [
+    "ability_bookworm_aoemagic",
+    "Captivating Read",
+    "Sürükleyici Kitap"
+  ],
+  [
+    "ability_bookworm_knightcharge",
+    "Rallying Charge",
+    "Savaş Çağrısı"
+  ],
+  [
+    "hero_chrono",
+    "Paradox",
+    "Paradoks"
+  ],
+  [
+    "citadel_ability_chrono_pulse_grenade",
+    "Pulse Grenade",
+    "Atımlı Bomba"
+  ],
+  [
+    "citadel_ability_chrono_time_wall",
+    "Time Wall",
+    "Zaman Duvarı"
+  ],
+  [
+    "citadel_ability_chrono_kinetic_carbine",
+    "Kinetic Carbine",
+    "Kinetik Tüfek"
+  ],
+  [
+    "citadel_ability_chrono_swap",
+    "Paradoxical Swap",
+    "Paradoksal Değişim"
+  ],
+  [
+    "hero_synth",
+    "Pocket",
+    "Sıska"
+  ],
+  [
+    "synth_barrage",
+    "Barrage",
+    "Bombardıman"
+  ],
+  [
+    "synth_plasma_flux",
+    "Flying Cloak",
+    "Uçan Pelerin"
+  ],
+  [
+    "synth_pulse",
+    "Enchanter's Satchel",
+    "Büyücünün Çantası"
+  ],
+  [
+    "synth_affliction",
+    "Affliction",
+    "Izdırap"
+  ],
+  [
+    "hero_ratking",
+    "Rat King",
+    "Fare Kral"
+  ],
+  [
+    "ability_ratking_scrap_grenade",
+    "Scrap Grenade",
+    "Hurda Bombası"
+  ],
+  [
+    "ability_ratking_ratnibble",
+    "Rat Swarm",
+    "Fare Sürüsü"
+  ],
+  [
+    "ability_ratking_ratarmor",
+    "Royal Pestments",
+    "Kraliyet Bezdirgânlığı"
+  ],
+  [
+    "ability_ratking_standard_bearer",
+    "Rule, Ratannia!",
+    "Çok Yaşa Farenya!"
+  ],
+  [
+    "hero_familiar",
+    "Rem",
+    "Rem"
+  ],
+  [
+    "ability_familiar_ability02",
+    "Pillow Toss",
+    "Yastık Fırlatma"
+  ],
+  [
+    "ability_familiar_attach",
+    "Tag Along",
+    "Peşine Takıl"
+  ],
+  [
+    "ability_familiar_helpinghands",
+    "Lil Helpers",
+    "Küçük Yardımcılar"
+  ],
+  [
+    "ability_familiar_ability01",
+    "Naptime",
+    "Uyku Zamanı"
+  ],
+  [
+    "hero_gigawatt",
+    "Seven",
+    "Yedi"
+  ],
+  [
+    "citadel_ability_lightning_ball",
+    "Lightning Ball",
+    "Elektrik Topu"
+  ],
+  [
+    "citadel_ability_static_charge",
+    "Static Charge",
+    "Statik Yük"
+  ],
+  [
+    "ability_power_surge",
+    "Power Surge",
+    "Güç Dalgalanması"
+  ],
+  [
+    "citadel_ability_storm_cloud",
+    "Storm Cloud",
+    "Fırtına Bulutu"
+  ],
+  [
+    "hero_shiv",
+    "Shiv",
+    "Hançer"
+  ],
+  [
+    "citadel_ability_shiv_dagger",
+    "Serrated Knives",
+    "Tırtıklı Bıçaklar"
+  ],
+  [
+    "citadel_ability_shiv_dash",
+    "Slice and Dice",
+    "Kes ve Parçala"
+  ],
+  [
+    "citadel_ability_shiv_defer_damage",
+    "Bloodletting",
+    "Kan Akıtma"
+  ],
+  [
+    "citadel_ability_shiv_killing_blow",
+    "Killing Blow",
+    "Öldürücü Darbe"
+  ],
+  [
+    "hero_werewolf",
+    "Silver",
+    "Silver"
+  ],
+  [
+    "ability_werewolf_unloadgun",
+    "Slam Fire",
+    "Ani Ateş"
+  ],
+  [
+    "ability_werewolf_kickflip",
+    "Boot Kick",
+    "Uçan Tekme"
+  ],
+  [
+    "ability_werewolf_netshot",
+    "Entangling Bola",
+    "Bağlayıcı Kelepçe"
+  ],
+  [
+    "ability_werewolf_transformation",
+    "Lycan Curse",
+    "Kurt Laneti"
+  ],
+  [
+    "hero_magician",
+    "Sinclair",
+    "Sinclair"
+  ],
+  [
+    "ability_magician_magicbolt",
+    "Vexing Bolt",
+    "Büyülü Şimşek"
+  ],
+  [
+    "ability_magician_cloneturret",
+    "Spectral Assistant",
+    "Hayalet Asistan"
+  ],
+  [
+    "ability_magician_animalhexarea",
+    "Rabbit Hex",
+    "Tavşan Büyüsü"
+  ],
+  [
+    "ability_magician_copyult",
+    "Audience Participation",
+    "Seyirci Katılımı"
+  ],
+  [
+    "hero_chessmaster",
+    "Solomon",
+    "Solomon"
+  ],
+  [
+    "ability_chessmaster_throwbishop",
+    "Setup Bishop",
+    "Fil Yerleştir"
+  ],
+  [
+    "ability_chessmaster_knightbuff",
+    "Kingside Knight",
+    "Şah Kanadı Atı"
+  ],
+  [
+    "ability_chessmaster_forkpiece",
+    "Rook Battery",
+    "Kale Bataryası"
+  ],
+  [
+    "ability_chessmaster_queen",
+    "Develop Queen",
+    "Vezir Geliştir"
+  ],
+  [
+    "hero_doorman",
+    "The Doorman",
+    "Kapıcı"
+  ],
+  [
+    "ability_doorman_bomb",
+    "Call Bell",
+    "Resepsiyon Zili"
+  ],
+  [
+    "ability_doorman_doorway",
+    "Doorway",
+    "Kapı"
+  ],
+  [
+    "ability_doorman_luggage_cart",
+    "Luggage Cart",
+    "Bavul Arabası"
+  ],
+  [
+    "ability_doorman_hotel",
+    "Hotel Guest",
+    "Otel Misafiri"
+  ],
+  [
+    "hero_priest",
+    "Venator",
+    "Avcı"
+  ],
+  [
+    "ability_priest_flashbang",
+    "Consecrating Grenade",
+    "Kutsal Bomba"
+  ],
+  [
+    "ability_priest_knockback",
+    "Gutshot",
+    "Karın Deşen"
+  ],
+  [
+    "ability_priest_beartrap",
+    "Hex-Lined Snap Trap",
+    "Lanet Kapanı"
+  ],
+  [
+    "ability_priest_weaponswap",
+    "Ira Domini",
+    "İlahi Gazap"
+  ],
+  [
+    "hero_frank",
+    "Victor",
+    "Victor"
+  ],
+  [
+    "ability_frank_shocktarget2",
+    "Pain Battery",
+    "Acı Aküsü"
+  ],
+  [
+    "ability_frank_selfzap",
+    "Jumpstart",
+    "Uyarıcı Şok"
+  ],
+  [
+    "ability_frank_painaura",
+    "Aura of Suffering",
+    "Acı Aurası"
+  ],
+  [
+    "ability_frank_revive",
+    "Shocking Reanimation",
+    "Çarpıcı Canlandırma"
+  ],
+  [
+    "hero_hornet",
+    "Vindicta",
+    "İntikamcı"
+  ],
+  [
+    "citadel_ability_hornet_chain",
+    "Stake",
+    "Kazık"
+  ],
+  [
+    "citadel_ability_hornet_leap",
+    "Flight",
+    "Uçuş"
+  ],
+  [
+    "citadel_ability_hornet_sting",
+    "Crow Familiar",
+    "Evcil Karga"
+  ],
+  [
+    "citadel_ability_hornet_snipe",
+    "Assassinate",
+    "Suikast"
+  ],
+  [
+    "hero_artist",
+    "Violet",
+    "Violet"
+  ],
+  [
+    "ability_artist_homingbrush",
+    "Living Ink",
+    "Yaşayan Mürekkep"
+  ],
+  [
+    "ability_artist_rollingprojectile",
+    "Flow State",
+    "Akış Hâli"
+  ],
+  [
+    "ability_artist_tether",
+    "Still Life",
+    "Durgun Yaşam"
+  ],
+  [
+    "ability_artist_bamboogrove",
+    "Abstract Landscape",
+    "Soyut Manzara"
+  ],
+  [
+    "hero_viscous",
+    "Viscous",
+    "Balçık"
+  ],
+  [
+    "viscous_goo_grenade",
+    "Splatter",
+    "Yapışkan Birikinti"
+  ],
+  [
+    "viscous_restorative_goo",
+    "The Cube",
+    "Küp"
+  ],
+  [
+    "viscous_telepunch",
+    "Puddle Punch",
+    "Birikinti Yumruğu"
+  ],
+  [
+    "viscous_goo_bowling_ball",
+    "Goo Ball",
+    "Balçık Topu"
+  ],
+  [
+    "hero_viper",
+    "Vyper",
+    "Engerek"
+  ],
+  [
+    "ability_viper_debuffdagger",
+    "Screwjab Dagger",
+    "Mahmurlaştırma Hançeri"
+  ],
+  [
+    "ability_viper_venom",
+    "Lethal Venom",
+    "Ölümcül Zehir"
+  ],
+  [
+    "ability_viper_snakedash",
+    "Slither",
+    "Sürünme"
+  ],
+  [
+    "ability_viper_petrifybola",
+    "Petrifying Bola",
+    "Taşlaştıran Kelepçe"
+  ],
+  [
+    "hero_warden",
+    "Warden",
+    "Bekçi"
+  ],
+  [
+    "ability_warden_crowd_control",
+    "Alchemical Flask",
+    "Simya Şişesi"
+  ],
+  [
+    "ability_warden_high_alert",
+    "Willpower",
+    "İrade"
+  ],
+  [
+    "ability_warden_lock_down",
+    "Binding Word",
+    "Bağlayıcı Büyü"
+  ],
+  [
+    "ability_warden_riot_protocol",
+    "Last Stand",
+    "Son Savunma"
+  ],
+  [
+    "hero_wraith",
+    "Wraith",
+    "Tayf"
+  ],
+  [
+    "citadel_ability_card_toss",
+    "Card Trick",
+    "Kart Hilesi"
+  ],
+  [
+    "citadel_ability_projectmind",
+    "Project Mind",
+    "Zihinsel Seyahat"
+  ],
+  [
+    "citadel_ability_wraith_rapidfire",
+    "Full Auto",
+    "Tam Otomatik"
+  ],
+  [
+    "citadel_ability_psychic_lift",
+    "Telekinesis",
+    "Telekinezi"
+  ],
+  [
+    "hero_yamato",
+    "Yamato",
+    "Yamato"
+  ],
+  [
+    "citadel_ability_power_slash",
+    "Power Slash",
+    "Güçlü Kesik"
+  ],
+  [
+    "citadel_ability_flying_strike",
+    "Flying Slash",
+    "Uçan Darbe"
+  ],
+  [
+    "citadel_ability_healing_slash",
+    "Crimson Slash",
+    "Kızıl Kesik"
+  ],
+  [
+    "citadel_ability_infinity_slash",
+    "Shadow Transformation",
+    "Gölge Dönüşümü"
+  ]
+]

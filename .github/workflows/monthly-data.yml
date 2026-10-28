@@ -33,7 +33,7 @@ jobs:
           cargo run --release -p engine --example snapshot -- raw src-tauri/data/snapshot.json
           mkdir -p raw-tr
           for f in heroes items; do curl -sf --max-time 180 -o raw-tr/$f.json "https://api.deadlock-api.com/v1/assets/$f?language=turkish"; done
-          cargo run --release -p engine --example game_text -- raw raw-tr src/locales/game-tr.json
+          cargo run --release -p engine --example game_text -- raw raw-tr src/locales/game-tr.json src/locales/names-tr.json
 
       - name: Gun share of each hero's damage
         run: cargo run --release -p engine --example damage_split -- measure/damage 300
@@ -55,6 +55,7 @@ jobs:
             engine/data/gun-share.json
             engine/data/area-density.json
             src/locales/game-tr.json
+            src/locales/names-tr.json
           commit-message: "Monthly data: game snapshot, gun shares and area densities"
           title: "Monthly data refresh"
           body: |
@@ -64,5 +65,6 @@ jobs:
             - `engine/data/gun-share.json`: the gun share of each hero's damage, from 300 recent high-rank matches.
             - `engine/data/area-density.json`: the enemies each ability hits in team fights, from 150 match replays.
             - `src/locales/game-tr.json`: the game's own Turkish for item and ability texts.
+            - `src/locales/names-tr.json`: the game's Turkish names of heroes, items and abilities.
 
             The engine's tests ran on the new numbers. Merge, then release, for the app to carry them.

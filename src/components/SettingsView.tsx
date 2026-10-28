@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { api, ConsoleState } from "../api";
 import { CONDEBUG_HELP } from "../live";
-import { date, LANG, LANGUAGES, setLang, t, tn } from "../i18n";
+import { date, LANG, LANGUAGES, NAMES, setLang, setNames, t, tn } from "../i18n";
 import { accountFrom, RANKS, SETTINGS, useSetting } from "../settings";
 import ErrorNote from "./ErrorNote";
 import { DAMAGES, FOCUSES } from "./GeneratorView";
@@ -49,8 +49,19 @@ export default function SettingsView({ version, fetchedAt, onRefresh, onGuide }:
               ))}
             </select>
           </label>
+          <label className="field">
+            {t("Hero, item and ability names")}
+            <select value={NAMES} onChange={(e) => setNames(e.target.value as typeof NAMES)}>
+              <option value="en">{t("English (as in the English game)")}</option>
+              <option value="tr">{t("Turkish (as in the Turkish game)")}</option>
+            </select>
+          </label>
         </div>
-        <p className="muted">{t("The app starts again in the new language. Hero, item and ability names stay as in the game's English data.")}</p>
+        <p className="muted">
+          {t(
+            "The two are set apart: the app can speak Turkish while the names stay as the English game has them, or the other way round. Build codes work either way. The app starts again after a change.",
+          )}
+        </p>
       </section>
 
       <section className="group">
