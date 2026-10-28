@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { api, Build, EMPTY_MAP, fmt, MasterBuild, PowerPoint } from "../api";
 import ErrorNote from "./ErrorNote";
+import { t } from "../i18n";
 
 /** Ability upgrade tiers the master builder assumes in each phase. */
 const PHASE_TIERS = [
@@ -85,7 +86,7 @@ function Chart({
       <svg
         viewBox={`0 0 ${W} ${H}`}
         role="img"
-        aria-label={`${title} by souls`}
+        aria-label={t("{title} by souls", { title })}
         onMouseLeave={() => onHover(null)}
         onMouseMove={(e) => {
           const r = e.currentTarget.getBoundingClientRect();
@@ -157,36 +158,36 @@ export default function PowerCurve({ master }: { master: MasterBuild }) {
   }, [steps, attempt]);
 
   if (error) return <ErrorNote error={error} onRetry={() => setAttempt((a) => a + 1)} />;
-  if (!points) return <p className="muted">Working out the power curve…</p>;
+  if (!points) return <p className="muted">{t("Working out the power curve…")}</p>;
   const h = hover !== null ? points[hover] : null;
   const spikes = points.filter((p) => p.spike);
   return (
     <div className="group power-curve">
       <h3>
-        Power curve <small className="muted">· every {fmt(STEP)} souls · dots mark spikes: +{SPIKE * 100}% fight damage or more in one step</small>
+        {t("Power curve")}{" "}
+        <small className="muted">· {t("every {n} souls · dots mark spikes: +{p}% fight damage or more in one step", { n: fmt(STEP), p: SPIKE * 100 })}</small>
       </h3>
       <div className="power-charts">
-        <Chart title="Fight damage" points={points} value={(p) => p.fight_damage} color="var(--accent)" hover={hover} onHover={setHover} spikes />
-        <Chart title="Effective health" points={points} value={(p) => p.effective_health} color="var(--vitality)" hover={hover} onHover={setHover} />
+        <Chart title={t("Fight damage")} points={points} value={(p) => p.fight_damage} color="var(--accent)" hover={hover} onHover={setHover} spikes />
+        <Chart title={t("Effective health")} points={points} value={(p) => p.effective_health} color="var(--vitality)" hover={hover} onHover={setHover} />
       </div>
       <div className="power-readout">
         {h ? (
           <>
-            <b>{fmt(h.souls)} souls</b> · {fmt(h.fight_damage, 0)} fight damage · {fmt(h.effective_health, 0)} effective health
-            {h.bought.length > 0 && <span className="muted"> · bought: {h.bought.join(", ")}</span>}
+            <b>{t("{n} souls", { n: fmt(h.souls) })}</b> · {t("{n} fight damage", { n: fmt(h.fight_damage, 0) })} ·{" "}
+            {t("{n} effective health", { n: fmt(h.effective_health, 0) })}
+            {h.bought.length > 0 && <span className="muted"> · {t("bought: {items}", { items: h.bought.join(", ") })}</span>}
           </>
         ) : (
           <span className="muted">
             {spikes.length
-              ? `Spikes at ${spikes.map((s) => `${fmt(s.souls)} (${s.bought.join(", ") || "level"})`).join(" · ")}`
-              : "No step stands out: the build grows evenly."}
+              ? t("Spikes at {list}", { list: spikes.map((s) => `${fmt(s.souls)} (${s.bought.join(", ") || t("level")})`).join(" · ") })
+              : t("No step stands out: the build grows evenly.")}
           </span>
         )}
       </div>
       <p className="muted">
-        Fight damage is a team fight: every ability and active item once and six seconds of shooting against a target without resists, each
-        ability's damage on every enemy its area catches, and its stuns counted for the time the enemies cannot fight back. Effective health is
-        max health over what the resists let through.
+        {t("Fight damage is a team fight: every ability and active item once and six seconds of shooting against a target without resists, each ability's damage on every enemy its area catches, and its stuns counted for the time the enemies cannot fight back. Effective health is max health over what the resists let through.")}
       </p>
     </div>
   );

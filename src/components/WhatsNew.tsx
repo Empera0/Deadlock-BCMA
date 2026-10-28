@@ -1,6 +1,11 @@
 import { ReactNode, useEffect, useState } from "react";
 import { getVersion } from "@tauri-apps/api/app";
-import changelog from "../../CHANGELOG.md?raw";
+import english from "../../CHANGELOG.md?raw";
+import turkish from "../../CHANGELOG.tr.md?raw";
+import { LANG, t } from "../i18n";
+
+/** The changelog in the app's language. */
+const changelog = LANG === "tr" ? turkish : english;
 
 const SEEN_KEY = "seen-version";
 
@@ -101,11 +106,11 @@ export default function WhatsNew() {
   const latest = news[news.length - 1];
   return (
     <div className="overlay" onClick={() => setNews([])}>
-      <div className="whats-new" role="dialog" aria-label="What's new" onClick={(e) => e.stopPropagation()}>
+      <div className="whats-new" role="dialog" aria-label={t("What's new")} onClick={(e) => e.stopPropagation()}>
         <div className="whats-new-head">
-          <b>Updated to {latest.version}</b>
+          <b>{t("Updated to {v}", { v: latest.version })}</b>
           <button className="ghost small" onClick={() => setNews([])}>
-            Close
+            {t("Close")}
           </button>
         </div>
         <div className="whats-new-body">

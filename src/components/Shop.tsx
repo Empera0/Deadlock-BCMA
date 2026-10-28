@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { Category, CATEGORY_LABEL, fmt, Item } from "../api";
+import { t } from "../i18n";
 
 interface Props {
   items: Item[];
@@ -10,6 +11,7 @@ interface Props {
 
 const TIER_NAME = ["", "I", "II", "III", "IV", "V"];
 
+/** Tooltip sections; translated where shown. */
 const SECTIONS: [string, string][] = [
   ["innate", "Always"],
   ["passive", "Passive (conditional)"],
@@ -26,15 +28,15 @@ function Tooltip({ item, x, y }: { item: Item; x: number; y: number }) {
         {item.name}
         <span className="cost">{fmt(item.cost)}</span>
       </div>
-      {item.active && <div className="tag">Active item</div>}
-      {item.components.length > 0 && <div className="tag">Upgrade: discounted if you own the component</div>}
+      {item.active && <div className="tag">{t("Active item")}</div>}
+      {item.components.length > 0 && <div className="tag">{t("Upgrade: discounted if you own the component")}</div>}
       {item.description && <div className="tooltip-desc">{item.description}</div>}
       {SECTIONS.map(([section, title]) => {
         const props = item.props.filter((p) => p.section === section);
         if (props.length === 0) return null;
         return (
           <div key={section} className="tooltip-section">
-            <div className="tooltip-section-title">{title}</div>
+            <div className="tooltip-section-title">{t(title)}</div>
             {props.map((p) => (
               <div key={p.key} className="tooltip-row">
                 <span>{p.label || p.key}</span>
@@ -42,7 +44,7 @@ function Tooltip({ item, x, y }: { item: Item; x: number; y: number }) {
                   {p.value > 0 && p.modifier ? "+" : ""}
                   {fmt(p.value)}
                   {p.postfix}
-                  {p.scale && p.scale.coef !== 0 ? ` (×${fmt(p.scale.coef)} scaling)` : ""}
+                  {p.scale && p.scale.coef !== 0 ? ` (${t("×{n} scaling", { n: fmt(p.scale.coef) })})` : ""}
                 </span>
               </div>
             ))}
@@ -90,8 +92,8 @@ export default function Shop({ items, owned, purchased, onToggle }: Props) {
       i.name.toLowerCase().includes(phrase) ||
       i.props.some((p) => p.modifier && p.value > 0 && p.label.toLowerCase().includes(phrase));
     return [
-      { title: "Named like it or gives it", tiers: group(visible.filter(gives)) },
-      { title: "Mentions it", tiers: group(visible.filter((i) => !gives(i))) },
+      { title: t("Named like it or gives it"), tiers: group(visible.filter(gives)) },
+      { title: t("Mentions it"), tiers: group(visible.filter((i) => !gives(i))) },
     ].filter((g) => g.tiers.length > 0);
   }, [items, category, query, haystacks]);
 
@@ -107,10 +109,10 @@ export default function Shop({ items, owned, purchased, onToggle }: Props) {
               setQuery("");
             }}
           >
-            {CATEGORY_LABEL[c]}
+            {t(CATEGORY_LABEL[c])}
           </button>
         ))}
-        <input placeholder="Search name, stat or description…" value={query} onChange={(e) => setQuery(e.target.value)} />
+        <input placeholder={t("Search name, stat or description…")} value={query} onChange={(e) => setQuery(e.target.value)} />
       </div>
       <div className="shop-body">
         {tiers.map((g) => (
@@ -119,7 +121,7 @@ export default function Shop({ items, owned, purchased, onToggle }: Props) {
             {g.tiers.map(([tier, list]) => (
           <div key={tier} className="tier">
             <div className={"tier-label " + (tiers.length === 1 && !query ? category : "")}>
-              <small>Tier {TIER_NAME[tier] ?? tier}</small>
+              <small>{t("Tier {n}", { n: TIER_NAME[tier] ?? tier })}</small>
               <b>{fmt(list[0].cost)}</b>
             </div>
             <div className="tier-items">
@@ -137,7 +139,7 @@ export default function Shop({ items, owned, purchased, onToggle }: Props) {
                 >
                   <span className="item-art">
                     <img src={i.icon} alt="" loading="lazy" />
-                    {i.active && <em>Active</em>}
+                    {i.active && <em>{t("Active")}</em>}
                     {owned.has(i.class_name) && <i className="item-check">✓</i>}
                   </span>
                   <span className="item-name">{i.name}</span>
@@ -148,7 +150,7 @@ export default function Shop({ items, owned, purchased, onToggle }: Props) {
             ))}
           </div>
         ))}
-        {tiers.length === 0 && <p className="muted">No items found.</p>}
+        {tiers.length === 0 && <p className="muted">{t("No items found.")}</p>}
       </div>
       {hover && <Tooltip {...hover} />}
     </section>

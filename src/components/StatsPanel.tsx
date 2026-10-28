@@ -3,6 +3,7 @@ import { Build, fmt, Group, Hero, Ranked, ScaledProp, Sheet, Stat } from "../api
 import InvestBars from "./InvestBars";
 import Advisor from "./Advisor";
 import AbilityOrderPanel from "./AbilityOrderPanel";
+import { t } from "../i18n";
 
 interface Props {
   heroes: Hero[];
@@ -18,6 +19,7 @@ interface Props {
   onBuy: (className: string) => void;
 }
 
+/** Stat groups; translated where shown. */
 const GROUPS: [Group, string][] = [
   ["weapon", "Weapon"],
   ["vitality", "Vitality"],
@@ -26,6 +28,7 @@ const GROUPS: [Group, string][] = [
   ["other", "Other effects"],
 ];
 
+/** What the next item is ranked by; translated where shown. */
 const METRICS: [string, string][] = [
   ["dps_sustained", "DPS (with reload)"],
   ["dps_burst", "DPS (burst)"],
@@ -52,12 +55,12 @@ function StatRow({ stat }: { stat: Stat }) {
       {open && (
         <div className="stat-body">
           <code>{stat.formula}</code>
-          {stat.terms.map((t, i) => (
+          {stat.terms.map((term, i) => (
             <div key={i} className="term">
-              <span>{t.label}</span>
+              <span>{term.label}</span>
               <span>
-                {fmt(t.value, 3)}
-                {t.unit}
+                {fmt(term.value, 3)}
+                {term.unit}
               </span>
             </div>
           ))}
@@ -76,7 +79,7 @@ function PropRow({ prop }: { prop: ScaledProp }) {
           {fmt(prop.value)}
           {prop.unit}
         </b>
-        {prop.vs_target !== null && <small> → vs target {fmt(prop.vs_target)}</small>}
+        {prop.vs_target !== null && <small> → {t("vs target {n}", { n: fmt(prop.vs_target) })}</small>}
         {prop.formula.includes("×") && <code>{prop.formula}</code>}
       </span>
     </div>
@@ -113,21 +116,21 @@ export default function StatsPanel(p: Props) {
         if (stats.length === 0) return null;
         return (
           <div key={group} className={"group " + group}>
-            <h3>{title}</h3>
+            <h3>{t(title)}</h3>
             {group === "target" && (
               <div className="fields">
                 <NumberField
-                  label="Health"
+                  label={t("Health")}
                   value={build.target.health}
                   onChange={(v) => p.onChange({ target: { ...build.target, health: v } })}
                 />
                 <NumberField
-                  label="Bullet resist %"
+                  label={t("Bullet resist %")}
                   value={build.target.bullet_resist}
                   onChange={(v) => p.onChange({ target: { ...build.target, bullet_resist: v } })}
                 />
                 <NumberField
-                  label="Spirit resist %"
+                  label={t("Spirit resist %")}
                   value={build.target.spirit_resist}
                   onChange={(v) => p.onChange({ target: { ...build.target, spirit_resist: v } })}
                 />
@@ -142,9 +145,9 @@ export default function StatsPanel(p: Props) {
 
       <div className="group">
         <h3>
-          Abilities
+          {t("Abilities")}
           <small className={sheet.ability_points_used > sheet.ability_points ? "over" : ""}>
-            {sheet.ability_points_used}/{sheet.ability_points} ability points
+            {t("{a}/{b} ability points", { a: sheet.ability_points_used, b: sheet.ability_points })}
           </small>
         </h3>
         {sheet.abilities.map((a, i) => (
@@ -152,15 +155,15 @@ export default function StatsPanel(p: Props) {
             <div className="ability-head">
               <img src={a.icon} alt="" />
               <strong>{a.name}</strong>
-              {a.imbued.length > 0 && <small>imbued: {a.imbued.join(", ")}</small>}
+              {a.imbued.length > 0 && <small>{t("imbued: {items}", { items: a.imbued.join(", ") })}</small>}
               {a.slot_class === "ability_magician_copyult" && (
                 <select
                   className="copy-ult"
-                  title="Enemy hero whose ultimate is copied"
+                  title={t("Enemy hero whose ultimate is copied")}
                   value={build.copied_ult ?? ""}
                   onChange={(e) => p.onChange({ copied_ult: e.target.value || null })}
                 >
-                  <option value="">Copy ultimate…</option>
+                  <option value="">{t("Copy ultimate…")}</option>
                   {p.heroes
                     .filter((h) => h.class_name !== p.hero.class_name)
                     .map((h) => (
@@ -171,9 +174,9 @@ export default function StatsPanel(p: Props) {
                 </select>
               )}
               <div className="tiers">
-                {Array.from({ length: a.max_tier + 1 }, (_, t) => (
-                  <button key={t} className={t === a.tier ? "on" : ""} onClick={() => setTier(i, t)}>
-                    {t}
+                {Array.from({ length: a.max_tier + 1 }, (_, tier) => (
+                  <button key={tier} className={tier === a.tier ? "on" : ""} onClick={() => setTier(i, tier)}>
+                    {tier}
                   </button>
                 ))}
               </div>
@@ -185,7 +188,7 @@ export default function StatsPanel(p: Props) {
                 {a.upgrade_notes.map((note, tier) =>
                   note ? (
                     <p key={tier} className={tier < a.tier ? "taken" : ""}>
-                      <b>Upgrade {tier + 1}</b> {note}
+                      <b>{t("Upgrade {n}", { n: tier + 1 })}</b> {note}
                     </p>
                   ) : null,
                 )}
@@ -202,7 +205,7 @@ export default function StatsPanel(p: Props) {
 
       {sheet.item_effects.length > 0 && (
         <div className="group">
-          <h3>Item effects</h3>
+          <h3>{t("Item effects")}</h3>
           {sheet.item_effects.map((e) => (
             <div key={e.item} className="ability">
               <div className="ability-head">
@@ -217,24 +220,24 @@ export default function StatsPanel(p: Props) {
       )}
 
       <div className="group">
-        <h3>Next item</h3>
+        <h3>{t("Next item")}</h3>
         <div className="fields">
           <label className="field wide">
-            Target stat
+            {t("Target stat")}
             <select value={p.metric} onChange={(e) => p.onMetric(e.target.value)}>
               {METRICS.map(([key, label]) => (
                 <option key={key} value={key}>
-                  {label}
+                  {t(label)}
                 </option>
               ))}
             </select>
           </label>
           <label className="check">
             <input type="checkbox" checked={p.conditional} onChange={(e) => p.onConditional(e.target.checked)} />
-            Include conditional effects
+            {t("Include conditional effects")}
           </label>
         </div>
-        {p.ranked.length === 0 && <p className="muted">No item increases this stat.</p>}
+        {p.ranked.length === 0 && <p className="muted">{t("No item increases this stat.")}</p>}
         {p.ranked.slice(0, 12).map((r) => (
           <button key={r.item} className={"rank " + r.category} onClick={() => p.onBuy(r.item)}>
             <span>{r.name}</span>
@@ -242,7 +245,7 @@ export default function StatsPanel(p: Props) {
             <span>
               +{fmt(r.delta)} <small>({fmt(r.delta_pct, 1)}%)</small>
             </span>
-            <b title="Gain per 1,000 souls">{fmt(r.per_1k)}/1k</b>
+            <b title={t("Gain per 1,000 souls")}>{fmt(r.per_1k)}/1k</b>
           </button>
         ))}
       </div>

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Build, fmt, Hero, Item, Sheet } from "../api";
 import { readShareCode, shareCode } from "../share";
+import { t } from "../i18n";
 
 interface Props {
   build: Build;
@@ -18,12 +19,12 @@ function ShareButtons({ build, heroes, items, onChange }: Pick<Props, "build" | 
   const share = () => {
     const text = shareCode(build, heroes, items);
     navigator.clipboard.writeText(text).then(
-      () => setNote("Build code copied"),
+      () => setNote(t("Build code copied")),
       () => {
         // Without clipboard access the code is shown to copy by hand.
         setCode(text);
         setImporting(true);
-        setNote("Copy the code from the field");
+        setNote(t("Copy the code from the field"));
       },
     );
   };
@@ -32,24 +33,24 @@ function ShareButtons({ build, heroes, items, onChange }: Pick<Props, "build" | 
       onChange(readShareCode(code, heroes, [...items.values()]));
       setImporting(false);
       setCode("");
-      setNote("Build loaded from the code");
+      setNote(t("Build loaded from the code"));
     } catch (e) {
       setNote(e instanceof Error ? e.message : String(e));
     }
   };
   return (
     <span className="share">
-      <button className="ghost" onClick={share} title="Copy the build as a code to paste anywhere">
-        Share
+      <button className="ghost" onClick={share} title={t("Copy the build as a code to paste anywhere")}>
+        {t("Share")}
       </button>
-      <button className="ghost" onClick={() => setImporting(!importing)} title="Load a build from a code">
-        Import
+      <button className="ghost" onClick={() => setImporting(!importing)} title={t("Load a build from a code")}>
+        {t("Import")}
       </button>
       {importing && (
         <>
           <input
             className="share-code"
-            placeholder="Paste a BCMA1. build code"
+            placeholder={t("Paste a BCMA1. build code")}
             value={code}
             onChange={(e) => setCode(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && load()}
@@ -57,7 +58,7 @@ function ShareButtons({ build, heroes, items, onChange }: Pick<Props, "build" | 
             autoFocus
           />
           <button onClick={load} disabled={!code.trim()}>
-            Load
+            {t("Load")}
           </button>
         </>
       )}
@@ -95,10 +96,10 @@ export default function BuildBar({ build, heroes, sheet, items, onChange }: Prop
   return (
     <section className="buildbar">
       <div className="buildbar-head">
-        <strong>Purchase order</strong>
+        <strong>{t("Purchase order")}</strong>
         {sheet && (
           <span className="muted">
-            {sheet.slots_used}/{sheet.slot_limit} slots · {fmt(sheet.spent)} souls spent
+            {t("{a}/{b} slots · {n} souls spent", { a: sheet.slots_used, b: sheet.slot_limit, n: fmt(sheet.spent) })}
           </span>
         )}
         {count > 0 && (
@@ -111,17 +112,17 @@ export default function BuildBar({ build, heroes, sheet, items, onChange }: Prop
               onChange={(e) => onChange({ upto: Number(e.target.value) === count ? null : Number(e.target.value) })}
             />
             <span className="muted">
-              {upto}/{count} purchases counted
+              {t("{a}/{b} purchases counted", { a: upto, b: count })}
             </span>
             <button className="ghost" onClick={() => onChange({ purchases: [], active: [], upto: null })}>
-              Clear
+              {t("Clear")}
             </button>
           </>
         )}
         <ShareButtons build={build} heroes={heroes} items={items} onChange={onChange} />
       </div>
       <div className="chips">
-        {count === 0 && <span className="muted">Click an item in the shop to add it to your build.</span>}
+        {count === 0 && <span className="muted">{t("Click an item in the shop to add it to your build.")}</span>}
         {build.purchases.map((className, i) => {
           const item = items.get(className);
           if (!item) return null;
@@ -139,12 +140,12 @@ export default function BuildBar({ build, heroes, sheet, items, onChange }: Prop
               <img src={item.icon} alt="" />
               <div className="chip-text">
                 <span>{item.name}</span>
-                <small>{consumed ? "upgraded" : `${fmt(step ? step.paid : item.cost)} souls`}</small>
+                <small>{consumed ? t("upgraded") : t("{n} souls", { n: fmt(step ? step.paid : item.cost) })}</small>
               </div>
               {item.imbue && !consumed && (
                 <select
                   className="imbue"
-                  title="Ability this item is imbued into"
+                  title={t("Ability this item is imbued into")}
                   value={build.imbues[className] ?? ""}
                   onChange={(e) => {
                     const imbues = { ...build.imbues };
@@ -153,7 +154,7 @@ export default function BuildBar({ build, heroes, sheet, items, onChange }: Prop
                     onChange({ imbues });
                   }}
                 >
-                  <option value="">Imbue…</option>
+                  <option value="">{t("Imbue…")}</option>
                   {sheet?.abilities.map((a, index) =>
                     item.imbue === "imbue_active_non_ult" && index === 3 ? null : (
                       <option key={a.class_name} value={index}>
@@ -166,19 +167,19 @@ export default function BuildBar({ build, heroes, sheet, items, onChange }: Prop
               {conditional && !item.imbue && (
                 <button
                   className={"chip-btn cond" + (on ? " on" : "")}
-                  title="Include conditional (passive/active) effects"
+                  title={t("Include conditional (passive/active) effects")}
                   onClick={() => toggleActive(className)}
                 >
                   ⚡
                 </button>
               )}
-              <button className="chip-btn" title="Move earlier" onClick={() => move(i, -1)}>
+              <button className="chip-btn" title={t("Move earlier")} onClick={() => move(i, -1)}>
                 ‹
               </button>
-              <button className="chip-btn" title="Move later" onClick={() => move(i, 1)}>
+              <button className="chip-btn" title={t("Move later")} onClick={() => move(i, 1)}>
                 ›
               </button>
-              <button className="chip-btn" title="Remove" onClick={() => remove(className)}>
+              <button className="chip-btn" title={t("Remove")} onClick={() => remove(className)}>
                 ×
               </button>
             </div>

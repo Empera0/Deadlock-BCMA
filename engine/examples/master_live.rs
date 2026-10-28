@@ -83,6 +83,11 @@ fn main() {
         bought: &[],
     };
     let b = master::master_build(&data, &input).unwrap();
+    // JSON_OUT=<file> also writes the build and the plan as the app receives them.
+    if let Ok(out) = std::env::var("JSON_OUT") {
+        let report = serde_json::json!({ "master": &b, "plan": &b.counter, "builds": &builds });
+        std::fs::write(out, serde_json::to_string_pretty(&report).unwrap()).unwrap();
+    }
     println!("focus {} style {}", b.focus, b.style);
     for role in &b.counter.roles {
         println!("JOB {} weight {:.2}: {}", role.title, role.weight, role.items.iter().map(|i| format!("{} {:.2}", i.name, i.score)).collect::<Vec<_>>().join(", "));

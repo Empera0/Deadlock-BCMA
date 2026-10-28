@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api, ConsoleState } from "../api";
 import { CONDEBUG_HELP } from "../live";
+import { date, LANG, LANGUAGES, setLang, t, tn } from "../i18n";
 import { accountFrom, RANKS, SETTINGS, useSetting } from "../settings";
 import ErrorNote from "./ErrorNote";
 import { DAMAGES, FOCUSES } from "./GeneratorView";
@@ -36,82 +37,100 @@ export default function SettingsView({ version, fetchedAt, onRefresh, onGuide }:
   return (
     <div className="settings-view">
       <section className="group">
-        <h3>Your account</h3>
-        <p className="muted">
-          Your Steam account ID: the short number, or the long 7656… one. The Draft screen adds your own record on each hero with it, the live
-          match and lobby scouting find you by it, and Match analysis opens on it. To look at someone else's matches, type their ID there instead.
-        </p>
+        <h3>{t("Language")}</h3>
         <div className="fields">
           <label className="field">
-            Steam account ID
-            <input value={typed} placeholder="e.g. 123456789" onChange={(e) => setTyped(e.target.value)} onBlur={save} onKeyDown={(e) => e.key === "Enter" && save()} />
+            {t("Language of the app")}
+            <select value={LANG} onChange={(e) => setLang(e.target.value as typeof LANG)}>
+              {LANGUAGES.map(([code, name]) => (
+                <option key={code} value={code}>
+                  {name}
+                </option>
+              ))}
+            </select>
           </label>
-          {detected && detected !== account && (
-            <button onClick={() => setAccount(detected)} title="The account the game is signed in to, from its console log">
-              Use {detected} from the game
-            </button>
-          )}
         </div>
-        {parsed === null && <div className="error">Only digits: the short account ID or the long SteamID.</div>}
-        {account && parsed !== null && <div className="muted">Saved: {account}</div>}
+        <p className="muted">{t("The app starts again in the new language. Hero, item and ability names stay as in the game's English data.")}</p>
       </section>
 
       <section className="group">
-        <h3>The game's console log</h3>
+        <h3>{t("Your account")}</h3>
+        <p className="muted">
+          {t(
+            "Your Steam account ID: the short number, or the long 7656… one. The Draft screen adds your own record on each hero with it, the live match and lobby scouting find you by it, and Match analysis opens on it. To look at someone else's matches, type their ID there instead.",
+          )}
+        </p>
+        <div className="fields">
+          <label className="field">
+            {t("Steam account ID")}
+            <input value={typed} placeholder={t("e.g. 123456789")} onChange={(e) => setTyped(e.target.value)} onBlur={save} onKeyDown={(e) => e.key === "Enter" && save()} />
+          </label>
+          {detected && detected !== account && (
+            <button onClick={() => setAccount(detected)} title={t("The account the game is signed in to, from its console log")}>
+              {t("Use {id} from the game", { id: detected })}
+            </button>
+          )}
+        </div>
+        {parsed === null && <div className="error">{t("Only digits: the short account ID or the long SteamID.")}</div>}
+        {account && parsed !== null && <div className="muted">{t("Saved: {id}", { id: account })}</div>}
+      </section>
+
+      <section className="group">
+        <h3>{t("The game's console log")}</h3>
         <ErrorNote error={logError} onRetry={readLog} />
         {log && log.found && (
           <div className="insight good">
-            <strong>Found</strong>
+            <strong>{t("Found")}</strong>
             <span>
               {log.path}
-              {log.account_id ? ` · signed in as ${log.account_id}` : ""}
-              {log.match_id ? ` · in match ${log.match_id}` : ""}
-              {log.finished?.length ? ` · ${log.finished.length} finished match${log.finished.length === 1 ? "" : "es"} in it` : ""}
+              {log.account_id ? ` · ${t("signed in as {id}", { id: log.account_id })}` : ""}
+              {log.match_id ? ` · ${t("in match {id}", { id: log.match_id })}` : ""}
+              {log.finished?.length ? ` · ${tn(log.finished.length, "{n} finished match in it", "{n} finished matches in it")}` : ""}
             </span>
           </div>
         )}
         {log && !log.found && (
           <div className="insight bad">
-            <strong>Not found</strong>
+            <strong>{t("Not found")}</strong>
             <span>
-              Looked for {log.path}. {CONDEBUG_HELP}
+              {t("Looked for {path}.", { path: log.path })} {CONDEBUG_HELP}
             </span>
           </div>
         )}
         <button className="ghost small" onClick={readLog}>
-          Check again
+          {t("Check again")}
         </button>
       </section>
 
       <section className="group">
-        <h3>Defaults</h3>
+        <h3>{t("Defaults")}</h3>
         <div className="fields">
           <label className="field">
-            Rank for the Draft screen
+            {t("Rank for the Draft screen")}
             <select value={badge} onChange={(e) => setBadge(e.target.value)}>
               {RANKS.map(([b, label]) => (
                 <option key={b} value={b}>
-                  {label}
+                  {t(label)}
                 </option>
               ))}
             </select>
           </label>
           <label className="field">
-            Master builder role
+            {t("Master builder role")}
             <select value={focus} onChange={(e) => setFocus(e.target.value)}>
               {FOCUSES.map(([key, name]) => (
                 <option key={key} value={key}>
-                  {name}
+                  {t(name)}
                 </option>
               ))}
             </select>
           </label>
           <label className="field">
-            Master builder damage
+            {t("Master builder damage")}
             <select value={damage} onChange={(e) => setDamage(e.target.value)}>
               {DAMAGES.map(([key, name]) => (
                 <option key={key} value={key}>
-                  {name}
+                  {t(name)}
                 </option>
               ))}
             </select>
@@ -120,36 +139,34 @@ export default function SettingsView({ version, fetchedAt, onRefresh, onGuide }:
       </section>
 
       <section className="group">
-        <h3>In the background</h3>
+        <h3>{t("In the background")}</h3>
         <label className="toggle-row">
           <input type="checkbox" checked={watch === "1"} onChange={(e) => setWatch(e.target.checked ? "1" : "0")} />
           <span>
-            <b>Watch for my match</b>
-            <small className="muted">While the Build generator is open, build for your match as soon as it starts. Needs -condebug.</small>
+            <b>{t("Watch for my match")}</b>
+            <small className="muted">{t("While the Build generator is open, build for your match as soon as it starts. Needs -condebug.")}</small>
           </span>
         </label>
         <label className="toggle-row">
           <input type="checkbox" checked={share !== "0"} onChange={(e) => setShare(e.target.checked ? "1" : "0")} />
           <span>
-            <b>Share my finished matches</b>
+            <b>{t("Share my finished matches")}</b>
             <small className="muted">
-              When a match ends, ask deadlock-api for it, which keeps the match and its replay for anyone to study. Only the match number is
-              sent. Needs -condebug.
+              {t("When a match ends, ask deadlock-api for it, which keeps the match and its replay for anyone to study. Only the match number is sent. Needs -condebug.")}
             </small>
           </span>
         </label>
       </section>
 
       <section className="group">
-        <h3>Game data</h3>
+        <h3>{t("Game data")}</h3>
         <p className="muted">
-          Game version {version ?? "?"}, read on {new Date(fetchedAt * 1000).toLocaleDateString("en-US")}. After a patch, update it to get the new
-          heroes and items.
+          {t("Game version {v}, read on {date}. After a patch, update it to get the new heroes and items.", { v: version ?? "?", date: date(fetchedAt) })}
         </p>
         <div className="fields">
-          <button onClick={onRefresh}>Update data</button>
+          <button onClick={onRefresh}>{t("Update data")}</button>
           <button className="ghost" onClick={onGuide}>
-            Open the guide
+            {t("Open the guide")}
           </button>
         </div>
       </section>

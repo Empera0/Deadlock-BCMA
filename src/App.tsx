@@ -15,6 +15,7 @@ import SettingsView from "./components/SettingsView";
 import ShareMatches from "./components/ShareMatches";
 import UpdateBanner from "./components/UpdateBanner";
 import WhatsNew from "./components/WhatsNew";
+import { date, t } from "./i18n";
 
 const STORAGE_KEY = "current-build";
 const COMBO_KEY = "current-combo";
@@ -106,8 +107,8 @@ export default function App() {
             setData(fresh);
             const known = new Set(d.heroes.map((h) => h.class_name));
             const added = fresh.heroes.filter((h) => !known.has(h.class_name)).map((h) => h.name);
-            if (added.length) setStatus(`Game data updated: new hero ${added.join(", ")}`);
-            else if (fresh.client_version !== d.client_version) setStatus(`Game data updated to version ${fresh.client_version}`);
+            if (added.length) setStatus(t("Game data updated: new hero {names}", { names: added.join(", ") }));
+            else if (fresh.client_version !== d.client_version) setStatus(t("Game data updated to version {v}", { v: fresh.client_version ?? "?" }));
           })
           .catch(() => {});
       })
@@ -158,7 +159,7 @@ export default function App() {
   const owned = useMemo(() => new Set(sheet?.owned ?? []), [sheet]);
   const purchased = useMemo(() => new Set(build?.purchases ?? []), [build]);
 
-  if (!data || !build) return <div className="loading">{status || "Loading…"}</div>;
+  if (!data || !build) return <div className="loading">{status || t("Loading…")}</div>;
   const hero = data.heroes.find((h) => h.class_name === build.hero) ?? data.heroes[0];
 
   const toggleItem = (className: string) => {
@@ -182,23 +183,23 @@ export default function App() {
     }
   };
   const save = () =>
-    run(`Saved "${name}"`, async () => {
+    run(t("Saved \"{name}\"", { name }), async () => {
       await api.saveBuild(name, build);
       setSaved(await api.listBuilds());
     });
   const load = (n: string) =>
-    run(`Loaded "${n}"`, async () => {
+    run(t("Loaded \"{name}\"", { name: n }), async () => {
       setBuild({ ...emptyBuild(hero.class_name), ...(await api.loadBuild(n)) });
       setName(n);
     });
   const remove = () =>
-    run(`Deleted "${name}"`, async () => {
+    run(t("Deleted \"{name}\"", { name }), async () => {
       await api.deleteBuild(name);
       setSaved(await api.listBuilds());
     });
   const refresh = () => {
-    setStatus("Downloading data…");
-    run("Data updated", async () => setData(await api.refreshData()));
+    setStatus(t("Downloading data…"));
+    run(t("Data updated"), async () => setData(await api.refreshData()));
   };
 
   const maxSouls = hero.levels[hero.levels.length - 1]?.required_souls ?? 50000;
@@ -207,7 +208,7 @@ export default function App() {
   return (
     <div className={"app" + (navOpen ? " nav-open" : "")}>
       <nav className="sidebar">
-        <button className="nav-toggle" onClick={toggleNav} title={navOpen ? "Collapse" : "Expand"}>
+        <button className="nav-toggle" onClick={toggleNav} title={navOpen ? t("Collapse") : t("Expand")}>
           <svg viewBox="0 0 24 24" width="20" height="20">
             <path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
           </svg>
@@ -222,25 +223,25 @@ export default function App() {
             ["settings", "Settings", "M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"],
           ] as const
         ).map(([key, label, icon]) => (
-          <button key={key} className={"nav-item" + (mode === key ? " on" : "")} onClick={() => setMode(key)} title={label}>
+          <button key={key} className={"nav-item" + (mode === key ? " on" : "")} onClick={() => setMode(key)} title={t(label)}>
             <svg viewBox="0 0 24 24" width="20" height="20">
               <path d={icon} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" strokeLinecap="round" />
             </svg>
-            <span>{label}</span>
+            <span>{t(label)}</span>
           </button>
         ))}
         <div className="nav-foot">
           <UpdateBanner />
           <WhatsNew />
           <ShareMatches />
-          <button className="ghost" onClick={() => guide.show("start")} title="How to use the app">
-            Guide
+          <button className="ghost" onClick={() => guide.show("start")} title={t("How to use the app")}>
+            {t("Guide")}
           </button>
           <small>
-            Game {data.client_version ?? "?"} · {new Date(data.fetched_at * 1000).toLocaleDateString("en-US")}
+            {t("Game")} {data.client_version ?? "?"} · {date(data.fetched_at)}
           </small>
           <button className="ghost" onClick={refresh}>
-            Update data
+            {t("Update data")}
           </button>
         </div>
       </nav>
@@ -250,11 +251,11 @@ export default function App() {
           <img src={hero.icon} alt="" />
           <span>
             <strong>{hero.name}</strong>
-            <small>Change hero</small>
+            <small>{t("Change hero")}</small>
           </span>
         </button>
         <label className="souls">
-          Total souls
+          {t("Total souls")}
           <input
             type="range"
             min={0}
@@ -272,11 +273,11 @@ export default function App() {
           />
           {sheet && (
             <>
-              <b>Level</b>
+              <b>{t("Level")}</b>
               <input
                 type="number"
                 className="level-input"
-                title="Sets total souls to the amount needed for this level"
+                title={t("Sets total souls to the amount needed for this level")}
                 min={1}
                 max={hero.levels.length}
                 value={sheet.level}
@@ -289,18 +290,18 @@ export default function App() {
           )}
         </label>
         <div className="saves" style={mode === "build" ? undefined : { display: "none" }}>
-          <input placeholder="Build name" value={name} onChange={(e) => setName(e.target.value)} />
+          <input placeholder={t("Build name")} value={name} onChange={(e) => setName(e.target.value)} />
           <button onClick={save} disabled={!name.trim()}>
-            Save
+            {t("Save")}
           </button>
           <select value="" onChange={(e) => e.target.value && load(e.target.value)}>
-            <option value="">Load…</option>
+            <option value="">{t("Load…")}</option>
             {saved.map((s) => (
               <option key={s}>{s}</option>
             ))}
           </select>
           <button className="ghost" onClick={remove} disabled={!saved.includes(name)}>
-            Delete
+            {t("Delete")}
           </button>
         </div>
         <div className="data-info">{status && <small className="status">{status}</small>}</div>
@@ -315,7 +316,7 @@ export default function App() {
             // The builder keeps its own target unless the build is opened against an enemy of the match.
             setBuild({ ...emptyBuild(b.hero), ...b, target: target ?? build.target });
             setMode("build");
-            setStatus(target ? "Opened a build from the match, with that enemy as the target" : "Opened a build from the match");
+            setStatus(target ? t("Opened a build from the match, with that enemy as the target") : t("Opened a build from the match"));
           }}
           onOpenMaster={(preset) => {
             setMasterPreset(preset);
@@ -374,16 +375,16 @@ export default function App() {
           <div className="side">
             <div className="side-tabs">
               <button className={tab === "stats" ? "on" : ""} onClick={() => setTab("stats")}>
-                Stats
+                {t("Stats")}
               </button>
               <button className={tab === "combo" ? "on" : ""} onClick={() => setTab("combo")}>
-                Combo
+                {t("Combo")}
               </button>
               <button className={tab === "misc" ? "on" : ""} onClick={() => setTab("misc")}>
-                Misc
+                {t("Misc")}
               </button>
               <button className={tab === "compare" ? "on" : ""} onClick={() => setTab("compare")}>
-                Compare
+                {t("Compare")}
               </button>
             </div>
             {tab === "stats" ? (
@@ -423,8 +424,8 @@ export default function App() {
         />
       )}
       <footer>
-        Click a stat to see its formula and contributions.
-        {sheet && ` · ${fmt(sheet.souls)} souls`}
+        {t("Click a stat to see its formula and contributions.")}
+        {sheet && ` · ${t("{n} souls", { n: fmt(sheet.souls) })}`}
       </footer>
       </div>
     </div>

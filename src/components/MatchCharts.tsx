@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { fmt } from "../api";
+import { t } from "../i18n";
 
 export const clock = (seconds: number) => `${Math.floor(seconds / 60)}:${String(Math.round(seconds % 60)).padStart(2, "0")}`;
 
@@ -172,10 +173,10 @@ export function FightStrip({
       <svg viewBox={`0 0 ${W} ${height}`}>
         <line className="chart-zero" x1={PAD.left} x2={W - PAD.right} y1={30} y2={30} />
         <text className="chart-label" x={PAD.left - 8} y={22} textAnchor="end">
-          kills
+          {t("kills")}
         </text>
         <text className="chart-label" x={PAD.left - 8} y={44} textAnchor="end">
-          deaths
+          {t("deaths")}
         </text>
         {minutes.map((t) => (
           <text key={t} className="chart-label" x={x(t)} y={height - 4} textAnchor="middle">
@@ -185,19 +186,21 @@ export function FightStrip({
         {kills.map((k, i) => (
           <rect key={"k" + i} className="fight-kill" x={x(k.time) - 2.5} y={10} width={5} height={18} rx={2}>
             <title>
-              {clock(k.time)} · killed {k.label}
+              {clock(k.time)} · {t("killed {hero}", { hero: k.label })}
             </title>
           </rect>
         ))}
-        {revives.map((t, i) => (
-          <rect key={"r" + i} className="fight-revive" x={x(t) - 2.5} y={32} width={5} height={18} rx={2}>
-            <title>{clock(t)} · went down and revived</title>
+        {revives.map((time, i) => (
+          <rect key={"r" + i} className="fight-revive" x={x(time) - 2.5} y={32} width={5} height={18} rx={2}>
+            <title>
+              {clock(time)} · {t("went down and revived")}
+            </title>
           </rect>
         ))}
         {deaths.map((d, i) => (
           <rect key={"d" + i} className="fight-death" x={x(d.time) - 2.5} y={32} width={5} height={18} rx={2}>
             <title>
-              {clock(d.time)} · killed by {d.label}
+              {clock(d.time)} · {t("killed by {hero}", { hero: d.label })}
             </title>
           </rect>
         ))}

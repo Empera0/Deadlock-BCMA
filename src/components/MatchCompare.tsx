@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { fmt, MatchPlayer, MatchReport, MatchSample } from "../api";
 import { clock, LineChart } from "./MatchCharts";
+import { engineText } from "../engineText";
+import { LOCALE, t } from "../i18n";
 
 interface Metric {
   key: string;
@@ -105,7 +107,7 @@ export default function MatchCompare({ report, metrics, first, second }: Props) 
     gaps
       .filter((g) => g.gap * sign * who > 0.3)
       .slice(0, 4)
-      .map((g) => `${g.label.toLowerCase()} (+${fmt(Math.abs(g.gap), 1)})`)
+      .map((g) => `${g.label.toLocaleLowerCase(LOCALE)} (+${fmt(Math.abs(g.gap), 1)})`)
       .join(", ");
 
   const side = (p: MatchPlayer, color: string) => (
@@ -114,15 +116,15 @@ export default function MatchCompare({ report, metrics, first, second }: Props) 
       <div>
         <strong style={{ color }}>
           {p.hero_name}{" "}
-          <small className="role-tag" title={`Scored as: ${p.role.toLowerCase()} (${p.role_why})`}>
+          <small className="role-tag" title={t("Scored as: {role} ({why})", { role: p.role.toLocaleLowerCase(LOCALE), why: p.role_why })}>
             {p.role}
           </small>
         </strong>
         {p.player_name && <small className="player-name">{p.player_name}</small>}
         <small>
-          {p.kills}/{p.deaths}/{p.assists} · {fmt(p.net_worth)} souls ·{" "}
+          {p.kills}/{p.deaths}/{p.assists} · {t("{n} souls", { n: fmt(p.net_worth) })} ·{" "}
           <b className={`place-text place-${Math.min(report.ranking.findIndex((r) => r.slot === p.slot) + 1, 4)}`}>
-            #{report.ranking.findIndex((r) => r.slot === p.slot) + 1} in the ranking
+            {t("#{n} in the ranking", { n: report.ranking.findIndex((r) => r.slot === p.slot) + 1 })}
           </b>
         </small>
       </div>
@@ -133,7 +135,7 @@ export default function MatchCompare({ report, metrics, first, second }: Props) 
       {p.purchases
         .filter((x) => x.sold_at === null)
         .map((x, i) => (
-          <div key={i} className={"match-item " + x.category} title={`${fmt(x.cost)} souls`}>
+          <div key={i} className={"match-item " + x.category} title={t("{n} souls", { n: fmt(x.cost) })}>
             <img src={x.icon} alt="" loading="lazy" />
             <span>{x.name}</span>
             <small>{clock(x.time)}</small>
@@ -158,24 +160,32 @@ export default function MatchCompare({ report, metrics, first, second }: Props) 
       {a.slot !== b.slot && (
         <div className="insight">
           <strong>
-            {ahead.hero_name} scores {fmt(Math.abs(lead), 1)} points more than {behind.hero_name} ({fmt(Math.max(rankA?.score ?? 0, rankB?.score ?? 0), 1)}{" "}
-            against {fmt(Math.min(rankA?.score ?? 0, rankB?.score ?? 0), 1)})
+            {t("{a} scores {n} points more than {b} ({x} against {y})", {
+              a: ahead.hero_name,
+              n: fmt(Math.abs(lead), 1),
+              b: behind.hero_name,
+              x: fmt(Math.max(rankA?.score ?? 0, rankB?.score ?? 0), 1),
+              y: fmt(Math.min(rankA?.score ?? 0, rankB?.score ?? 0), 1),
+            })}
           </strong>
           <span>
-            {ahead.hero_name} gains most from: {reasons(1) || "nothing in particular"}.
+            {t("{hero} gains most from: {what}.", { hero: ahead.hero_name, what: reasons(1) || t("nothing in particular") })}
           </span>
           <span>
-            {behind.hero_name} is ahead in: {reasons(-1) || "nothing"}.
+            {t("{hero} is ahead in: {what}.", { hero: behind.hero_name, what: reasons(-1) || t("nothing") })}
           </span>
         </div>
       )}
 
       <Rows
-        title="Score, part by part (points)"
+        title={t("Score, part by part (points)")}
         rows={[
-          { label: "Total score", a: rankA?.score ?? 0, b: rankB?.score ?? 0, format: (v) => fmt(v, 1) },
+          { label: t("Total score"), a: rankA?.score ?? 0, b: rankB?.score ?? 0, format: (v) => fmt(v, 1) },
           ...points.map((p) => ({
-            label: Math.abs(p.maxA - p.maxB) < 0.05 ? `${p.label} (max ${fmt(p.maxA, 1)})` : `${p.label} (max ${fmt(p.maxA, 1)} / ${fmt(p.maxB, 1)})`,
+            label:
+              Math.abs(p.maxA - p.maxB) < 0.05
+                ? `${p.label} (${t("max {n}", { n: fmt(p.maxA, 1) })})`
+                : `${p.label} (${t("max {n}", { n: `${fmt(p.maxA, 1)} / ${fmt(p.maxB, 1)}` })})`,
             a: p.a,
             b: p.b,
             format: (v: number) => fmt(v, 1),
@@ -185,88 +195,88 @@ export default function MatchCompare({ report, metrics, first, second }: Props) 
       />
 
       <Rows
-        title="Fighting"
+        title={t("Fighting")}
         rows={[
-          { label: "Kills", a: a.kills, b: b.kills },
-          { label: "Assists", a: a.assists, b: b.assists },
-          { label: "Deaths", a: a.deaths, b: b.deaths, more: false },
-          { label: "Went down but revived", a: a.revives_at.length, b: b.revives_at.length, more: false },
-          { label: "Close calls (10% health or less, survived)", a: a.close_calls, b: b.close_calls, more: false },
-          { label: "Team fights joined", a: a.fights_joined, b: b.fights_joined },
-          { label: "Team fights joined %", a: pct(a.fights_joined, a.fights_possible), b: pct(b.fights_joined, b.fights_possible), format: percent },
-          { label: "Fights left to the team", a: a.fights_missed, b: b.fights_missed, more: false },
-          { label: "Late-game fights skipped", a: a.late_fights_skipped, b: b.late_fights_skipped, more: false },
-          { label: "Team fights won when there", a: a.fights_won, b: b.fights_won },
-          { label: "Team fights lost when there", a: a.fights_lost, b: b.fights_lost, more: false },
-          { label: "Died first in a team fight", a: a.first_deaths, b: b.first_deaths, more: false },
-          { label: "Lane: damage dealt to the lane opponents", a: a.lane_damage_dealt, b: b.lane_damage_dealt },
-          { label: "Lane: damage taken from the lane opponents", a: a.lane_damage_taken, b: b.lane_damage_taken, more: false },
-          { label: "Won a fight, then farmed", a: a.wins_farmed, b: b.wins_farmed, more: false },
-          { label: "Caught alone outside a fight", a: a.caught_deaths, b: b.caught_deaths, more: false },
-          { label: "Deaths that left the team short for a fight", a: a.costly_deaths, b: b.costly_deaths, more: false },
-          { label: "Hero damage", a: a.hero_damage, b: b.hero_damage },
-          { label: "Hero damage per minute", a: a.hero_damage / minutes, b: b.hero_damage / minutes },
-          { label: "Damage enabled for teammates (estimate)", a: a.enabled_total, b: b.enabled_total },
-          { label: "Objective damage", a: a.objective_damage, b: b.objective_damage },
-          { label: "Objectives taken (there when they fell)", a: a.objectives_taken.length, b: b.objectives_taken.length },
-          { label: "Damage taken", a: a.damage_taken, b: b.damage_taken },
-          { label: "Damage mitigated", a: a.mitigated, b: b.mitigated },
-          { label: "Self healing", a: a.self_healing, b: b.self_healing },
-          { label: "Healing and barriers for teammates", a: a.teammate_support, b: b.teammate_support },
-          { label: "Accuracy vs heroes", a: pct(a.hero_hits, a.hero_shots), b: pct(b.hero_hits, b.hero_shots), format: percent },
-          { label: "Headshot share", a: pct(a.hero_headshots, a.hero_hits), b: pct(b.hero_headshots, b.hero_hits), format: percent },
+          { label: t("Kills"), a: a.kills, b: b.kills },
+          { label: t("Assists"), a: a.assists, b: b.assists },
+          { label: t("Deaths"), a: a.deaths, b: b.deaths, more: false },
+          { label: t("Went down but revived"), a: a.revives_at.length, b: b.revives_at.length, more: false },
+          { label: t("Close calls (10% health or less, survived)"), a: a.close_calls, b: b.close_calls, more: false },
+          { label: t("Team fights joined"), a: a.fights_joined, b: b.fights_joined },
+          { label: t("Team fights joined %"), a: pct(a.fights_joined, a.fights_possible), b: pct(b.fights_joined, b.fights_possible), format: percent },
+          { label: t("Fights left to the team"), a: a.fights_missed, b: b.fights_missed, more: false },
+          { label: t("Late-game fights skipped"), a: a.late_fights_skipped, b: b.late_fights_skipped, more: false },
+          { label: t("Team fights won when there"), a: a.fights_won, b: b.fights_won },
+          { label: t("Team fights lost when there"), a: a.fights_lost, b: b.fights_lost, more: false },
+          { label: t("Died first in a team fight"), a: a.first_deaths, b: b.first_deaths, more: false },
+          { label: t("Lane: damage dealt to the lane opponents"), a: a.lane_damage_dealt, b: b.lane_damage_dealt },
+          { label: t("Lane: damage taken from the lane opponents"), a: a.lane_damage_taken, b: b.lane_damage_taken, more: false },
+          { label: t("Won a fight, then farmed"), a: a.wins_farmed, b: b.wins_farmed, more: false },
+          { label: t("Caught alone outside a fight"), a: a.caught_deaths, b: b.caught_deaths, more: false },
+          { label: t("Deaths that left the team short for a fight"), a: a.costly_deaths, b: b.costly_deaths, more: false },
+          { label: t("Hero damage"), a: a.hero_damage, b: b.hero_damage },
+          { label: t("Hero damage per minute"), a: a.hero_damage / minutes, b: b.hero_damage / minutes },
+          { label: t("Damage enabled for teammates (estimate)"), a: a.enabled_total, b: b.enabled_total },
+          { label: t("Objective damage"), a: a.objective_damage, b: b.objective_damage },
+          { label: t("Objectives taken (there when they fell)"), a: a.objectives_taken.length, b: b.objectives_taken.length },
+          { label: t("Damage taken"), a: a.damage_taken, b: b.damage_taken },
+          { label: t("Damage mitigated"), a: a.mitigated, b: b.mitigated },
+          { label: t("Self healing"), a: a.self_healing, b: b.self_healing },
+          { label: t("Healing and barriers for teammates"), a: a.teammate_support, b: b.teammate_support },
+          { label: t("Accuracy vs heroes"), a: pct(a.hero_hits, a.hero_shots), b: pct(b.hero_hits, b.hero_shots), format: percent },
+          { label: t("Headshot share"), a: pct(a.hero_headshots, a.hero_hits), b: pct(b.hero_headshots, b.hero_hits), format: percent },
         ]}
       />
 
       <Rows
-        title="Souls"
+        title={t("Souls")}
         rows={[
-          { label: "Souls", a: a.net_worth, b: b.net_worth },
-          { label: "Souls per minute", a: a.net_worth / minutes, b: b.net_worth / minutes },
-          ...union(a.souls, b.souls).map((name) => ({ label: `From ${name.toLowerCase()}`, a: named(a.souls, name), b: named(b.souls, name) })),
-          { label: "Trooper damage", a: a.creep_damage, b: b.creep_damage },
-          { label: "Neutral camp damage", a: a.neutral_damage, b: b.neutral_damage },
+          { label: t("Souls"), a: a.net_worth, b: b.net_worth },
+          { label: t("Souls per minute"), a: a.net_worth / minutes, b: b.net_worth / minutes },
+          ...union(a.souls, b.souls).map((name) => ({ label: t("From {source}", { source: name.toLocaleLowerCase(LOCALE) }), a: named(a.souls, name), b: named(b.souls, name) })),
+          { label: t("Trooper damage"), a: a.creep_damage, b: b.creep_damage },
+          { label: t("Neutral camp damage"), a: a.neutral_damage, b: b.neutral_damage },
         ]}
       />
 
       <Rows
-        title="Macro habits"
+        title={t("Macro habits")}
         rows={[
-          { label: `Souls at the end of laning (${clock(a.lane_time)})`, a: a.lane_souls, b: b.lane_souls },
-          { label: "Souls ahead of the lane opponent", a: a.lane_souls_diff, b: b.lane_souls_diff, format: (v) => `${v > 0 ? "+" : ""}${fmt(v, 0)}` },
-          { label: "Laning last hits", a: a.lane_last_hits, b: b.lane_last_hits },
-          { label: "Laning denies", a: a.lane_denies, b: b.lane_denies },
-          { label: "Trooper last hits taken", a: a.last_hit_pct, b: b.last_hit_pct, format: percent },
-          { label: "Average unspent souls", a: a.avg_unspent_souls, b: b.avg_unspent_souls, more: false },
-          { label: "Average unspent ability points", a: a.avg_unspent_ap, b: b.avg_unspent_ap, more: false, format: (v) => fmt(v, 1) },
-          { label: "Time dead (seconds)", a: a.dead_seconds, b: b.dead_seconds, more: false },
-          { label: "Souls lost on death", a: a.souls_lost_on_death, b: b.souls_lost_on_death, more: false },
+          { label: t("Souls at the end of laning ({time})", { time: clock(a.lane_time) }), a: a.lane_souls, b: b.lane_souls },
+          { label: t("Souls ahead of the lane opponent"), a: a.lane_souls_diff, b: b.lane_souls_diff, format: (v) => `${v > 0 ? "+" : ""}${fmt(v, 0)}` },
+          { label: t("Laning last hits"), a: a.lane_last_hits, b: b.lane_last_hits },
+          { label: t("Laning denies"), a: a.lane_denies, b: b.lane_denies },
+          { label: t("Trooper last hits taken"), a: a.last_hit_pct, b: b.last_hit_pct, format: percent },
+          { label: t("Average unspent souls"), a: a.avg_unspent_souls, b: b.avg_unspent_souls, more: false },
+          { label: t("Average unspent ability points"), a: a.avg_unspent_ap, b: b.avg_unspent_ap, more: false, format: (v) => fmt(v, 1) },
+          { label: t("Time dead (seconds)"), a: a.dead_seconds, b: b.dead_seconds, more: false },
+          { label: t("Souls lost on death"), a: a.souls_lost_on_death, b: b.souls_lost_on_death, more: false },
           ...a.time_split
-            .filter((t) => t.name !== "Dead")
-            .map((t, i) => ({
-              label: `${t.name} (share of the match)`,
-              a: pct(t.amount, report.duration_s),
+            .filter((part) => part.name !== engineText("Dead"))
+            .map((part, i) => ({
+              label: t("{name} (share of the match)", { name: part.name }),
+              a: pct(part.amount, report.duration_s),
               b: pct(b.time_split[i]?.amount ?? 0, report.duration_s),
               format: percent,
-              more: t.name !== "Out of combat",
+              more: part.name !== engineText("Out of combat"),
             })),
         ]}
       />
 
       <Rows
-        title="Map play"
+        title={t("Map play")}
         rows={union(a.macro_stats, b.macro_stats).map((name) => ({
           label: name,
           a: named(a.macro_stats, name),
           b: named(b.macro_stats, name),
-          more: name !== "Parries missed",
+          more: name !== engineText("Parries missed"),
         }))}
       />
 
       <div className="group">
-        <h3>Over time</h3>
+        <h3>{t("Over time")}</h3>
         <label className="field inline">
-          Show
+          {t("Show")}
           <select value={metric.key} onChange={(e) => setMetricKey(e.target.value)}>
             {metrics.map((m) => (
               <option key={m.key} value={m.key}>
@@ -287,7 +297,7 @@ export default function MatchCompare({ report, metrics, first, second }: Props) 
 
       <div className="match-columns">
         <div className="group">
-          <h3 style={{ color: COLORS[0] }}>{a.hero_name}: final items</h3>
+          <h3 style={{ color: COLORS[0] }}>{t("{hero}: final items", { hero: a.hero_name })}</h3>
           {purchases(a)}
           {a.insights.map((i, n) => (
             <div key={n} className={"insight " + i.tone}>
@@ -297,7 +307,7 @@ export default function MatchCompare({ report, metrics, first, second }: Props) 
           ))}
         </div>
         <div className="group">
-          <h3 style={{ color: COLORS[1] }}>{b.hero_name}: final items</h3>
+          <h3 style={{ color: COLORS[1] }}>{t("{hero}: final items", { hero: b.hero_name })}</h3>
           {purchases(b)}
           {b.insights.map((i, n) => (
             <div key={n} className={"insight " + i.tone}>

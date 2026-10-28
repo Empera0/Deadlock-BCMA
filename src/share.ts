@@ -1,3 +1,4 @@
+import { t } from "./i18n";
 import { Build, Hero, Item } from "./api";
 
 /** Share codes start with this, so an old code can still be told apart once the format changes. */
@@ -36,15 +37,15 @@ export function shareCode(build: Build, heroes: Hero[], items: Map<string, Item>
 /** The build a share code stands for, or an error that says what is wrong with it. */
 export function readShareCode(code: string, heroes: Hero[], items: Item[]): Partial<Build> {
   const text = code.trim();
-  if (!text.startsWith(PREFIX)) throw new Error("Not a build code: it should start with " + PREFIX);
+  if (!text.startsWith(PREFIX)) throw new Error(t("Not a build code: it should start with {prefix}", { prefix: PREFIX }));
   let packed: Packed;
   try {
     packed = JSON.parse(fromBase64Url(text.slice(PREFIX.length)));
   } catch {
-    throw new Error("The build code is damaged: copy it again in full");
+    throw new Error(t("The build code is damaged: copy it again in full"));
   }
   const hero = heroes.find((h) => h.id === packed.h);
-  if (!hero) throw new Error("The code's hero is not in the game data: use Update data");
+  if (!hero) throw new Error(t("The code's hero is not in the game data: use Update data"));
   const byId = new Map(items.map((i) => [i.id, i.class_name]));
   const classes = (list: number[] = []) => list.map((x) => byId.get(x)).filter((x): x is string => x !== undefined);
   const purchases = classes(packed.i);

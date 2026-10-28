@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { api, Build, Combo, ComboResult, EMPTY_MAP, fmt, Hero, Item, Zone } from "../api";
 import HeroPicker from "./HeroPicker";
 import Shop from "./Shop";
+import { t } from "../i18n";
 
 interface Props {
   heroes: Hero[];
@@ -64,21 +65,21 @@ export default function ComboTarget({ heroes, items, combo, result, onChange }: 
   return (
     <div className="group">
       <h3>
-        Target
+        {t("Target")}
         {enemy && (
-          <button className="ghost small" onClick={() => setEnemy(null)} title="Use the health and resists set in the Stats tab">
-            Manual target
+          <button className="ghost small" onClick={() => setEnemy(null)} title={t("Use the health and resists set in the Stats tab")}>
+            {t("Manual target")}
           </button>
         )}
       </h3>
       <div className="enemy-row">
         <button className="enemy-hero" onClick={() => setPicking(true)}>
           {hero ? <img src={hero.icon} alt="" /> : <span className="enemy-empty">?</span>}
-          <span>{hero ? hero.name : "Pick an enemy hero"}</span>
+          <span>{hero ? hero.name : t("Pick an enemy hero")}</span>
         </button>
         {enemy && (
-          <label className="field inline" title="The enemy's total souls: its level and boons follow from them">
-            Souls
+          <label className="field inline" title={t("The enemy's total souls: its level and boons follow from them")}>
+            {t("Souls")}
             {number(Math.max(enemy.souls ?? 0, spent), (v) => setEnemy({ ...enemy, souls: Math.round(v) }), 500)}
           </label>
         )}
@@ -89,14 +90,14 @@ export default function ComboTarget({ heroes, items, combo, result, onChange }: 
             const item = byClass.get(c);
             if (!item) return null;
             return (
-              <button key={c} className={"enemy-item " + item.category} title={`${item.name}: click to remove`} onClick={() => toggleItem(c)}>
+              <button key={c} className={"enemy-item " + item.category} title={t("{item}: click to remove", { item: item.name })} onClick={() => toggleItem(c)}>
                 <img src={item.icon} alt="" />
                 <span>{item.name}</span>
               </button>
             );
           })}
           <button className="ghost small" onClick={() => setShopping(true)}>
-            + Items
+            {t("+ Items")}
           </button>
         </div>
       )}
@@ -104,22 +105,28 @@ export default function ComboTarget({ heroes, items, combo, result, onChange }: 
       <div className="zone">
         <label>
           <input type="checkbox" checked={zone.rift} onChange={(e) => setZone({ rift: e.target.checked })} />
-          Inside the Unstable Rift
+          {t("Inside the Unstable Rift")}
         </label>
         {zone.rift && (
           <div className="fields misc-fields">
-            <label>Minute {number(zone.minute, (v) => setZone({ minute: v }))}</label>
-            <label>Your team's souls {number(zone.own_souls, (v) => setZone({ own_souls: v }), 1000)}</label>
-            <label>Enemy team's souls {number(zone.enemy_souls, (v) => setZone({ enemy_souls: v }), 1000)}</label>
+            <label>
+              {t("Minute")} {number(zone.minute, (v) => setZone({ minute: v }))}
+            </label>
+            <label>
+              {t("Your team's souls")} {number(zone.own_souls, (v) => setZone({ own_souls: v }), 1000)}
+            </label>
+            <label>
+              {t("Enemy team's souls")} {number(zone.enemy_souls, (v) => setZone({ enemy_souls: v }), 1000)}
+            </label>
           </div>
         )}
-        <label title="Allied heroes within 28 m of a Walker get 15% bullet and spirit resist">
+        <label title={t("Allied heroes within 28 m of a Walker get 15% bullet and spirit resist")}>
           <input type="checkbox" checked={zone.enemy_walker} onChange={(e) => setZone({ enemy_walker: e.target.checked })} />
-          Target near its own Walker
+          {t("Target near its own Walker")}
         </label>
-        <label title="A Walker's fireballs take 10% bullet and spirit resist from the enemies they hit">
+        <label title={t("A Walker's fireballs take 10% bullet and spirit resist from the enemies they hit")}>
           <input type="checkbox" checked={zone.own_walker} onChange={(e) => setZone({ own_walker: e.target.checked })} />
-          Target near your Walker
+          {t("Target near your Walker")}
         </label>
       </div>
 
@@ -127,15 +134,15 @@ export default function ComboTarget({ heroes, items, combo, result, onChange }: 
         <>
           <div className="tiles small">
             <div>
-              <span>Health</span>
+              <span>{t("Health")}</span>
               <b>{fmt(target.health, 0)}</b>
             </div>
             <div>
-              <span>Bullet resist</span>
+              <span>{t("Bullet resist")}</span>
               <b>{fmt(target.bullet_resist, 1)}%</b>
             </div>
             <div>
-              <span>Spirit resist</span>
+              <span>{t("Spirit resist")}</span>
               <b>{fmt(target.spirit_resist, 1)}%</b>
             </div>
           </div>
@@ -162,10 +169,10 @@ export default function ComboTarget({ heroes, items, combo, result, onChange }: 
         <div className="overlay" onClick={() => setShopping(false)}>
           <div className="enemy-shop" onClick={(e) => e.stopPropagation()}>
             <div className="enemy-shop-head">
-              <strong>{hero?.name ?? "Enemy"} items</strong>
-              <span className="muted">{fmt(spent, 0)} souls spent</span>
+              <strong>{t("{hero} items", { hero: hero?.name ?? t("Enemy") })}</strong>
+              <span className="muted">{t("{n} souls spent", { n: fmt(spent, 0) })}</span>
               <button className="ghost small" onClick={() => setShopping(false)}>
-                Done
+                {t("Done")}
               </button>
             </div>
             <Shop items={items} owned={owned} purchased={new Set(enemy.purchases)} onToggle={toggleItem} />

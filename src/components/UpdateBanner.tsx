@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { getVersion } from "@tauri-apps/api/app";
 import { check, Update } from "@tauri-apps/plugin-updater";
 import { relaunch } from "@tauri-apps/plugin-process";
+import { LANG, t } from "../i18n";
 
 /** While the app runs, it looks for a newer release this often. */
 const CHECK_EVERY_MS = 30 * 60 * 1000;
@@ -21,18 +22,18 @@ export default function UpdateBanner() {
   const download = async (found: Update) => {
     let total = 0;
     let done = 0;
-    setProgress("Downloading…");
+    setProgress(t("Downloading…"));
     await found.download((event) => {
       if (event.event === "Started") total = event.data.contentLength ?? 0;
       if (event.event === "Progress") {
         done += event.data.chunkLength;
-        setProgress(total > 0 ? `Downloading ${found.version}… ${Math.round((done / total) * 100)}%` : `Downloading ${found.version}…`);
+        setProgress(total > 0 ? t("Downloading {v}… {pct}%", { v: found.version, pct: Math.round((done / total) * 100) }) : t("Downloading {v}…", { v: found.version }));
       }
     });
   };
 
   const install = async (found: Update) => {
-    setProgress(`Installing ${found.version}…`);
+    setProgress(t("Installing {v}…", { v: found.version }));
     await found.install();
     await relaunch();
   };
@@ -55,7 +56,7 @@ export default function UpdateBanner() {
         }
       } catch (e) {
         // No network or no release: the app carries on, and the button lets the update be tried again.
-        setProgress(`Update failed: ${String(e)}`);
+        setProgress(`${t("Update failed:")} ${String(e)}`);
       } finally {
         busy.current = false;
       }
@@ -72,19 +73,21 @@ export default function UpdateBanner() {
       if (!ready) await download(update);
       await install(update);
     } catch (e) {
-      setProgress(`Update failed: ${String(e)}`);
+      setProgress(`${t("Update failed:")} ${String(e)}`);
     } finally {
       busy.current = false;
     }
   };
 
-  const failed = progress.startsWith("Update failed");
+  const failed = progress.startsWith(t("Update failed:"));
   return (
     <span className="app-version">
-      {version && <small>App {version}</small>}
+      {version && <small>{t("App {v}", { v: version })}</small>}
       {update && (
-        <button className="update-button" disabled={progress !== "" && !failed} onClick={retry} title={failed ? progress : update.body ?? ""}>
-          {failed ? `Retry update to ${update.version}` : progress || (ready ? `Restart to update to ${update.version}` : `Update to ${update.version}`)}
+        <button className="update-button" disabled={progress !== "" && !failed} onClick={retry} title={failed ? progress : LANG === "en" ? update.body ?? "" : ""}>
+          {failed
+            ? t("Retry update to {v}", { v: update.version })
+            : progress || t(ready ? "Restart to update to {v}" : "Update to {v}", { v: update.version })}
         </button>
       )}
     </span>

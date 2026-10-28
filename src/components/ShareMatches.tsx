@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "../api";
 import { SETTINGS, useSetting } from "../settings";
+import { t } from "../i18n";
 
 const STATE_KEY = "shared-matches";
 /** How often the console log is read for a match that ended, ms. */
@@ -73,7 +74,7 @@ export default function ShareMatches() {
           try {
             const s = await api.shareMatch(id);
             state[key] = { tries: (state[key]?.tries ?? 0) + 1, last: now, metadata: s.metadata, replay: s.replay };
-            setLast(`Match ${id} shared${s.replay ? " with its replay" : s.metadata ? "; replay not out yet" : ""}`);
+            setLast(t(s.replay ? "Match {id} shared with its replay" : s.metadata ? "Match {id} shared; replay not out yet" : "Match {id} shared", { id }));
           } catch {
             // Not known to the service yet: asked again on the next round, as if never tried.
           }
@@ -91,11 +92,13 @@ export default function ShareMatches() {
   return (
     <label
       className="share-matches"
-      title="When a match ends, the app reads its number from the game's console log (-condebug) and asks deadlock-api for it, which then keeps the match and its replay for anyone to study. Only the match number is sent."
+      title={t(
+        "When a match ends, the app reads its number from the game's console log (-condebug) and asks deadlock-api for it, which then keeps the match and its replay for anyone to study. Only the match number is sent.",
+      )}
     >
       <input type="checkbox" checked={on} onChange={(e) => setOn(e.target.checked)} />
       <span>
-        Share my finished matches
+        {t("Share my finished matches")}
         {on && last && <small>{last}</small>}
       </span>
     </label>

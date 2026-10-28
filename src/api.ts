@@ -1,4 +1,15 @@
 import { invoke } from "@tauri-apps/api/core";
+import { engineError, translateDeep } from "./engineText";
+import { LOCALE } from "./i18n";
+
+/** A command of the app's backend, its answer and its errors in the app's language. */
+async function call<T>(command: string, args?: Record<string, unknown>): Promise<T> {
+  try {
+    return translateDeep(await invoke<T>(command, args));
+  } catch (e) {
+    throw typeof e === "string" ? engineError(e) : e;
+  }
+}
 
 export type Category = "weapon" | "vitality" | "spirit";
 
@@ -537,46 +548,46 @@ export interface DeathAnalysis {
 }
 
 export const api = {
-  getData: () => invoke<GameData>("get_data"),
-  refreshData: () => invoke<GameData>("refresh_data"),
-  compute: (build: Build) => invoke<Sheet>("compute", { build }),
-  powerCurve: (builds: Build[]) => invoke<(PowerPoint | null)[]>("power_curve", { builds }),
-  farmReport: (build: Build, minute: number) => invoke<FarmReport>("farm_report", { build, minute }),
-  popularBuild: (heroId: number) => invoke<PopularReport>("popular_build", { heroId }),
+  getData: () => call<GameData>("get_data"),
+  refreshData: () => call<GameData>("refresh_data"),
+  compute: (build: Build) => call<Sheet>("compute", { build }),
+  powerCurve: (builds: Build[]) => call<(PowerPoint | null)[]>("power_curve", { builds }),
+  farmReport: (build: Build, minute: number) => call<FarmReport>("farm_report", { build, minute }),
+  popularBuild: (heroId: number) => call<PopularReport>("popular_build", { heroId }),
   masterBuild: (myHero: string, allies: number[], enemies: number[], lane: number[], focus: string, damage: string, bought: [string, number][] | null) =>
-    invoke<MasterReport>("master_build", { myHero, allies, enemies, lane, focus, damage, bought }),
+    call<MasterReport>("master_build", { myHero, allies, enemies, lane, focus, damage, bought }),
   riftComeback: (minute: number, ownSouls: number, enemySouls: number) =>
-    invoke<RiftComeback>("rift_comeback", { minute, ownSouls, enemySouls }),
-  suggestBuilds: (build: Build, styles: string[]) => invoke<Suggestions>("suggest_builds", { build, styles }),
+    call<RiftComeback>("rift_comeback", { minute, ownSouls, enemySouls }),
+  suggestBuilds: (build: Build, styles: string[]) => call<Suggestions>("suggest_builds", { build, styles }),
   rankNext: (build: Build, metric: string, conditional: boolean) =>
-    invoke<Ranked[]>("rank_next", { build, metric, conditional }),
+    call<Ranked[]>("rank_next", { build, metric, conditional }),
   draftPicks: (allies: number[], enemies: number[], lane: number[], banned: number[], badge: number, accountId: string | null) =>
-    invoke<DraftReport>("draft_picks", { allies, enemies, lane, banned, badge, accountId }),
-  abilityOrder: (build: Build) => invoke<OrderReport>("ability_order", { build }),
-  deathTrend: (accountId: string, count: number) => invoke<DeathTrend>("death_trend", { accountId, count }),
-  liveMatch: (accountId: string) => invoke<LiveMatch>("live_match", { accountId }),
-  consoleMatch: () => invoke<ConsoleState>("console_match"),
-  shareMatch: (matchId: number) => invoke<SharedMatch>("share_match", { matchId }),
-  itemTiming: (matchId: number, slot: number) => invoke<ItemTimingReport>("item_timing", { matchId, slot }),
-  replayStudy: (matchId: number, slot: number) => invoke<ReplayStudy>("replay_study", { matchId, slot }),
-  matchTeams: (matchId: number, accountId: string) => invoke<LiveMatch>("match_teams", { matchId, accountId }),
-  scoutLobby: (players: LivePlayer[]) => invoke<Scout[]>("scout_lobby", { players }),
-  adviseBuild: (build: Build, style: string) => invoke<Advice>("advise_build", { build, style }),
-  simulateCombo: (build: Build, combo: Combo) => invoke<ComboResult>("simulate_combo", { build, combo }),
-  saveBuild: (name: string, build: Build) => invoke<void>("save_build", { name, build }),
+    call<DraftReport>("draft_picks", { allies, enemies, lane, banned, badge, accountId }),
+  abilityOrder: (build: Build) => call<OrderReport>("ability_order", { build }),
+  deathTrend: (accountId: string, count: number) => call<DeathTrend>("death_trend", { accountId, count }),
+  liveMatch: (accountId: string) => call<LiveMatch>("live_match", { accountId }),
+  consoleMatch: () => call<ConsoleState>("console_match"),
+  shareMatch: (matchId: number) => call<SharedMatch>("share_match", { matchId }),
+  itemTiming: (matchId: number, slot: number) => call<ItemTimingReport>("item_timing", { matchId, slot }),
+  replayStudy: (matchId: number, slot: number) => call<ReplayStudy>("replay_study", { matchId, slot }),
+  matchTeams: (matchId: number, accountId: string) => call<LiveMatch>("match_teams", { matchId, accountId }),
+  scoutLobby: (players: LivePlayer[]) => call<Scout[]>("scout_lobby", { players }),
+  adviseBuild: (build: Build, style: string) => call<Advice>("advise_build", { build, style }),
+  simulateCombo: (build: Build, combo: Combo) => call<ComboResult>("simulate_combo", { build, combo }),
+  saveBuild: (name: string, build: Build) => call<void>("save_build", { name, build }),
   listBuilds: () => invoke<string[]>("list_builds"),
   loadBuild: (name: string) => invoke<Build>("load_build", { name }),
-  deleteBuild: (name: string) => invoke<void>("delete_build", { name }),
-  fetchMatch: (matchId: number) => invoke<MatchReport>("fetch_match", { matchId }),
-  deathAnalysis: (matchId: number, slot: number) => invoke<DeathAnalysis>("death_analysis", { matchId, slot }),
-  matchHistory: (accountId: string) => invoke<HistoryEntry[]>("match_history", { accountId }),
-  findLocalMatches: () => invoke<LocalScan>("find_local_matches"),
-  analyzeHistory: (accountId: string, count: number) => invoke<{ rows: MatchSummary[]; skipped: number }>("analyze_history", { accountId, count }),
+  deleteBuild: (name: string) => call<void>("delete_build", { name }),
+  fetchMatch: (matchId: number) => call<MatchReport>("fetch_match", { matchId }),
+  deathAnalysis: (matchId: number, slot: number) => call<DeathAnalysis>("death_analysis", { matchId, slot }),
+  matchHistory: (accountId: string) => call<HistoryEntry[]>("match_history", { accountId }),
+  findLocalMatches: () => call<LocalScan>("find_local_matches"),
+  analyzeHistory: (accountId: string, count: number) => call<{ rows: MatchSummary[]; skipped: number }>("analyze_history", { accountId, count }),
 };
 
 export function fmt(v: number | null | undefined, digits = 2): string {
   if (v === null || v === undefined || !Number.isFinite(v)) return "∞";
-  return v.toLocaleString("en-US", { maximumFractionDigits: digits });
+  return v.toLocaleString(LOCALE, { maximumFractionDigits: digits });
 }
 
 export const CATEGORY_LABEL: Record<Category, string> = {

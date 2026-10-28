@@ -4,7 +4,7 @@ import { RANKS, SETTINGS, useSetting } from "../settings";
 import LobbyScout from "./LobbyScout";
 import { api, LiveMatch, DraftPick, DraftReason, DraftReport, fmt, Hero, MatchPreset } from "../api";
 import ErrorNote from "./ErrorNote";
-
+import { t } from "../i18n";
 
 const TEAM_SIZE = 6;
 /** With an account, "my heroes" are the ones played at least this often. */
@@ -12,6 +12,7 @@ const MY_HERO_MATCHES = 3;
 const SHOWN = 12;
 
 type Side = "allies" | "enemies" | "banned";
+/** The draft sides; translated where shown. */
 const SIDES: [Side, string][] = [
   ["allies", "Your team"],
   ["enemies", "Enemy team"],
@@ -26,7 +27,7 @@ function Reasons({ reasons, enemy = false }: { reasons: DraftReason[]; enemy?: b
   return (
     <ul className="draft-reasons">
       {reasons.map((r) => (
-        <li key={r.label} className={r.points >= 0 !== enemy ? "good" : "bad"} title={`${fmt(r.matches)} matches`}>
+        <li key={r.label} className={r.points >= 0 !== enemy ? "good" : "bad"} title={t("{n} matches", { n: fmt(r.matches) })}>
           {r.label} <b>{signed(r.points, 2)}</b>
         </li>
       ))}
@@ -42,20 +43,20 @@ function PickRow({ pick, rank, onPlan }: { pick: DraftPick; rank: number; onPlan
       <div className="draft-pick-main">
         <div className="draft-pick-head">
           <strong>{pick.name}</strong>
-          <span className="muted">{pick.hero_type}</span>
-          <b className={pick.edge >= 0 ? "good" : "bad"} title="Win rate points the pick adds to your team's chance">
-            {signed(pick.edge, 2)} pts
+          <span className="muted">{t(pick.hero_type)}</span>
+          <b className={pick.edge >= 0 ? "good" : "bad"} title={t("Win rate points the pick adds to your team's chance")}>
+            {t("{n} pts", { n: signed(pick.edge, 2) })}
           </b>
-          {pick.team_rate !== null && <span className="muted">team {fmt(pick.team_rate, 1)}%</span>}
+          {pick.team_rate !== null && <span className="muted">{t("team {n}%", { n: fmt(pick.team_rate, 1) })}</span>}
         </div>
         <div className="draft-parts muted">
-          Strength {signed(pick.strength, 2)} · matchups {signed(pick.counter, 2)} · lane {signed(pick.lane, 2)}
-          {pick.mine && ` · your record ${signed(pick.comfort, 2)} (${fmt(pick.mine[1], 0)}% in ${pick.mine[0]})`}
+          {t("Strength {a} · matchups {b} · lane {c}", { a: signed(pick.strength, 2), b: signed(pick.counter, 2), c: signed(pick.lane, 2) })}
+          {pick.mine && ` · ${t("your record {n} ({pct}% in {m})", { n: signed(pick.comfort, 2), pct: fmt(pick.mine[1], 0), m: pick.mine[0] })}`}
         </div>
         <Reasons reasons={pick.reasons} />
       </div>
-      <button className="ghost small" onClick={onPlan} title="Open the master builder for this hero with both teams and the lane">
-        Plan build
+      <button className="ghost small" onClick={onPlan} title={t("Open the master builder for this hero with both teams and the lane")}>
+        {t("Plan build")}
       </button>
     </div>
   );
@@ -114,7 +115,7 @@ export default function DraftView({ heroes, onPlan }: { heroes: Hero[]; onPlan: 
     onPlan({
       key: `draft-${pick.hero}-${Date.now()}`,
       match_id: 0,
-      player_name: "Draft",
+      player_name: t("Draft"),
       hero: pick.hero,
       allies: cls(teams.allies),
       enemies: cls(teams.enemies),
@@ -138,43 +139,43 @@ export default function DraftView({ heroes, onPlan }: { heroes: Hero[]; onPlan: 
     <div className="draft-view">
       <div className="draft-bar">
         <label className="field inline">
-          Rank
+          {t("Rank")}
           <select
             value={badge}
             onChange={(e) => setBadgeSetting(e.target.value)}
           >
             {RANKS.map(([b, label]) => (
               <option key={b} value={b}>
-                {label}
+                {t(label)}
               </option>
             ))}
           </select>
         </label>
-        <span className="muted" title="Your own record on each hero comes from this account. Set it in Settings.">
-          {account.trim() ? `Your account: ${account.trim()}` : "No account set: add it in Settings for your own record"}
+        <span className="muted" title={t("Your own record on each hero comes from this account. Set it in Settings.")}>
+          {account.trim() ? t("Your account: {id}", { id: account.trim() }) : t("No account set: add it in Settings for your own record")}
         </span>
         <button className="ghost" onClick={() => (setTeams({ allies: [], enemies: [], banned: [] }), setLane([]))}>
-          Clear
+          {t("Clear")}
         </button>
         <button
           className="ghost"
-          title="Fills both teams and your lane from the match you are playing now, read from the game's console log (-condebug)"
+          title={t("Fills both teams and your lane from the match you are playing now, read from the game's console log (-condebug)")}
           onClick={() => {
-            setLiveNote("Looking for your match… the teams take about a minute the first time.");
+            setLiveNote(t("Looking for your match… the teams take about a minute the first time."));
             findLiveMatch()
               .then((live) => {
                 setLive(live);
                 setTeams({ allies: live.allies, enemies: live.enemies, banned: [] });
                 setLane(live.lane);
-                setLiveNote(`Match ${live.match_id}: both teams loaded`);
+                setLiveNote(t("Match {id}: both teams loaded.", { id: live.match_id }));
               })
               .catch((e) => setLiveNote(String(e)));
           }}
         >
-          Load my live match
+          {t("Load my live match")}
         </button>
         {liveNote && <span className="muted">{liveNote}</span>}
-        {busy && <span className="muted">Working…</span>}
+        {busy && <span className="muted">{t("Working…")}</span>}
       </div>
 
       <div className="draft-layout">
@@ -182,11 +183,15 @@ export default function DraftView({ heroes, onPlan }: { heroes: Hero[]; onPlan: 
           {SIDES.map(([s, label]) => (
             <div key={s} className={"draft-side " + s + (side === s ? " on" : "")} onClick={() => setSide(s)}>
               <div className="draft-side-head">
-                <strong>{label}</strong>
+                <strong>{t(label)}</strong>
                 <span className="muted">
-                  {s === "allies" ? `${teams.allies.length}/${TEAM_SIZE - 1} besides you` : s === "enemies" ? `${teams.enemies.length}/${TEAM_SIZE}` : teams.banned.length}
+                  {s === "allies"
+                    ? t("{n}/{m} besides you", { n: teams.allies.length, m: TEAM_SIZE - 1 })
+                    : s === "enemies"
+                      ? `${teams.enemies.length}/${TEAM_SIZE}`
+                      : teams.banned.length}
                 </span>
-                {side === s && <span className="draft-adding">adding here</span>}
+                {side === s && <span className="draft-adding">{t("adding here")}</span>}
               </div>
               <div className="draft-chips">
                 {teams[s].map((id) => {
@@ -201,23 +206,23 @@ export default function DraftView({ heroes, onPlan }: { heroes: Hero[]; onPlan: 
                         <button
                           className="ghost small"
                           onClick={(e) => (e.stopPropagation(), toggleLane(id))}
-                          title="Mark as an enemy in your lane"
+                          title={t("Mark as an enemy in your lane")}
                         >
-                          {inLane ? "in lane" : "lane?"}
+                          {inLane ? t("in lane") : t("lane?")}
                         </button>
                       )}
-                      <button className="ghost small" onClick={(e) => (e.stopPropagation(), remove(s, id))} title="Remove">
+                      <button className="ghost small" onClick={(e) => (e.stopPropagation(), remove(s, id))} title={t("Remove")}>
                         ×
                       </button>
                     </span>
                   );
                 })}
-                {teams[s].length === 0 && <span className="muted">Click a hero below to add it here.</span>}
+                {teams[s].length === 0 && <span className="muted">{t("Click a hero below to add it here.")}</span>}
               </div>
             </div>
           ))}
 
-          <input className="draft-search" placeholder="Find a hero…" value={query} onChange={(e) => setQuery(e.target.value)} />
+          <input className="draft-search" placeholder={t("Find a hero…")} value={query} onChange={(e) => setQuery(e.target.value)} />
           <div className="draft-grid">
             {grid.map((h) => (
               <button key={h.id} className={"draft-hero" + (placed.has(h.id) ? " used" : "")} disabled={placed.has(h.id)} onClick={() => add(h.id)} title={h.name}>
@@ -235,7 +240,7 @@ export default function DraftView({ heroes, onPlan }: { heroes: Hero[]; onPlan: 
             <>
               {report.team_rate !== null && (
                 <div className="draft-chance">
-                  <span>Draft as it stands</span>
+                  <span>{t("Draft as it stands")}</span>
                   <div className="draft-meter">
                     <div style={{ width: `${report.team_rate}%` }} />
                   </div>
@@ -250,15 +255,15 @@ export default function DraftView({ heroes, onPlan }: { heroes: Hero[]; onPlan: 
 
               <div className="group">
                 <h3>
-                  Best picks
+                  {t("Best picks")}
                   {account.trim() && (
                     <label className="check">
                       <input type="checkbox" checked={onlyMine} onChange={(e) => setOnlyMine(e.target.checked)} />
-                      Only heroes I play ({MY_HERO_MATCHES}+ matches)
+                      {t("Only heroes I play ({n}+ matches)", { n: MY_HERO_MATCHES })}
                     </label>
                   )}
                 </h3>
-                {shown.length === 0 && <p className="muted">No hero fits.</p>}
+                {shown.length === 0 && <p className="muted">{t("No hero fits.")}</p>}
                 {shown.map((p, i) => (
                   <PickRow key={p.hero_id} pick={p} rank={i + 1} onPlan={() => plan(p)} />
                 ))}
@@ -266,13 +271,13 @@ export default function DraftView({ heroes, onPlan }: { heroes: Hero[]; onPlan: 
 
               {report.threats.length > 0 && (
                 <div className="group">
-                  <h3>Enemy picks, the most dangerous first</h3>
-                  {report.threats.map((t) => (
-                    <div key={t.hero_id} className="draft-threat">
-                      <img src={t.icon} alt="" />
-                      <strong>{t.name}</strong>
-                      <b className={t.edge > 0 ? "bad" : "good"}>{signed(t.edge, 2)} pts</b>
-                      <Reasons reasons={t.reasons} enemy />
+                  <h3>{t("Enemy picks, the most dangerous first")}</h3>
+                  {report.threats.map((threat) => (
+                    <div key={threat.hero_id} className="draft-threat">
+                      <img src={threat.icon} alt="" />
+                      <strong>{threat.name}</strong>
+                      <b className={threat.edge > 0 ? "bad" : "good"}>{t("{n} pts", { n: signed(threat.edge, 2) })}</b>
+                      <Reasons reasons={threat.reasons} enemy />
                     </div>
                   ))}
                 </div>
@@ -280,13 +285,13 @@ export default function DraftView({ heroes, onPlan }: { heroes: Hero[]; onPlan: 
 
               {report.bans.length > 0 && (
                 <div className="group">
-                  <h3>Bans</h3>
+                  <h3>{t("Bans")}</h3>
                   {report.bans.map((b) => (
                     <div key={b.hero_id} className="draft-threat">
                       <img src={b.icon} alt="" />
                       <strong>{b.name}</strong>
-                      <b className="bad">{signed(b.edge, 2)} pts</b>
-                      <span className="muted">{fmt(b.ban_share, 1)}% of bans</span>
+                      <b className="bad">{t("{n} pts", { n: signed(b.edge, 2) })}</b>
+                      <span className="muted">{t("{n}% of bans", { n: fmt(b.ban_share, 1) })}</span>
                       <Reasons reasons={b.reasons} enemy />
                     </div>
                   ))}
@@ -294,10 +299,7 @@ export default function DraftView({ heroes, onPlan }: { heroes: Hero[]; onPlan: 
               )}
 
               <p className="muted">
-                Win rates from the last 30 days of matches at the chosen rank; your own record from your last 90 days. A pick counts its own
-                win rate and its matchups against every enemy (and, in your lane, its lane results), weighted as fitted on 8,700 Ascendant+
-                matches: with these weights, drafts given 45% won 45% and drafts given 55% won 56%. Pairs of allies did not predict wins and are
-                not counted. A draft moves a match by a few points at most.
+                {t("Win rates from the last 30 days of matches at the chosen rank; your own record from your last 90 days. A pick counts its own win rate and its matchups against every enemy (and, in your lane, its lane results), weighted as fitted on 8,700 Ascendant+ matches: with these weights, drafts given 45% won 45% and drafts given 55% won 56%. Pairs of allies did not predict wins and are not counted. A draft moves a match by a few points at most.")}
               </p>
             </>
           )}

@@ -24,7 +24,7 @@ export const DEFAULTS: Record<string, string> = {
   [SETTINGS.shareMatches]: "1",
 };
 
-/** Ranks the statistics can be read at: the lowest average badge of the matches. */
+/** Ranks the statistics can be read at: the lowest average badge of the matches; translated where shown. */
 export const RANKS: [number, string][] = [
   [0, "All ranks"],
   [71, "Archon and above"],
