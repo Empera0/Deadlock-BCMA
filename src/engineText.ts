@@ -79,7 +79,7 @@ function number(s: string): string {
   const sign = s.match(/^[−+-]/)?.[0] ?? "";
   const plain = s.slice(sign.length).replace(/,/g, "");
   const [whole, frac] = plain.split(".");
-  const grouped = whole.length > 4 ? whole.replace(/\B(?=(\d{3})+(?!\d))/g, ".") : whole;
+  const grouped = whole.length > 3 ? whole.replace(/\B(?=(\d{3})+(?!\d))/g, ".") : whole;
   return sign + grouped + (frac ? "," + frac : "");
 }
 
@@ -114,6 +114,8 @@ function apply(rule: Rule, m: RegExpExecArray, depth: number): string {
 function match(s: string, depth: number): string | null {
   const found = exactly(s, depth);
   if (found !== null) return found;
+  // Only for sentences: a single word may be a key ("weapon", "spirit") that must stay as it is.
+  if (!s.includes(" ")) return null;
   const first = s.charAt(0);
   const swapped = first === first.toLowerCase() ? first.toUpperCase() : first.toLowerCase();
   if (swapped === first) return null;
@@ -209,7 +211,9 @@ function deep(v: unknown): unknown {
   if (Array.isArray(v)) return v.map(deep);
   if (v && typeof v === "object") {
     const out: Record<string, unknown> = {};
-    for (const [k, x] of Object.entries(v)) out[k] = KEEP.has(k) ? x : deep(x);
+    // The name of something the game defines (an item, a hero, an ability) stays as the game's data has it.
+    const defined = "class_name" in v;
+    for (const [k, x] of Object.entries(v)) out[k] = KEEP.has(k) || (defined && k === "name") ? x : deep(x);
     return out;
   }
   return v;

@@ -48,6 +48,11 @@ export function tn(n: number, one: string, many: string, vars?: Record<string, s
   return t(n === 1 ? one : many, { n, ...vars });
 }
 
+/** A share as the language writes it: "45%" in English, "%45" in Turkish. */
+export function percent(n: string | number): string {
+  return LANG === "tr" ? `%${n}` : `${n}%`;
+}
+
 /** A date as the language writes it. */
 export function date(unixSeconds: number): string {
   return new Date(unixSeconds * 1000).toLocaleDateString(LOCALE);

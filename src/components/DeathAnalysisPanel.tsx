@@ -2,9 +2,9 @@ import { useState } from "react";
 import { api, DeathAnalysis, DeathFix, DeathTrend, fmt } from "../api";
 import { clock } from "./MatchCharts";
 import ErrorNote from "./ErrorNote";
-import { t, tn } from "../i18n";
+import { percent, t, tn } from "../i18n";
 
-const pct = (v: number) => `${fmt(v * 100, 0)}%`;
+const pct = (v: number) => percent(fmt(v * 100, 0));
 
 const secs = (seconds: number) => (seconds >= 30 ? t("{n}s+", { n: 30 }) : t("{n}s", { n: fmt(seconds, 1) }));
 
