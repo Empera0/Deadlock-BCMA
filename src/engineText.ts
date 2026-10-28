@@ -28,11 +28,13 @@ function compile(en: string, tr: string): Rule {
   const names: string[] = [];
   let pattern = "^";
   let weight = 0;
-  for (const part of en.split(/(\{\w+\})/)) {
+  const parts = en.split(/(\{\w+\})/);
+  for (const [at, part] of parts.entries()) {
     const name = /^\{(\w+)\}$/.exec(part)?.[1];
     if (name) {
       names.push(name);
-      pattern += /^n\d*$/.test(name) ? `(${NUMBER})` : "(.+?)";
+      // A part never runs over the end of a sentence.
+      pattern += /^n\d*$/.test(name) ? `(${NUMBER})` : at === parts.length - 2 && parts[at + 1] === "" ? "((?:(?!\\. ).)+?)(?<!\\.)" : "((?:(?!\\. ).)+?)";
     } else {
       pattern += escape(part);
       weight += part.length;
@@ -85,15 +87,18 @@ function number(s: string): string {
 function part(s: string, depth: number): string {
   const word = WORDS[s];
   if (word !== undefined) return word;
-  const whole = text(s, depth + 1, false);
-  if (whole !== s) return whole;
+  // A time in seconds, "4.1s".
+  const seconds = /^([−+-]?\d+(?:\.\d+)?)s$/.exec(s);
+  if (seconds) return `${number(seconds[1])} sn`;
+  const template = match(s, depth + 1);
+  if (template !== null) return template;
   for (const sep of [", ", " and ", " or ", " + ", "; "]) {
     if (!s.includes(sep)) continue;
     const pieces = s.split(sep);
     const done = pieces.map((p) => part(p, depth + 1));
     if (done.some((d, i) => d !== pieces[i])) return done.join(sep === " and " ? " ve " : sep === " or " ? " veya " : sep);
   }
-  return s;
+  return text(s, depth + 1, false);
 }
 
 function apply(rule: Rule, m: RegExpExecArray, depth: number): string {
@@ -133,7 +138,7 @@ const SPLITS = [/(\n)/, /((?<=[.!?])\s+)/, /(\s+·\s+)/, /((?<=;)\s+)/, /((?<=:)
 
 /** One text of the engine's in Turkish, or as it is when no template covers it. */
 function text(s: string, depth = 0, record = true, level = 0): string {
-  if (depth > 8 || !/[A-Za-z]{2}/.test(s)) return s;
+  if (depth > 24 || !/[A-Za-z]{2}/.test(s)) return s;
   const whole = match(s, depth);
   if (whole !== null) return whole;
   // A sentence that ends with a full stop the template does not have, or the other way round.

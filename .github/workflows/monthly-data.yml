@@ -1,6 +1,6 @@
 # Refreshes the measurements the engine reads, once a month and on demand: the game data snapshot, the gun share of
 # each hero's damage (300 recent high-rank matches) and the enemies each ability hits in team fights (150 match
-# replays). The result is opened as a pull request to look over and merge, never pushed straight to main.
+# replays), and the game's Turkish texts. The result is opened as a pull request to look over and merge, never pushed straight to main.
 name: Monthly data
 
 on:
@@ -31,6 +31,9 @@ jobs:
           mkdir -p raw
           for f in heroes items client-versions; do curl -sf --max-time 180 -o raw/$f.json "https://api.deadlock-api.com/v1/assets/$f"; done
           cargo run --release -p engine --example snapshot -- raw src-tauri/data/snapshot.json
+          mkdir -p raw-tr
+          for f in heroes items; do curl -sf --max-time 180 -o raw-tr/$f.json "https://api.deadlock-api.com/v1/assets/$f?language=turkish"; done
+          cargo run --release -p engine --example game_text -- raw raw-tr src/locales/game-tr.json
 
       - name: Gun share of each hero's damage
         run: cargo run --release -p engine --example damage_split -- measure/damage 300
@@ -51,6 +54,7 @@ jobs:
             src-tauri/data/snapshot.json
             engine/data/gun-share.json
             engine/data/area-density.json
+            src/locales/game-tr.json
           commit-message: "Monthly data: game snapshot, gun shares and area densities"
           title: "Monthly data refresh"
           body: |
@@ -59,5 +63,6 @@ jobs:
             - `src-tauri/data/snapshot.json`: heroes and items of the current game version.
             - `engine/data/gun-share.json`: the gun share of each hero's damage, from 300 recent high-rank matches.
             - `engine/data/area-density.json`: the enemies each ability hits in team fights, from 150 match replays.
+            - `src/locales/game-tr.json`: the game's own Turkish for item and ability texts.
 
             The engine's tests ran on the new numbers. Merge, then release, for the app to carry them.

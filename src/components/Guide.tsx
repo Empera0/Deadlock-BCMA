@@ -1,4 +1,5 @@
 import { ReactNode, useEffect, useState } from "react";
+import { LANG, t } from "../i18n";
 
 const SEEN_KEY = "guide-seen";
 
@@ -9,7 +10,10 @@ interface Step {
   body: ReactNode;
 }
 
-const TOPICS: { key: GuideTopic; title: string; intro: string; steps: Step[] }[] = [
+type Topic = { key: GuideTopic; title: string; intro: string; steps: Step[] };
+
+/** The guide in English; the Turkish one is TOPICS_TR, and one of the two is translated where shown by picking it. */
+const TOPICS_EN: Topic[] = [
   {
     key: "start",
     title: "Getting started",
@@ -141,7 +145,7 @@ const TOPICS: { key: GuideTopic; title: string; intro: string; steps: Step[] }[]
       },
       {
         title: "Settings",
-        body: "Everything you set once is on the Settings screen, kept on this computer: your Steam account ID (the short number or the long 7656… one; with -condebug the app offers the one the game is signed in to), the Draft screen's rank, the Master builder's role and damage, and what runs in the background. To look at someone else's matches, type their ID on Match analysis: your own stays as it is.",
+        body: "Everything you set once is on the Settings screen, kept on this computer: the language, your Steam account ID (the short number or the long 7656… one; with -condebug the app offers the one the game is signed in to), the Draft screen's rank, the Master builder's role and damage, and what runs in the background. To look at someone else's matches, type their ID on Match analysis: your own stays as it is.",
       },
       {
         title: "Share my finished matches",
@@ -152,33 +156,179 @@ const TOPICS: { key: GuideTopic; title: string; intro: string; steps: Step[] }[]
   },
 ];
 
+/** The guide in Turkish, written plainly; translated where shown. */
+const TOPICS_TR: Topic[] = [
+  {
+    key: "start",
+    title: "Başlarken",
+    intro: "Deadlock BCMA, oyunun kendi sayılarından ve en iyi oyuncuların aldıklarından build çıkarır ve maçlarını inceler. Solda dört ekran var:",
+    steps: [
+      { title: "Build kur", body: "Eşya eşya bir build kur ve verdiği her sayıyı gör: hasar, sağlık, dirençler, bir hedefe karşı savaş, yeteneklerin hangi sırayla yükseltileceği." },
+      { title: "Build önerici", body: "Build'i uygulama kursun: en iyi oyuncuların popüler build'i ya da senin verdiğin rakip takıma göre maç için build kuran Usta build." },
+      { title: "Kahraman seçimi", body: "Kahraman seçerken: hangi kahraman rakiplere karşı ve takımınla iyi gider, rakip büyük ihtimalle neyi yasaklar." },
+      { title: "Maç analizi", body: "Herhangi bir maçı numarasıyla aç ya da Steam hesabınla son maçlarına bak: maç nasıl geçti, neden öldün, build'de ne eksikti." },
+      {
+        title: "İlk yapılacak ayar",
+        body: (
+          <>
+            Steam'de Deadlock'un başlatma seçeneklerine <code>-condebug</code> ekle (Özellikler, Başlatma Seçenekleri). Uygulama böylece oynadığın maçı oyunun konsol
+            kaydından okur, hesabını kendisi bulur ve maç başlarken senin maçına göre build kurabilir. Gerisi için <b>Kurulum</b> bölümüne bak.
+          </>
+        ),
+      },
+      { title: "Bu rehberi tekrar aç", body: "Kenar çubuğunun altındaki Rehber düğmesi rehberi her zaman açar. Her ekranın sağ üstündeki ? de o ekranın rehberini açar." },
+    ],
+  },
+  {
+    key: "build",
+    title: "Build kur",
+    intro: "Senin build'in ve oyunun sayıları, onun için hesaplanmış hali.",
+    steps: [
+      { title: "Kahraman seç, ruhu ayarla", body: "Değiştirmek için sol üstteki kahramana tıkla. Ruh, seviyeyi ve yetenek puanlarını belirler. Boş bırakırsan eşyaların fiyatına göre ayarlanır." },
+      {
+        title: "Eşya al",
+        body: "Almak için mağazada bir eşyaya tıkla, satmak için tekrar tıkla. Arama, eşyayı adına, değerine ya da ne yaptığına göre bulur. Üstteki çubuk build'i sırayla gösterir: orada bir eşyanın bazen çalışan etkilerini açabilir, aktarılabilen bir eşyayı bir yeteneğe koyabilir, eşyaların yerini değiştirebilir ya da onları kaldırabilirsin.",
+      },
+      {
+        title: "Sağdaki sekmeler",
+        body: (
+          <>
+            <b>Değerler</b>: her değer ve nereden geldiği, alınmaya değer sonraki eşya ve yeteneklerinin yükseltme sırası. <b>Kombo</b>: yetenekleri, ateşi, yakın
+            dövüşü ve eşyaları sıraya koy, ayarladığın hedefe adım adım ne yaptıklarını gör. <b>Diğer</b>: build'in ormanı ne kadar hızlı kestiği ve Unstable Rift.{" "}
+            <b>Karşılaştır</b>: bu build'i kayıtlı bir build ya da bir arkadaşının build koduyla karşılaştır.
+          </>
+        ),
+      },
+      { title: "Al, yükselt ya da sat", body: "Değerler sekmesinin altında, öneri kutusu hangi alımın, yükseltmenin ya da değişimin savaşına en çok kattığını söyler. Tahmin değil, ölçüm." },
+      { title: "Kaydet ve paylaş", body: "Build'leri adıyla kaydet ya da build kodunu (BCMA1.…) kopyalayıp gönder. Çubuğa bir kod yapıştırınca o build açılır." },
+    ],
+  },
+  {
+    key: "generator",
+    title: "Build önerici",
+    intro: "Senin için kurulan build'ler: popüler olan ya da maça göre kurulan.",
+    steps: [
+      { title: "Popüler", body: "O kahramanı oynayan en iyi oyuncuların aşama aşama aldıkları, ne sıklıkla aldıkları ve bununla ne sıklıkla kazandıkları. Ana build, neredeyse hepsinin aldığı eşyalar." },
+      {
+        title: "Usta build",
+        body: "Rakip takımı gir (biliyorsan kendi takımını ve lane'indekileri de). Uygulama aşama aşama kurar: en iyi oyuncuların aldıkları, her eşyanın senin savaşına kattığı ve rakip takıma neye cevap verdiği.",
+      },
+      {
+        title: "Rol ve hasar",
+        body: "Rol: taşıyıcı, tempo, destek ya da ön saf (otomatik, takımlara göre birini seçer). Hasar: silah, büyü, karma ya da yakın dövüş (otomatik, en iyi oyuncuların oynadığına uyar). Büyü seçersen, silah kahramanı olsa bile build büyü hasarına göre kurulur.",
+      },
+      {
+        title: "Altın KARŞI eşyalar",
+        body: "KARŞI yazan eşyalar rakip takım için var: iyileşenlere iyileştirme azaltma, sersemletmelere cevap, silahlara mermi direnci. Aşamalarının sonunda gelirler.",
+      },
+      {
+        title: "Neden başka bir şey değil?",
+        body: "Her aşamanın altında alınmayan en iyi eşyalar ve nedeni: neye kaybettikleri; popülerlik, sana kattıkları, rakip takıma cevapları ya da fiyat yüzünden.",
+      },
+      {
+        title: "Canlı maçın",
+        body: "-condebug ayarlıysa Canlı maçımı yükle, oynadığın maçtan iki takımı doldurur, maç başladıktan yaklaşık bir dakika sonra. Maçımı takip et, ekran açıkken bunu her maçta kendisi yapar. Lobi listesi her oyuncunun rütbesini, kahramandaki sonucunu ve grubunu gösterir.",
+      },
+      {
+        title: "Eşyalar nasıl ölçülür",
+        body: "Eşyalar bir takım savaşında ölçülür: alana vuran yetenekler vurdukları her düşman için sayılır (maç tekrarlarından ölçüldü), sersemletmeler de düşmanın karşılık veremediği süre kadar.",
+      },
+    ],
+  },
+  {
+    key: "draft",
+    title: "Kahraman seçimi",
+    intro: "Seçim sürerken hangi kahramanı alacağın.",
+    steps: [
+      { title: "Seçimleri gir", body: "Rakip seçimlerini ve takımının seçimlerini geldikçe ekle, yasakları da. -condebug ayarlıysa Canlı maçımı yükle bunları oyundan doldurur." },
+      { title: "Listeyi oku", body: "Kahramanlar, en iyi oyuncuların maçlarına göre rakip seçimlere karşı ve takımınla ne kadar iyi gittiklerine göre sıralanır. Her satır neyi saydığını ve arkasında kaç maç olduğunu söyler." },
+      { title: "Kendi sonucun", body: "Steam hesap numaran, her kahramandaki kendi sonucunu da sıralamaya ekler. İstersen." },
+      { title: "Sonra build", body: "Seçtiğin kahraman için seçim ekranından Usta build'i aç: takımlar da gelir." },
+    ],
+  },
+  {
+    key: "match",
+    title: "Maç analizi",
+    intro: "Bir maçta ne oldu ve neyi farklı yapmalısın.",
+    steps: [
+      { title: "Maç aç", body: "Bir maç numarası yaz ya da son maçların için Steam hesap numaranı. Açılan maçlar bu bilgisayarda kalır." },
+      { title: "Kısaca maç", body: "Önce hikâye: lane'ler, ruh farkı, maçın döndüğü an, kim taşıdı. Sonra her oyuncu: build zamanlaması, katılınan ve kaçırılan takım savaşları, harita oyunu, yapılar, unvanlar." },
+      {
+        title: "Ölümler",
+        body: "Her ölüm, etrafta kimin olduğu ve nerede olduğu. Yalnız yakalandı: takım savaşı dışında, yakında takım arkadaşı yok. Lane'de sayıca az: kendi lane'inde yenen gank, senin hatan değil.",
+      },
+      {
+        title: "Neden öldün?",
+        body: "Her ölüm bir düello: öldürenin bütün gücü seni ne kadar hızlı öldürür, seninki onu ne kadar hızlı öldürürdü, o anki build'lerle. Listelenen eşyalar düelloyu çevirirdi ya da en çok değiştirirdi. Seni sadece bir saniye daha uzun yaşatanlar listelenmez.",
+      },
+      {
+        title: "En iyi oyunculara karşı",
+        body: "Aldığın her eşya, o kahramanı oynayan en iyi oyuncuların aldığı dakikaya göre: erken, zamanında, geç ya da çok geç. Ayrıca çoğunun aldığı ama senin hiç almadığın eşyalar. Zamanından önce alınan bir eşya (bir karşı eşya) arkasından gelenleri geciktirir. Bu gecikme ruh gelirinden hesaplanır ve sana yazılmaz.",
+      },
+      {
+        title: "Tekrardan",
+        body: "Valve maçın tekrarını sakladıysa Tekrarı incele her ölümden önceki son on saniyedeki her vuruşu gösterir (kim, neyle, ne kadar sağlık kaldı), sana yapılan her sersemletme, uyutma, susturma ya da tutmayı da. Her yeteneğin bir kullanımda kaç düşman yakaladığını ve tuttuğunu, o yeteneğin genelde yakaladığıyla karşılaştırır. Kullanımlar ne yaptıklarına göre değerlendirilir, ne sıklıkla kullandığına göre değil.",
+      },
+      { title: "Birçok maçta neden ölüyorsun", body: "Son maçlar listesinden: seni en çok kim öldürüyor, ne tür hasarla ve en sık hangi eşya işe yarardı." },
+      { title: "Build'i aç", body: "Son build'i build kurucuda aç, o maçtaki bir oyuncunun build'ini Build kur ekranına yükler." },
+    ],
+  },
+  {
+    key: "setup",
+    title: "Kurulum",
+    intro: "Uygulamanın bilgisayarından ve oyundan istedikleri.",
+    steps: [
+      {
+        title: "-condebug",
+        body: (
+          <>
+            Steam'de Deadlock'un Özellikler'ini aç ve Başlatma Seçenekleri'ne <code>-condebug</code> ekle, sonra oyunu yeniden aç. Oyun böylece uygulamanın okuduğu bir
+            konsol kaydı yazar: içinde olduğun maç ve oynadığın hesap. Canlı maç, Maçımı takip et ve maçlarını paylaşmak buna ihtiyaç duyar.
+          </>
+        ),
+      },
+      {
+        title: "Ayarlar",
+        body: "Bir kez ayarladığın her şey Ayarlar ekranında, bu bilgisayarda saklanır: dil, Steam hesap numaran (kısa numara ya da 7656… ile başlayan uzun numara; -condebug varsa uygulama oyunda açık olan hesabı önerir), Kahraman seçimi ekranının rütbesi, Usta build'in rolü ve hasarı, arka planda çalışanlar. Başka birinin maçlarına bakmak için onun numarasını Maç analizi ekranına yaz: seninki olduğu gibi kalır.",
+      },
+      {
+        title: "Biten maçlarımı paylaş",
+        body: "Kenar çubuğunun altında. Bir maç bitince uygulama bunu deadlock-api'ye bildirir. Servis maçı ve, Valve sakladıysa, tekrarını saklar, böylece incelenebilir. Sadece maç numarası gönderilir. Durdurmak için işareti kaldır.",
+      },
+      { title: "Güncellemeler", body: "Uygulama kendini günceller ve neyin yeni olduğunu söyler. Kenar çubuğunun altındaki Veriyi güncelle, bir yamadan sonra en yeni kahramanları ve eşyaları indirir." },
+    ],
+  },
+];
+
+const TOPICS = LANG === "tr" ? TOPICS_TR : TOPICS_EN;
+
 /** The guide: how to use each screen, opened on the first start and from the side bar or a screen's ? any time. */
 export default function Guide({ open, topic, onClose, onTopic }: { open: boolean; topic: GuideTopic; onClose: () => void; onTopic: (t: GuideTopic) => void }) {
   if (!open) return null;
   // The Settings screen is explained under Setup.
-  const t = TOPICS.find((x) => x.key === (topic === "settings" ? "setup" : topic)) ?? TOPICS[0];
+  const shown = TOPICS.find((x) => x.key === (topic === "settings" ? "setup" : topic)) ?? TOPICS[0];
   return (
     <div className="overlay" onClick={onClose}>
-      <div className="whats-new guide" role="dialog" aria-label="Guide" onClick={(e) => e.stopPropagation()}>
+      <div className="whats-new guide" role="dialog" aria-label={t("Guide")} onClick={(e) => e.stopPropagation()}>
         <div className="whats-new-head">
-          <b>Guide</b>
+          <b>{t("Guide")}</b>
           <button className="ghost small" onClick={onClose}>
-            Close
+            {t("Close")}
           </button>
         </div>
         <div className="guide-body">
           <nav className="guide-topics">
             {TOPICS.map((x) => (
-              <button key={x.key} className={"ghost small" + (x.key === t.key ? " on" : "")} onClick={() => onTopic(x.key)}>
+              <button key={x.key} className={"ghost small" + (x.key === shown.key ? " on" : "")} onClick={() => onTopic(x.key)}>
                 {x.title}
               </button>
             ))}
           </nav>
           <section className="whats-new-body">
-            <h3>{t.title}</h3>
-            <p className="muted">{t.intro}</p>
+            <h3>{shown.title}</h3>
+            <p className="muted">{shown.intro}</p>
             <ol className="guide-steps">
-              {t.steps.map((s) => (
+              {shown.steps.map((s) => (
                 <li key={s.title}>
                   <b>{s.title}</b>
                   <p>{s.body}</p>
@@ -208,7 +358,7 @@ export function useFirstStart(open: () => void) {
 /** A ? that opens the guide at a screen's topic. */
 export function GuideButton({ onOpen }: { onOpen: () => void }) {
   return (
-    <button className="ghost small guide-button" onClick={onOpen} title="How to use this screen">
+    <button className="ghost small guide-button" onClick={onOpen} title={t("How to use this screen")}>
       ?
     </button>
   );

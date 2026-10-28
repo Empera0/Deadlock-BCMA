@@ -1201,4 +1201,5 @@ export const TR: Record<string, string> = {
   "Weapon Damage": "Silah Hasarı",
   "Base Health": "Temel Sağlık",
   "Spirit Power": "Büyü Gücü",
+  "How to use this screen": "Bu ekran nasıl kullanılır",
 };
