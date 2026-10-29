@@ -112,7 +112,8 @@ const TOPICS_EN: Topic[] = [
     steps: [
       { title: "Pick the ranks", body: "The same range as the Draft screen: changing it on one changes it on the other." },
       { title: "Tiers", body: "Each hero is compared with the average one. S and A win clearly more, C and D clearly less. A hero played rarely is pulled toward 50% so a lucky run does not put it on top." },
-      { title: "Sort and open", body: "Click a column to sort by it. Click a hero to see what players build with it in the Build generator." },
+      { title: "A hero's page", body: "Click a hero: its numbers, the heroes it is strong and weak against, its best teammates and its popular build. Open its build from there." },
+      { title: "Items", body: "The Items tab ranks the shop at the same ranks, for every hero or one: win rate, how many buy it and when. Items are compared within their own cost, as expensive ones are bought by players already ahead." },
     ],
   },
   {
@@ -269,7 +270,8 @@ const TOPICS_TR: Topic[] = [
     steps: [
       { title: "Rütbeleri seç", body: "Kahraman seçimi ekranıyla aynı aralık: birinde değiştirince öbüründe de değişir." },
       { title: "Seviyeler", body: "Her hero ortalama bir heroyla karşılaştırılır. S ve A belirgin şekilde daha çok, C ve D belirgin şekilde daha az kazanır. Az oynanan bir hero %50'ye doğru çekilir, şanslı birkaç maçla tepeye çıkmasın diye." },
-      { title: "Sırala ve aç", body: "Sıralamak için bir sütuna tıkla. Oyuncuların o heroyla ne build yaptığını Build önericide görmek için heroya tıkla." },
+      { title: "Hero sayfası", body: "Bir heroya tıkla: değerleri, karşısında güçlü ve zayıf olduğu herolar, en iyi takım arkadaşları ve popüler build'i. Build'ini oradan açabilirsin." },
+      { title: "Eşyalar", body: "Eşyalar sekmesi dükkânı aynı rütbelerde sıralar, bütün herolar ya da tek bir hero için: kazanma oranı, ne kadar alındığı ve ne zaman. Eşyalar kendi fiyatındakilerle karşılaştırılır, çünkü pahalıları zaten önde olanlar alır." },
     ],
   },
   {

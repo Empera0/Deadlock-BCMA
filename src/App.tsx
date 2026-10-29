@@ -363,6 +363,7 @@ export default function App() {
 
       {mode === "heroes" && (
         <TiersView
+          heroes={data.heroes}
           onBuild={(heroClass) => {
             if (heroClass !== build.hero) setBuild({ ...emptyBuild(heroClass), target: build.target, map: build.map });
             setPopularAt(Date.now());

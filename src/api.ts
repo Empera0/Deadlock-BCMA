@@ -531,6 +531,33 @@ export interface PatchNotes {
   changes: PatchChange[];
 }
 
+export interface DraftFitRow {
+  hero_id: number;
+  rate: number | null;
+  matches: number;
+  points: number;
+}
+
+export interface HeroPageReport {
+  tier: HeroTier | null;
+  against: DraftFitRow[];
+  with: DraftFitRow[];
+}
+
+export interface ItemTier {
+  item: string;
+  name: string;
+  icon: string;
+  category: Category;
+  cost: number;
+  tier: string;
+  matches: number;
+  win_rate: number;
+  ranked_rate: number;
+  pick_rate: number;
+  buy_minute: number;
+}
+
 export interface AdviceMove {
   kind: "buy" | "upgrade" | "swap";
   sell: string | null;
@@ -630,6 +657,8 @@ export const api = {
   draftPicks: (allies: number[], enemies: number[], lane: number[], banned: number[], badge: number, maxBadge: number | null, accountId: string | null) =>
     call<DraftReport>("draft_picks", { allies, enemies, lane, banned, badge, maxBadge, accountId }),
   patchNotes: () => call<PatchNotes | null>("patch_notes"),
+  heroPage: (heroId: number, badge: number, maxBadge: number | null) => call<HeroPageReport>("hero_page", { heroId, badge, maxBadge }),
+  itemTiers: (badge: number, maxBadge: number | null, heroId: number | null) => call<ItemTier[]>("item_tiers", { badge, maxBadge, heroId }),
   heroTiers: (badge: number, maxBadge: number | null) => call<HeroTier[]>("hero_tiers", { badge, maxBadge }),
   abilityOrder: (build: Build) => call<OrderReport>("ability_order", { build }),
   deathTrend: (accountId: string, count: number) => call<DeathTrend>("death_trend", { accountId, count }),

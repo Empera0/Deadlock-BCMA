@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import { api, fmt, HeroTier } from "../api";
+import { api, fmt, Hero, HeroTier } from "../api";
+import HeroPage from "./HeroPage";
+import ItemTiers from "./ItemTiers";
 import { percent, t } from "../i18n";
 import { SETTINGS, useSetting } from "../settings";
 import ErrorNote from "./ErrorNote";
@@ -21,7 +23,10 @@ const TYPES = ["brawler", "marksman", "mystic", "assassin"];
 const kda = (h: HeroTier) => (h.kills + h.assists) / Math.max(h.deaths, 1);
 
 /** Every hero at the chosen ranks: how often it wins, is picked and banned, and what its players average. */
-export default function TiersView({ onBuild }: { onBuild: (heroClass: string) => void }) {
+export default function TiersView({ heroes, onBuild }: { heroes: Hero[]; onBuild: (heroClass: string) => void }) {
+  const [view, setView] = useState<"heroes" | "items">("heroes");
+  const [open, setOpen] = useState<number | null>(null);
+  const [itemHero, setItemHero] = useState<number | null>(null);
   const [badgeSetting] = useSetting(SETTINGS.draftBadge);
   const [maxSetting] = useSetting(SETTINGS.draftMaxBadge);
   const badge = Number(badgeSetting) || 0;
@@ -56,10 +61,46 @@ export default function TiersView({ onBuild }: { onBuild: (heroClass: string) =>
   }, [rows, sort, type, query]);
   const total = rows ? Math.round(rows.reduce((n, h) => n + h.matches, 0) / 12) : 0;
 
+  const opened = open !== null ? heroes.find((h) => h.id === open) : undefined;
+  const tabs = (
+    <div className="draft-bar tiers-top">
+      <div className="segmented">
+        <button className={view === "heroes" && open === null ? "on" : ""} onClick={() => (setView("heroes"), setOpen(null))}>
+          {t("Heroes")}
+        </button>
+        <button className={view === "items" ? "on" : ""} onClick={() => (setView("items"), setOpen(null))}>
+          {t("Items")}
+        </button>
+      </div>
+      <RankRange inline />
+    </div>
+  );
+  if (opened)
+    return (
+      <div className="tiers-view">
+        {tabs}
+        <HeroPage
+          hero={opened}
+          heroes={heroes}
+          badge={badge}
+          maxBadge={maxBadge}
+          onBack={() => setOpen(null)}
+          onBuild={() => onBuild(opened.class_name)}
+          onItems={() => (setItemHero(opened.id), setView("items"), setOpen(null))}
+        />
+      </div>
+    );
+  if (view === "items")
+    return (
+      <div className="tiers-view">
+        {tabs}
+        <ItemTiers heroes={heroes} badge={badge} maxBadge={maxBadge} hero={itemHero} onHero={setItemHero} />
+      </div>
+    );
   return (
     <div className="tiers-view">
+      {tabs}
       <div className="draft-bar">
-        <RankRange inline />
         <select value={type} onChange={(e) => setType(e.target.value)}>
           <option value="">{t("Every type")}</option>
           {TYPES.map((x) => (
@@ -76,7 +117,7 @@ export default function TiersView({ onBuild }: { onBuild: (heroClass: string) =>
         <>
           <p className="muted">
             {t(
-              "From about {n} matches of the last 30 days in the chosen ranks. Tiers compare each hero with the average one: S and A win clearly more, C and D clearly less. Click a column to sort by it, and a hero to see its build.",
+              "From about {n} matches of the last 30 days in the chosen ranks. Tiers compare each hero with the average one: S and A win clearly more, C and D clearly less. Click a column to sort by it, and a hero to open its page.",
               { n: fmt(total) },
             )}
           </p>
@@ -99,7 +140,7 @@ export default function TiersView({ onBuild }: { onBuild: (heroClass: string) =>
                     <span className={"tier-badge " + h.tier}>{h.tier}</span>
                   </td>
                   <td>
-                    <button className="ghost small tier-hero" onClick={() => onBuild(h.hero)} title={t("See what players build with {hero}", { hero: h.name })}>
+                    <button className="ghost small tier-hero" onClick={() => setOpen(h.hero_id)} title={t("Open the page of {hero}", { hero: h.name })}>
                       <img src={h.icon} alt="" loading="lazy" />
                       <span>{h.name}</span>
                       <small className="muted">{t(h.hero_type)}</small>

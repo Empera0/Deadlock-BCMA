@@ -101,3 +101,68 @@ pub fn tiers(data: &GameData, rows: &[HeroRow], bans: &[(u64, u64)]) -> Vec<Hero
     out.sort_by(|a, b| b.ranked_rate.total_cmp(&a.ranked_rate));
     out
 }
+
+/// Items are compared within their own cost: an expensive item is bought by players already ahead, so its raw win
+/// rate is high whatever it does.
+#[derive(Debug, Clone, Serialize)]
+pub struct ItemTier {
+    pub item: String,
+    pub name: String,
+    pub icon: String,
+    pub category: String,
+    pub cost: u32,
+    /// S, A, B, C or D against the other items of the same cost.
+    pub tier: String,
+    pub matches: u64,
+    /// Percent of the matches it was bought in that were won, and the same pulled toward its cost's average.
+    pub win_rate: f64,
+    pub ranked_rate: f64,
+    /// Percent of players who bought it.
+    pub pick_rate: f64,
+    /// When it is bought on average, in minutes.
+    pub buy_minute: f64,
+}
+
+/// Every item of the shop with purchases, the best of each cost first; `players` is the number of player matches
+/// the purchases come from.
+pub fn item_tiers(data: &GameData, rows: &[crate::popular::ItemStat], players: u64) -> Vec<ItemTier> {
+    let mut by_item: BTreeMap<u64, (u64, u64, f64)> = BTreeMap::new();
+    for r in rows {
+        let e = by_item.entry(r.item_id).or_insert((0, 0, 0.0));
+        e.0 += r.wins;
+        e.1 += r.matches;
+        e.2 += r.avg_buy_time_s * r.matches as f64;
+    }
+    let shop: Vec<(&crate::data::Item, (u64, u64, f64))> =
+        data.items.iter().filter_map(|i| by_item.get(&i.id).filter(|r| r.1 > 0).map(|r| (i, *r))).collect();
+    // Each cost's average win rate, weighted by purchases.
+    let mut per_cost: BTreeMap<u32, (u64, u64)> = BTreeMap::new();
+    for (i, (wins, matches, _)) in &shop {
+        let e = per_cost.entry(i.cost).or_default();
+        e.0 += wins;
+        e.1 += matches;
+    }
+    let mut out: Vec<ItemTier> = shop
+        .iter()
+        .map(|(i, (wins, matches, time))| {
+            let avg = per_cost.get(&i.cost).map(|(w, m)| *w as f64 / (*m).max(1) as f64).unwrap_or(0.5);
+            let ranked = (*wins as f64 + PRIOR * avg) / (*matches as f64 + PRIOR) * 100.0;
+            let tier = TIERS.iter().find(|(_, above)| ranked - avg * 100.0 >= *above).map(|(t, _)| *t).unwrap_or("D");
+            ItemTier {
+                item: i.class_name.clone(),
+                name: i.name.clone(),
+                icon: i.icon.clone(),
+                category: i.category.clone(),
+                cost: i.cost,
+                tier: tier.to_string(),
+                matches: *matches,
+                win_rate: *wins as f64 / *matches as f64 * 100.0,
+                ranked_rate: ranked,
+                pick_rate: if players > 0 { *matches as f64 / players as f64 * 100.0 } else { 0.0 },
+                buy_minute: time / *matches as f64 / 60.0,
+            }
+        })
+        .collect();
+    out.sort_by(|a, b| a.cost.cmp(&b.cost).then(b.ranked_rate.total_cmp(&a.ranked_rate)));
+    out
+}

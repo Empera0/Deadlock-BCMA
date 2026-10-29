@@ -425,6 +425,69 @@ async fn hero_tiers(app: AppHandle, state: State<'_, AppState>, badge: u32, max_
     .map_err(|e| e.to_string())?
 }
 
+#[derive(serde::Serialize)]
+struct HeroPage {
+    tier: Option<engine::tiers::HeroTier>,
+    /// How the hero fares against each other hero, and beside it, the best first.
+    against: Vec<engine::draft::Fit>,
+    with: Vec<engine::draft::Fit>,
+}
+
+/// One hero at a rank range: its line of the tier list, its matchups and its partners. Read from the draft's
+/// statistics, so it shares their cache.
+#[tauri::command]
+async fn hero_page(app: AppHandle, state: State<'_, AppState>, hero_id: u64, badge: u32, max_badge: Option<u32>) -> Result<HeroPage, String> {
+    let data = state.data.read().unwrap().clone();
+    let cache = Cache::new(&app, &data)?;
+    tauri::async_runtime::spawn_blocking(move || {
+        let upto = |query: &str| with_max(query, max_badge);
+        prefetch(
+            &cache,
+            vec![
+                ("hero-stats", upto(""), badge, DRAFT_DAYS),
+                ("hero-ban-stats", upto(""), badge, DRAFT_DAYS),
+                ("hero-counter-stats", upto("same_lane_filter=false"), badge, DRAFT_DAYS),
+                ("hero-synergy-stats", upto("same_lane_filter=false"), badge, DRAFT_DAYS),
+            ],
+        );
+        let read = |endpoint: &str, query: &str| analytics_over(&cache, endpoint, &upto(query), badge, DRAFT_DAYS);
+        let hero_json = read("hero-stats", "")?;
+        let rows: Vec<engine::tiers::HeroRow> = parse(&hero_json)?;
+        let bans = engine::draft::parse_bans(&read("hero-ban-stats", "")?)?;
+        let stats = engine::draft::DraftData {
+            heroes: parse(&hero_json)?,
+            counters: engine::draft::parse_counters(&read("hero-counter-stats", "same_lane_filter=false")?)?,
+            synergies: engine::draft::parse_synergies(&read("hero-synergy-stats", "same_lane_filter=false")?)?,
+            ..Default::default()
+        };
+        let tier = engine::tiers::tiers(&data, &rows, &bans).into_iter().find(|h| h.hero_id == hero_id);
+        let (against, with) = engine::draft::matchups(&data, &stats, hero_id);
+        Ok(HeroPage { tier, against, with })
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+/// The shop's items ranked at a rank range, for every hero or for one.
+#[tauri::command]
+async fn item_tiers(app: AppHandle, state: State<'_, AppState>, badge: u32, max_badge: Option<u32>, hero_id: Option<u64>) -> Result<Vec<engine::tiers::ItemTier>, String> {
+    let data = state.data.read().unwrap().clone();
+    let cache = Cache::new(&app, &data)?;
+    tauri::async_runtime::spawn_blocking(move || {
+        let items_query = with_max(&hero_id.map(|h| format!("hero_id={h}")).unwrap_or_default(), max_badge);
+        prefetch(&cache, vec![("hero-stats", with_max("", max_badge), badge, DRAFT_DAYS), ("item-stats", items_query.clone(), badge, DRAFT_DAYS)]);
+        let heroes: Vec<popular::HeroStat> = parse(&analytics_over(&cache, "hero-stats", &with_max("", max_badge), badge, DRAFT_DAYS)?)?;
+        let players = match hero_id {
+            Some(h) => heroes.iter().filter(|r| r.hero_id == h).map(|r| r.matches).sum(),
+            None => heroes.iter().map(|r| r.matches).sum(),
+        };
+        let rows: Vec<popular::ItemStat> = parse(&analytics_over(&cache, "item-stats", &items_query, badge, DRAFT_DAYS)?)?;
+        Ok(engine::tiers::item_tiers(&data, &rows, players))
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
 /// Matches this long are long ones, and this short short ones, when telling which heroes grow strong late.
 const LONG_MATCH_S: u32 = 35 * 60;
 const SHORT_MATCH_S: u32 = 25 * 60;
@@ -1155,6 +1218,8 @@ pub fn run() {
             master_build,
             draft_picks,
             hero_tiers,
+            hero_page,
+            item_tiers,
             patch_notes,
             simulate_combo,
             refresh_data,

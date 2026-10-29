@@ -6653,3 +6653,154 @@ main.arena > .shop.store {
 .buildbar .chip-slot img {
   border-radius: calc(var(--r-sm) - 2px);
 }
+
+/* A hero's page: its card art and numbers on top, then who it beats, loses to and pairs with, then its build. */
+.hero-page {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.hero-page-head {
+  position: relative;
+  display: flex;
+  gap: 20px;
+  align-items: flex-end;
+  padding: 18px 20px;
+  overflow: hidden;
+  isolation: isolate;
+}
+.hero-page-head::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--hero-bg) right -10% center / auto 160% no-repeat;
+  opacity: 0.28;
+  -webkit-mask-image: linear-gradient(90deg, transparent 25%, #000 80%);
+  mask-image: linear-gradient(90deg, transparent 25%, #000 80%);
+}
+.hero-page-back {
+  position: absolute;
+  top: 10px;
+  left: 12px;
+}
+.hero-page-card {
+  width: 128px;
+  border-radius: var(--r);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  margin-top: 22px;
+}
+.hero-page-title {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.hero-page-title h2 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  font-size: 26px;
+  letter-spacing: -0.01em;
+}
+.hero-page-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 6px;
+}
+.hero-page-stats span {
+  display: flex;
+  flex-direction: column;
+  padding: 6px 12px;
+  border-radius: var(--r);
+  background: color-mix(in srgb, var(--bg) 70%, transparent);
+  border: 1px solid var(--line);
+}
+.hero-page-stats small {
+  color: var(--muted);
+  font-size: 11px;
+}
+.hero-page-stats b {
+  font-size: 15px;
+}
+.hero-page-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 6px;
+}
+.hero-page-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+.hero-page-list h3 {
+  margin: 0 0 6px;
+}
+.hero-page-row {
+  display: grid;
+  grid-template-columns: 26px 1fr auto 44px;
+  align-items: center;
+  gap: 10px;
+  padding: 5px 0;
+  border-bottom: 1px solid var(--line);
+}
+.hero-page-row:last-child {
+  border-bottom: none;
+}
+.hero-page-row img {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+}
+.hero-page-row small {
+  text-align: right;
+}
+.hero-page .good {
+  color: var(--vitality);
+}
+.hero-page .bad {
+  color: var(--danger);
+}
+.hero-page-build {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.hero-page-item {
+  width: 76px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  text-align: center;
+}
+.hero-page-item img {
+  width: 64px;
+  height: 64px;
+  border-radius: var(--r-sm);
+  border: 2px solid var(--cat);
+}
+.hero-page-item small {
+  font-size: 11px;
+  line-height: 1.15;
+}
+.item-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.item-cell img {
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  border: 1.5px solid var(--cat);
+}
+.tiers-top {
+  margin-bottom: 2px;
+}
+@media (max-width: 1000px) {
+  .hero-page-grid {
+    grid-template-columns: 1fr;
+  }
+}

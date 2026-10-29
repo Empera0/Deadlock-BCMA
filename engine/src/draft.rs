@@ -250,11 +250,51 @@ fn team_notes(data: &GameData, allies: &[u64]) -> Vec<String> {
     notes
 }
 
+/// Each hero's strength in log-odds, and its matches.
+fn strengths(d: &DraftData) -> BTreeMap<u64, (f64, u64)> {
+    d.heroes.iter().filter(|h| h.matches > 0).map(|h| (h.hero_id, (logit(shrunk(h.wins, h.matches, 0.5, PRIOR_HERO)), h.matches))).collect()
+}
+
+/// Pairs on the same team, either way round, keyed by (lower id, higher id).
+fn together(d: &DraftData) -> BTreeMap<(u64, u64), (u64, u64)> {
+    let mut out = BTreeMap::new();
+    for r in d.synergies.iter().filter(|r| r.matches > 0 && r.a != r.b) {
+        out.entry((r.a.min(r.b), r.a.max(r.b))).or_insert((r.wins, r.matches));
+    }
+    out
+}
+
+/// A pairing's record as shown: its win rate, and what it adds over the `expected` log-odds.
+fn fit(hero: u64, row: Option<(u64, u64)>, expected: f64) -> Fit {
+    match row {
+        Some((wins, n)) => Fit {
+            hero_id: hero,
+            rate: Some(wins as f64 / n as f64 * 100.0),
+            matches: n,
+            points: points(logit(shrunk(wins, n, sigmoid(expected), PRIOR_SHOWN)) - expected),
+        },
+        None => Fit { hero_id: hero, rate: None, matches: 0, points: 0.0 },
+    }
+}
+
+/// How one hero fares against every other hero (its matchups) and beside it (its partners), the best first.
+pub fn matchups(data: &GameData, d: &DraftData, hero: u64) -> (Vec<Fit>, Vec<Fit>) {
+    let strength = strengths(d);
+    let s = |id: u64| strength.get(&id).map(|x| x.0).unwrap_or(0.0);
+    let counters = by_pair(&d.counters);
+    let together = together(d);
+    let others = || data.heroes.iter().filter(move |h| h.id != hero);
+    let mut against: Vec<Fit> = others().map(|h| fit(h.id, counters.get(&(hero, h.id)).copied(), s(hero) - s(h.id))).filter(|f| f.rate.is_some()).collect();
+    let mut with: Vec<Fit> =
+        others().map(|h| fit(h.id, together.get(&(hero.min(h.id), hero.max(h.id))).copied(), s(hero) + s(h.id))).filter(|f| f.rate.is_some()).collect();
+    against.sort_by(|a, b| b.points.total_cmp(&a.points));
+    with.sort_by(|a, b| b.points.total_cmp(&a.points));
+    (against, with)
+}
+
 pub fn draft(data: &GameData, d: &DraftData, input: &DraftInput) -> DraftReport {
     let all_bans: u64 = d.bans.iter().map(|b| b.1).sum();
-    let strength: BTreeMap<u64, (f64, u64)> =
-        d.heroes.iter().filter(|h| h.matches > 0).map(|h| (h.hero_id, (logit(shrunk(h.wins, h.matches, 0.5, PRIOR_HERO)), h.matches))).collect();
-    let m = Model { data, strength, counters: by_pair(&d.counters), lane: by_pair(&d.lane_counters) };
+    let m = Model { data, strength: strengths(d), counters: by_pair(&d.counters), lane: by_pair(&d.lane_counters) };
     let mine: BTreeMap<u64, (u64, u64)> = d.mine.iter().map(|h| (h.hero_id, (h.wins, h.matches))).collect();
     let taken: Vec<u64> = input.allies.iter().chain(&input.enemies).chain(&input.banned).copied().collect();
     let playable: Vec<&crate::data::Hero> =
@@ -365,20 +405,7 @@ pub fn draft(data: &GameData, d: &DraftData, input: &DraftInput) -> DraftReport 
         .collect();
     threats.sort_by(|a, b| b.edge.total_cmp(&a.edge));
 
-    // Pairs on the same team, either way round.
-    let mut together: BTreeMap<(u64, u64), (u64, u64)> = BTreeMap::new();
-    for r in d.synergies.iter().filter(|r| r.matches > 0 && r.a != r.b) {
-        together.entry((r.a.min(r.b), r.a.max(r.b))).or_insert((r.wins, r.matches));
-    }
-    let fit = |hero: u64, row: Option<(u64, u64)>, expected: f64| match row {
-        Some((wins, n)) => Fit {
-            hero_id: hero,
-            rate: Some(wins as f64 / n as f64 * 100.0),
-            matches: n,
-            points: points(logit(shrunk(wins, n, sigmoid(expected), PRIOR_SHOWN)) - expected),
-        },
-        None => Fit { hero_id: hero, rate: None, matches: 0, points: 0.0 },
-    };
+    let together = together(d);
     let placed = input.allies.iter().map(|h| (*h, true)).chain(input.enemies.iter().map(|h| (*h, false)));
     let fits = placed
         .map(|(focus, ally)| Focus {

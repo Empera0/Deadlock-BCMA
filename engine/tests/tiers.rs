@@ -21,3 +21,24 @@ fn heroes_are_ranked_by_a_pulled_win_rate() {
     // Twelve heroes to a match: the pick rate is the share of matches a hero is in.
     assert!((t[0].pick_rate - 10_000.0 / (22_010.0 / 12.0) * 100.0).abs() < 1e-6);
 }
+
+#[test]
+fn items_are_ranked_against_their_own_cost() {
+    use engine::popular::ItemStat;
+    let d: GameData = serde_json::from_str(include_str!("../../src-tauri/data/snapshot.json")).unwrap();
+    let cheap: Vec<&engine::data::Item> = d.items.iter().filter(|i| i.cost == 800).take(2).collect();
+    let dear = d.items.iter().find(|i| i.cost == 6400).unwrap();
+    let row = |item_id, wins, matches| -> ItemStat {
+        serde_json::from_value(serde_json::json!({ "item_id": item_id, "wins": wins, "matches": matches, "avg_buy_time_s": 300.0 })).unwrap()
+    };
+    // The expensive item wins 65% but is alone at its cost: average there, not above.
+    let rows = vec![row(cheap[0].id, 6_000, 10_000), row(cheap[1].id, 4_000, 10_000), row(dear.id, 6_500, 10_000)];
+    let t = engine::tiers::item_tiers(&d, &rows, 40_000);
+    assert_eq!(t.len(), 3);
+    assert_eq!(t[0].item, cheap[0].class_name);
+    assert_eq!(t[0].tier, "S");
+    assert_eq!(t[1].tier, "D");
+    assert_eq!(t[2].tier, "B");
+    assert!((t[0].pick_rate - 25.0).abs() < 1e-9);
+    assert!((t[0].buy_minute - 5.0).abs() < 1e-9);
+}

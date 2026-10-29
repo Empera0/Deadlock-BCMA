@@ -60,6 +60,13 @@ fn picks_follow_strength_matchups_lane_and_own_record() {
     assert!(fit(enemy, counter).points > 5.0);
     assert_eq!(fit(enemy, plain).rate, None);
     assert!(r.fits.iter().find(|f| f.hero_id == ally).unwrap().ally);
+    // A hero's page: its best matchup and its best partner first.
+    let (against, with) = draft::matchups(&d, &stats, counter);
+    assert_eq!(against[0].hero_id, enemy);
+    assert!(against[0].points > 5.0);
+    let (_, partners) = draft::matchups(&d, &stats, ally);
+    assert_eq!(partners[0].hero_id, plain);
+    assert!(with.is_empty());
 }
 
 #[test]
