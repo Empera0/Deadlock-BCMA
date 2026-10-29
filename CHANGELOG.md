@@ -2,6 +2,25 @@
 
 All notable changes to Deadlock BCMA are listed here. Versions follow [semantic versioning](https://semver.org).
 
+## [0.4.0] – 2026-10-29
+
+A new look from top to bottom, the shop drawn as the game draws it, and three new tools: hero tiers, patch changes and builds at your own ranks.
+
+### Added
+
+1. **Hero tiers.** A new screen: every hero at the ranks you choose, with its win rate, how often it is picked and banned, its players' K/D/A and souls, and a tier from S to D against the average hero. A hero played rarely is not put on top by a lucky run. Click a hero to see what players build with it.
+2. **Patch changes.** After a patch, the app compares the game's numbers before and after: hero stats, every ability value and upgrade, item costs and values, new and removed ones. A button at the top right lists them, the ones in your saved builds first.
+3. **Builds at your ranks.** The Popular and Master builds can be read from a rank range of your choice instead of the top players, on the Build generator or in Settings.
+4. **Themes.** Six looks in Settings (Obsidian, Graphite, Midnight, Moss, Plum and the light Paper), with compact or comfortable spacing.
+5. **Search.** Ctrl K finds any screen, hero or action.
+
+### Changed
+
+1. **A new layout.** The side bar is gone: the screens are tabs across the top, each screen's tools sit in one row under them, and its content is in rounded cards.
+2. **The shop as in the game.** The Build maker's shop is drawn as the game's three storefronts (Fairfax, MPS and the Curiosity Catalog), with the tiers in framed panels, price tags and paper cards. Your purchase order sits at the bottom as the game's item slots.
+3. **Draft as a lobby.** The two teams face each other with the chance between them, a hero picker below, and the picks and the fit table side by side.
+4. **Match analysis in cards,** with a title plate that shows who won.
+
 ## [0.3.2] – 2026-10-28
 
 The Draft screen reads any rank range and shows how heroes fit together.
@@ -571,6 +590,7 @@ This release adds the **Build generator**, with builds read from top-ranked matc
   - trends across your last matches.
 - Windows installer with a desktop shortcut and automatic updates from GitHub releases.
 
+[0.4.0]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.3.2...v0.4.0
 [0.3.2]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.3.1...v0.3.2
 [0.3.1]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.2.49...v0.3.0

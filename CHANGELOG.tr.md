@@ -2,6 +2,25 @@
 
 Uygulamanın Türkçe yenilik notları. Her sürümde neyin değiştiği, kısa ve sade.
 
+## [0.4.0] – 2026-10-29
+
+Baştan aşağı yeni bir görünüm, oyundaki gibi çizilmiş bir dükkân ve üç yeni araç: hero sıralaması, yama değişiklikleri ve kendi rütbende build'ler.
+
+### Eklenenler
+
+1. **Hero sıralaması.** Yeni bir ekran: seçtiğin rütbelerde her hero. Kazanma, seçilme ve yasaklanma oranı, oyuncularının Ö/Ö/A ve ruhu, ortalama heroya göre S'den D'ye bir seviye. Az oynanan bir hero şanslı birkaç maçla tepeye çıkmaz. Bir heroya tıklayınca oyuncuların onunla ne build yaptığını görürsün.
+2. **Yama değişiklikleri.** Bir yamadan sonra uygulama oyunun sayılarını öncesi ve sonrasıyla karşılaştırır: hero değerleri, her yetenek değeri ve geliştirmesi, eşya fiyatları ve değerleri, yeni gelenler ve kaldırılanlar. Sağ üstteki düğme bunları listeler; kayıtlı build'lerindekiler en üstte.
+3. **Kendi rütbende build'ler.** Popüler ve Usta build'ler en iyi oyuncular yerine seçtiğin rütbe aralığından okunabilir. Build önericide ya da Ayarlar'da seçilir.
+4. **Temalar.** Ayarlar'da altı görünüm (Obsidyen, Grafit, Gece Yarısı, Yosun, Erik ve açık renkli Kâğıt), sıkı ya da rahat yerleşimle.
+5. **Arama.** Ctrl K ile her ekranı, heroyu ya da işlemi bulursun.
+
+### Değişenler
+
+1. **Yeni yerleşim.** Sol menü kalktı: ekranlar üstte sekmeler halinde, her ekranın araçları altında tek satırda, içerik yuvarlak kartlarda.
+2. **Oyundaki gibi dükkân.** Build kur'daki dükkân oyundaki üç dükkân gibi çizildi (Fairfax, MPS ve Curiosity Catalog): çerçeveli kademe panelleri, fiyat etiketleri, kâğıt kartlar. Satın alma sıran altta, oyundaki eşya slotları gibi duruyor.
+3. **Lobi gibi kahraman seçimi.** İki takım karşılıklı, kazanma şansı ortada; altında hero seçici, en altta öneriler ve uyum tablosu yan yana.
+4. **Kartlara ayrılmış maç analizi,** kimin kazandığını gösteren bir başlıkla.
+
 ## [0.3.2] – 2026-10-28
 
 Kahraman seçimi ekranı artık istediğin rütbe aralığına bakıyor ve heroların birbiriyle uyumunu gösteriyor.
