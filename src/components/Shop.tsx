@@ -9,7 +9,6 @@ interface Props {
   onToggle: (className: string) => void;
 }
 
-const TIER_NAME = ["", "I", "II", "III", "IV", "V"];
 
 /** Tooltip sections; translated where shown. */
 const SECTIONS: [string, string][] = [
@@ -97,8 +96,47 @@ export default function Shop({ items, owned, purchased, onToggle }: Props) {
     ].filter((g) => g.tiers.length > 0);
   }, [items, category, query, haystacks]);
 
+  const card = (i: Item) => (
+    <button
+      key={i.class_name}
+      className={"store-item " + i.category + (owned.has(i.class_name) ? " owned" : purchased.has(i.class_name) ? " consumed" : "")}
+      onClick={() => onToggle(i.class_name)}
+      onMouseMove={(e) => setHover({ item: i, x: e.clientX, y: e.clientY })}
+      onMouseLeave={() => setHover(null)}
+    >
+      <span className="store-art">
+        <img src={i.icon} alt="" />
+        {i.imbue && <em className="store-imbue">{t("Imbue")}</em>}
+        {i.active && <em className="store-active">{t("Active")}</em>}
+        {owned.has(i.class_name) && (
+          <i className="store-cart" title={t("In your build")}>
+            <svg viewBox="0 0 24 24" width="12" height="12">
+              <path d="M3 4h3l2.4 10.2a1 1 0 0 0 1 .8h8.2a1 1 0 0 0 1-.8L20 8H7" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+              <circle cx="10" cy="19.5" r="1.6" fill="currentColor" />
+              <circle cx="17" cy="19.5" r="1.6" fill="currentColor" />
+            </svg>
+          </i>
+        )}
+      </span>
+      <span className="store-name">{i.name}</span>
+    </button>
+  );
+  const panel = (tier: number, list: Item[]) => (
+    <div key={tier} className={"store-tier t" + tier} style={{ gridArea: "t" + tier }}>
+      <div className="store-tier-head">
+        <span className="price-tag">
+          <small>$</small>
+          {list[0].cost}
+        </span>
+        <b>{t("Tier {n}", { n: tier })}</b>
+        {tier === 4 && <em>{t("Experts only")}</em>}
+      </div>
+      <div className="store-items">{list.map(card)}</div>
+    </div>
+  );
+
   return (
-    <section className="shop">
+    <section className={"shop store " + (query ? "searching" : category)}>
       <div className="shop-head">
         {(Object.keys(CATEGORY_LABEL) as Category[]).map((c) => (
           <button
@@ -115,44 +153,59 @@ export default function Shop({ items, owned, purchased, onToggle }: Props) {
         <input placeholder={t("Search name, stat or description…")} value={query} onChange={(e) => setQuery(e.target.value)} />
       </div>
       <div className="shop-body">
-        {tiers.map((g) => (
-          <div key={g.title}>
-            {g.title && <div className="shop-group-title">{g.title}</div>}
-            {g.tiers.map(([tier, list]) => (
-          <div key={tier} className="tier">
-            <div className={"tier-label " + (tiers.length === 1 && !query ? category : "")}>
-              <small>{t("Tier {n}", { n: TIER_NAME[tier] ?? tier })}</small>
-              <b>{fmt(list[0].cost)}</b>
+        {query ? (
+          tiers.map((g) => (
+            <div key={g.title} className="store-results">
+              <div className="store-results-title">{g.title}</div>
+              <div className="store-grid">{g.tiers.map(([tier, list]) => panel(tier, list))}</div>
             </div>
-            <div className="tier-items">
-              {list.map((i) => (
-                <button
-                  key={i.class_name}
-                  className={
-                    "item " +
-                    i.category +
-                    (owned.has(i.class_name) ? " owned" : purchased.has(i.class_name) ? " consumed" : "")
-                  }
-                  onClick={() => onToggle(i.class_name)}
-                  onMouseMove={(e) => setHover({ item: i, x: e.clientX, y: e.clientY })}
-                  onMouseLeave={() => setHover(null)}
-                >
-                  <span className="item-art">
-                    <img src={i.icon} alt="" loading="lazy" />
-                    {i.active && <em>{t("Active")}</em>}
-                    {owned.has(i.class_name) && <i className="item-check">✓</i>}
-                  </span>
-                  <span className="item-name">{i.name}</span>
-                </button>
-              ))}
-            </div>
+          ))
+        ) : (
+          <div className="store-grid">
+            <StoreLogo category={category} />
+            {tiers[0]?.tiers.map(([tier, list]) => panel(tier, list))}
           </div>
-            ))}
-          </div>
-        ))}
+        )}
         {tiers.length === 0 && <p className="muted">{t("No items found.")}</p>}
       </div>
       {hover && <Tooltip {...hover} />}
     </section>
+  );
+}
+
+/** Each of the game's three shops has a storefront of its own: the sign is drawn the way the game draws it. */
+function StoreLogo({ category }: { category: Category }) {
+  if (category === "weapon")
+    return (
+      <div className="store-logo fairfax">
+        <b>FAIRFAX</b>
+        <small>ARTILLERY BOUGHT AND SOLD</small>
+      </div>
+    );
+  if (category === "vitality")
+    return (
+      <div className="store-logo mps">
+        <b>MPS</b>
+        <span>
+          <small>MYSTIC · PHARMACEUTICAL · STORES</small>
+          <em>
+            voted <b>#1 PHARMACY</b> for <b>FAMILIES</b> and <b>BEASTS</b>
+          </em>
+        </span>
+      </div>
+    );
+  return (
+    <div className="store-logo curiosity">
+      <svg viewBox="0 0 300 120" width="260" height="104" aria-label="Curiosity Catalog">
+        <path id="arc" d="M30 92 Q150 -10 270 92" fill="none" />
+        <text>
+          <textPath href="#arc" startOffset="50%" textAnchor="middle">
+            CURIOSITY
+          </textPath>
+        </text>
+      </svg>
+      <span>CATALOG</span>
+      <small>№ 777</small>
+    </div>
   );
 }

@@ -1275,4 +1275,7 @@ export const TR: Record<string, string> = {
   Search: "Ara",
   "Type a screen, a hero or an action…": "Bir ekran, hero ya da işlem yaz…",
   "Nothing found.": "Bir şey bulunamadı.",
+  Imbue: "Aşılama",
+  "In your build": "Build'inde",
+  "Experts only": "Sadece uzmanlar",
 };

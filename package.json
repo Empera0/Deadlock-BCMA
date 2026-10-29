@@ -10,6 +10,11 @@
     "tauri": "tauri"
   },
   "dependencies": {
+    "@fontsource/alfa-slab-one": "^5.1.0",
+    "@fontsource/barlow-condensed": "^5.1.0",
+    "@fontsource/big-shoulders-stencil-display": "^5.1.0",
+    "@fontsource/fraunces": "^5.1.0",
+    "@fontsource/zilla-slab": "^5.1.0",
     "@tauri-apps/api": "^2",
     "@tauri-apps/plugin-process": "^2.4.0",
     "@tauri-apps/plugin-updater": "^2.14.0",
