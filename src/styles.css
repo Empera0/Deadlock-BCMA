@@ -5767,3 +5767,366 @@ textarea:focus {
 .lobby > :empty {
   display: none;
 }
+
+/* ================================================================== Arena: the Build maker as the game's shop
+   The hero's own background art behind everything, the shop on dark glass with the game's category colors, and
+   the purchase order at the bottom as the game's item slots (white glyphs on the category's color). */
+:root {
+  --game-weapon: #d3842f;
+  --game-vitality: #6ba337;
+  --game-spirit: #9a5fd4;
+}
+.weapon {
+  --cat: var(--game-weapon);
+}
+.vitality {
+  --cat: var(--game-vitality);
+}
+.spirit {
+  --cat: var(--game-spirit);
+}
+main.arena {
+  position: relative;
+  isolation: isolate;
+  background: radial-gradient(120% 90% at 85% 10%, color-mix(in srgb, var(--accent) 6%, transparent), transparent 60%), var(--bg-deep);
+}
+main.arena::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--hero-bg) right -8% center / auto 118% no-repeat;
+  opacity: 0.22;
+  filter: saturate(1.1);
+  -webkit-mask-image: linear-gradient(90deg, transparent 15%, #000 70%);
+  mask-image: linear-gradient(90deg, transparent 15%, #000 70%);
+  pointer-events: none;
+}
+:root[data-theme="paper"] main.arena::before {
+  opacity: 0.12;
+}
+main.arena > .shop,
+main.arena > .side {
+  background: color-mix(in srgb, var(--bg) 72%, transparent);
+  backdrop-filter: blur(10px);
+}
+main.arena > .side {
+  border-left: 1px solid var(--line);
+}
+
+/* Category tabs: wide plates, the active one lit in its color. */
+.arena .shop-head {
+  padding: 12px 14px 0;
+  gap: 6px;
+  border-bottom: 1px solid var(--line);
+}
+.arena .shop-head .tab {
+  position: relative;
+  padding: 10px 28px 11px;
+  border: 1px solid transparent;
+  border-bottom: none;
+  border-radius: var(--r) var(--r) 0 0;
+  background: color-mix(in srgb, var(--cat) 9%, transparent);
+  color: color-mix(in srgb, var(--cat) 75%, var(--muted));
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+}
+.arena .shop-head .tab.on {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--cat) 85%, #fff 0%), color-mix(in srgb, var(--cat) 70%, #000));
+  border-color: color-mix(in srgb, var(--cat) 60%, #fff);
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 -6px 22px color-mix(in srgb, var(--cat) 35%, transparent);
+}
+.arena .shop-head .tab.on::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  background: var(--cat);
+}
+.arena .shop-head input {
+  margin: 0 0 8px auto;
+  border-radius: 999px;
+  padding: 5px 12px;
+}
+
+/* Tier rows: the cost in big soul-colored figures on a thin rail. */
+.arena .shop-body {
+  padding: 14px 14px 24px;
+}
+.arena .tier {
+  margin-bottom: 14px;
+  gap: 12px;
+}
+.arena .tier-label {
+  width: 58px;
+  background: transparent;
+  border-left: none;
+  border-right: 2px solid color-mix(in srgb, var(--cat, var(--line)) 70%, transparent);
+  border-radius: 0;
+  justify-content: flex-start;
+  padding: 4px 8px 4px 0;
+  align-items: flex-end;
+}
+.arena .tier-label b {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--souls, #7fe3c7);
+  letter-spacing: -0.01em;
+}
+.arena .tier-label small {
+  order: 2;
+  font-size: 9.5px;
+}
+.arena .tier-items {
+  grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
+  gap: 8px;
+}
+
+/* Item cards: the shop art framed in the category color, a name plate under it. */
+.arena .item {
+  border-radius: var(--r);
+  border: 1px solid color-mix(in srgb, var(--cat) 40%, #000);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--cat) 30%, #111), color-mix(in srgb, var(--cat) 14%, #0a0a0b));
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--cat) 40%, transparent), 0 2px 6px rgba(0, 0, 0, 0.35);
+}
+.arena .item:hover:not(:disabled) {
+  transform: translateY(-2px);
+  border-color: var(--cat);
+  filter: brightness(1.12);
+  box-shadow: 0 0 0 1px var(--cat), 0 8px 22px color-mix(in srgb, var(--cat) 30%, transparent);
+}
+.arena .item-art {
+  aspect-ratio: 1 / 1;
+}
+.arena .item-name {
+  min-height: 30px;
+  background: rgba(0, 0, 0, 0.35);
+  color: #f2efe9;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+.arena .item.owned {
+  background: linear-gradient(180deg, var(--cat), color-mix(in srgb, var(--cat) 65%, #000));
+  border-color: color-mix(in srgb, var(--cat) 50%, #fff);
+  box-shadow: 0 0 0 2px var(--cat), 0 0 18px color-mix(in srgb, var(--cat) 55%, transparent);
+}
+.arena .item.owned .item-name {
+  background: rgba(0, 0, 0, 0.25);
+  color: #fff;
+}
+
+/* The purchase order as the game's item slots, along the bottom. */
+.page > .buildbar {
+  order: 0;
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  border-top: 1px solid var(--line);
+  border-bottom: none;
+  padding: 8px 16px 10px;
+}
+.buildbar .chips {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 6px 2px 2px;
+}
+.buildbar .chip {
+  position: relative;
+  flex: none;
+  width: 74px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  overflow: visible;
+}
+.buildbar .chip-slot {
+  width: 56px;
+  height: 56px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--r-sm);
+  background: linear-gradient(180deg, var(--cat), color-mix(in srgb, var(--cat) 62%, #000));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 2px 8px rgba(0, 0, 0, 0.4);
+  overflow: hidden;
+}
+.buildbar .chip-slot img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 0;
+}
+.buildbar .chip-slot img.glyph {
+  width: 74%;
+  height: 74%;
+  object-fit: contain;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.4));
+}
+.buildbar .chip-index {
+  position: absolute;
+  top: -6px;
+  left: 2px;
+  z-index: 1;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--bg);
+  border: 1px solid var(--line-strong);
+  font-size: 10px;
+  color: var(--muted);
+}
+.buildbar .chip-text {
+  width: 100%;
+  text-align: center;
+  line-height: 1.15;
+}
+.buildbar .chip-text span {
+  display: block;
+  font-size: 10.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.buildbar .chip-text small {
+  font-size: 10px;
+  color: var(--souls, #7fe3c7);
+}
+.buildbar .chip-btn {
+  position: absolute;
+  top: 6px;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  display: none;
+  place-items: center;
+  border-radius: 50%;
+  font-size: 11px;
+  line-height: 1;
+  background: rgba(0, 0, 0, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+}
+.buildbar .chip:hover .chip-btn {
+  display: grid;
+}
+.buildbar .chip-btn:nth-last-child(3) {
+  left: 6px;
+  top: 24px;
+}
+.buildbar .chip-btn:nth-last-child(2) {
+  right: 6px;
+  top: 24px;
+}
+.buildbar .chip-btn:last-child {
+  right: 4px;
+  top: -6px;
+}
+.buildbar .chip-btn.cond {
+  display: grid;
+  left: 4px;
+  top: 40px;
+  opacity: 0.55;
+}
+.buildbar .chip-btn.cond.on {
+  opacity: 1;
+  background: var(--accent);
+  color: var(--on-accent);
+}
+.buildbar .chip.future .chip-slot {
+  opacity: 0.4;
+  filter: grayscale(0.5);
+}
+.buildbar .chip.consumed .chip-slot {
+  opacity: 0.35;
+  filter: grayscale(1);
+}
+.buildbar .chip select.imbue {
+  width: 74px;
+  font-size: 10px;
+  padding: 1px 2px;
+}
+.buildbar-head {
+  gap: 12px;
+}
+main.arena::before {
+  background-position: 62% 40%;
+  background-size: auto 130%;
+  opacity: 0.3;
+  -webkit-mask-image: radial-gradient(70% 90% at 62% 40%, #000 30%, transparent 85%);
+  mask-image: radial-gradient(70% 90% at 62% 40%, #000 30%, transparent 85%);
+}
+main.arena > .shop {
+  background: color-mix(in srgb, var(--bg) 45%, transparent);
+}
+main.arena > .side {
+  background: color-mix(in srgb, var(--bg) 80%, transparent);
+}
+
+/* Match analysis: a title plate, the scoreboards and every section as cards, centered. */
+.match-main > * {
+  max-width: 1360px;
+  margin-left: auto;
+  margin-right: auto;
+}
+.match-title {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin: 4px auto 12px;
+  color: var(--muted);
+}
+.match-title b {
+  font-size: 18px;
+  font-weight: 650;
+  color: var(--text);
+  letter-spacing: -0.01em;
+}
+.match-winner {
+  margin-left: auto;
+  align-self: center;
+  padding: 3px 12px;
+  border-radius: 999px;
+  font-weight: 600;
+  color: var(--team);
+  background: color-mix(in srgb, var(--team) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--team) 40%, transparent);
+}
+.match-nav .side-tabs {
+  margin: 0 0 8px;
+}
+.match-table {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  border-collapse: separate;
+  border-spacing: 0;
+  overflow: hidden;
+}
+.match-table th {
+  background: var(--panel);
+  padding-top: 10px;
+}
+.match-table tr:last-child td {
+  border-bottom: none;
+}
+.match-table tbody tr:hover td {
+  background: var(--hover);
+}
+.match-main .group {
+  margin-bottom: 14px;
+}
+.match-history {
+  background: var(--bg);
+}

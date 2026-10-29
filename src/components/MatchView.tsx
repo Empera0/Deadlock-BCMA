@@ -972,8 +972,13 @@ function Report({
   return (
     <>
       <div className="match-title">
-        {t("Match {id}", { id: report.match_id })} · {clock(report.duration_s)} · {dateTime(report.start_time)} ·{" "}
-        <b style={{ color: TEAM_COLOR[report.winning_team] }}>{t("{team} won", { team: TEAM_NAME[report.winning_team] })}</b>
+        <b>{t("Match {id}", { id: report.match_id })}</b>
+        <span>
+          {clock(report.duration_s)} · {dateTime(report.start_time)}
+        </span>
+        <span className="match-winner" style={{ ["--team" as string]: TEAM_COLOR[report.winning_team] }}>
+          {t("{team} won", { team: TEAM_NAME[report.winning_team] })}
+        </span>
       </div>
       <div className="match-nav">
       <div className="side-tabs match-sections">

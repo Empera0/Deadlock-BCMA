@@ -137,7 +137,9 @@ export default function BuildBar({ build, heroes, sheet, items, onChange }: Prop
               className={`chip ${item.category}${future ? " future" : ""}${consumed ? " consumed" : ""}`}
             >
               <span className="chip-index">{i + 1}</span>
-              <img src={item.icon} alt="" />
+              <span className="chip-slot" title={item.name}>
+                <img src={item.glyph || item.icon} alt="" className={item.glyph ? "glyph" : ""} />
+              </span>
               <div className="chip-text">
                 <span>{item.name}</span>
                 <small>{consumed ? t("upgraded") : t("{n} souls", { n: fmt(step ? step.paid : item.cost) })}</small>

@@ -399,9 +399,10 @@ export default function App() {
         />
       )}
 
-      {mode === "build" && <BuildBar build={build} heroes={data.heroes} sheet={sheet} items={items} onChange={patch} />}
-
-      <main style={{ display: mode === "build" ? undefined : "none" }}>
+      <main
+        className="arena"
+        style={{ display: mode === "build" ? undefined : "none", ...(hero.background ? { ["--hero-bg" as string]: `url("${hero.background}")` } : {}) }}
+      >
         <Shop items={data.items} owned={owned} purchased={purchased} onToggle={toggleItem} />
         {sheet && (
           <div className="side">
@@ -443,6 +444,8 @@ export default function App() {
           </div>
         )}
       </main>
+
+      {mode === "build" && <BuildBar build={build} heroes={data.heroes} sheet={sheet} items={items} onChange={patch} />}
 
       {picking && (
         <HeroPicker

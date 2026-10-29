@@ -35,6 +35,8 @@ export interface Item {
   class_name: string;
   name: string;
   icon: string;
+  /** The game's white glyph for the item's slot; empty in data read before it was kept. */
+  glyph?: string;
   category: Category;
   tier: number;
   cost: number;
@@ -51,6 +53,8 @@ export interface Hero {
   name: string;
   icon: string;
   card: string;
+  /** The hero's background art; empty in data read before it was kept. */
+  background?: string;
   hero_type: string;
   levels: { level: number; required_souls: number }[];
   invest: Record<Category, InvestTier[]>;

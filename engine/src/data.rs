@@ -29,6 +29,9 @@ pub struct Hero {
     pub name: String,
     pub icon: String,
     pub card: String,
+    /// The hero's background art, as the game shows behind it.
+    #[serde(default)]
+    pub background: String,
     pub hero_type: String,
     /// `starting_stats` (e.g. `max_health`, `sprint_speed`).
     pub base: BTreeMap<String, f64>,
@@ -153,6 +156,9 @@ pub struct Item {
     pub class_name: String,
     pub name: String,
     pub icon: String,
+    /// The item's icon as the game draws it on its slot: a white glyph on the category's color.
+    #[serde(default)]
+    pub glyph: String,
     /// `weapon` | `vitality` | `spirit`.
     pub category: String,
     pub tier: u32,
