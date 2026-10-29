@@ -17,6 +17,8 @@ interface Props {
   souls: number;
   /** A match player handed over from the match analysis. */
   preset: MatchPreset | null;
+  /** When last asked to open on the Popular tab (0: never). */
+  popularAt?: number;
   /** Loads a build into the builder, with the abilities imbued items go into, for a hero when it is not the builder's. */
   onUse: (purchases: string[], what: string, imbues?: Record<string, number>, hero?: string) => void;
   /** Opens the combo with the player's build at some souls against an enemy's usual build at the same souls. */
@@ -900,11 +902,14 @@ function MasterPanel({
 }
 
 /** Builds put together for the hero: by the calculator, from what players build, and for a match by the master builder. */
-export default function GeneratorView({ heroes, hero, build, souls, preset, onUse, onFight }: Props) {
-  const [tab, setTab] = useState<"calculated" | "popular" | "master">(preset ? "master" : "calculated");
+export default function GeneratorView({ heroes, hero, build, souls, preset, popularAt = 0, onUse, onFight }: Props) {
+  const [tab, setTab] = useState<"calculated" | "popular" | "master">(preset ? "master" : popularAt ? "popular" : "calculated");
   useEffect(() => {
     if (preset) setTab("master");
   }, [preset?.key]);
+  useEffect(() => {
+    if (popularAt) setTab("popular");
+  }, [popularAt]);
   return (
     <div className="generator-view">
       <div className="side-tabs gen-tabs">

@@ -22,5 +22,6 @@ pub mod raw;
 pub mod replay;
 pub mod scout;
 pub mod suggest;
+pub mod tiers;
 pub mod timing;
 pub mod team;

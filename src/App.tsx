@@ -12,6 +12,7 @@ import Shop from "./components/Shop";
 import StatsPanel from "./components/StatsPanel";
 import Guide, { GuideButton, useFirstStart, useGuide } from "./components/Guide";
 import SettingsView from "./components/SettingsView";
+import TiersView from "./components/TiersView";
 import ShareMatches from "./components/ShareMatches";
 import UpdateBanner from "./components/UpdateBanner";
 import WhatsNew from "./components/WhatsNew";
@@ -68,11 +69,13 @@ export default function App() {
   const [name, setName] = useState("");
   const [status, setStatus] = useState("");
   const [tab, setTab] = useState<"stats" | "combo" | "misc" | "compare">("stats");
-  const [mode, setMode] = useState<"build" | "generator" | "draft" | "match" | "settings">("build");
+  const [mode, setMode] = useState<"build" | "generator" | "draft" | "heroes" | "match" | "settings">("build");
   const guide = useGuide();
   useFirstStart(() => guide.show("start"));
   /** A match player handed to the master builder. */
   const [masterPreset, setMasterPreset] = useState<MatchPreset | null>(null);
+  // Set to open the Build generator on its Popular tab, from the hero list.
+  const [popularAt, setPopularAt] = useState(0);
   const [navOpen, setNavOpen] = useState(() => {
     try {
       return localStorage.getItem("nav-open") !== "0";
@@ -219,6 +222,7 @@ export default function App() {
             ["build", "Build maker", "M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.5-.5-.5-2.5z"],
             ["generator", "Build generator", "M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9zM19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"],
             ["draft", "Draft", "M4 5h6v6H4zM14 5h6v6h-6zM4 15h6v4H4zM14 15h6v4h-6z"],
+            ["heroes", "Hero tiers", "M4 6h3M4 12h3M4 18h3M10 6h10M10 12h7M10 18h4"],
             ["match", "Match analysis", "M4 20V10M10 20V4M16 20v-7M22 20H2"],
             ["settings", "Settings", "M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"],
           ] as const
@@ -340,6 +344,16 @@ export default function App() {
         />
       </div>
 
+      {mode === "heroes" && (
+        <TiersView
+          onBuild={(heroClass) => {
+            if (heroClass !== build.hero) setBuild({ ...emptyBuild(heroClass), target: build.target, map: build.map });
+            setPopularAt(Date.now());
+            setMode("generator");
+          }}
+        />
+      )}
+
       {mode === "generator" && sheet && (
         <GeneratorView
           heroes={data.heroes}
@@ -347,6 +361,7 @@ export default function App() {
           build={build}
           souls={sheet.souls}
           preset={masterPreset}
+          popularAt={popularAt}
           onUse={(purchases, what, imbues, heroClass) => {
             // A build for another hero (the master builder's) switches the builder to that hero.
             if (heroClass && heroClass !== build.hero) {

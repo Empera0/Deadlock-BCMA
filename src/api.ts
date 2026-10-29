@@ -482,6 +482,24 @@ export interface DraftFocus {
   fits: DraftFit[];
 }
 
+export interface HeroTier {
+  hero_id: number;
+  hero: string;
+  name: string;
+  icon: string;
+  hero_type: string;
+  tier: string;
+  matches: number;
+  win_rate: number;
+  ranked_rate: number;
+  pick_rate: number;
+  ban_share: number;
+  kills: number;
+  deaths: number;
+  assists: number;
+  net_worth: number;
+}
+
 export interface AdviceMove {
   kind: "buy" | "upgrade" | "swap";
   sell: string | null;
@@ -580,6 +598,7 @@ export const api = {
     call<Ranked[]>("rank_next", { build, metric, conditional }),
   draftPicks: (allies: number[], enemies: number[], lane: number[], banned: number[], badge: number, maxBadge: number | null, accountId: string | null) =>
     call<DraftReport>("draft_picks", { allies, enemies, lane, banned, badge, maxBadge, accountId }),
+  heroTiers: (badge: number, maxBadge: number | null) => call<HeroTier[]>("hero_tiers", { badge, maxBadge }),
   abilityOrder: (build: Build) => call<OrderReport>("ability_order", { build }),
   deathTrend: (accountId: string, count: number) => call<DeathTrend>("death_trend", { accountId, count }),
   liveMatch: (accountId: string) => call<LiveMatch>("live_match", { accountId }),

@@ -3,7 +3,7 @@ import { LANG, t } from "../i18n";
 
 const SEEN_KEY = "guide-seen";
 
-export type GuideTopic = "start" | "build" | "generator" | "draft" | "match" | "setup" | "settings";
+export type GuideTopic = "start" | "build" | "generator" | "draft" | "heroes" | "match" | "setup" | "settings";
 
 interface Step {
   title: string;
@@ -17,11 +17,12 @@ const TOPICS_EN: Topic[] = [
   {
     key: "start",
     title: "Getting started",
-    intro: "Deadlock BCMA works out builds from the game's own numbers and from what top players buy, and studies your matches. Four screens, on the left:",
+    intro: "Deadlock BCMA works out builds from the game's own numbers and from what top players buy, and studies your matches. Five screens, on the left:",
     steps: [
       { title: "Build maker", body: "Put a build together item by item and see every number it gives: damage, health, resists, a fight against a target, the order to upgrade abilities in." },
       { title: "Build generator", body: "Let the app build for you: the popular build of top players, or the Master builder, which builds for one match against the enemy team you give it." },
       { title: "Draft", body: "During hero selection: which heroes do well into the enemy picks and with your team, and what the enemy will likely ban." },
+      { title: "Hero tiers", body: "Every hero at the ranks you choose: how often it wins, is picked and banned, and what its players average." },
       { title: "Match analysis", body: "Open any match by its number, or your recent ones by your Steam account: how it went, why you died, what the build lacked." },
       {
         title: "First thing to set up",
@@ -97,9 +98,21 @@ const TOPICS_EN: Topic[] = [
     intro: "Which hero to pick while the draft is on.",
     steps: [
       { title: "Enter the picks", body: "Add the enemy picks and your team's picks as they come in; bans too. Load my live match fills them from the game when -condebug is set." },
-      { title: "Read the list", body: "Heroes are ranked by how they do into the enemy picks and with your team, from top players' matches. Each line says what it counts, with how many matches stand behind it." },
+      { title: "Pick the ranks", body: "Win rates come from the last 30 days of matches in the ranks you choose at the top, from everyone who played them. Your own matches are not needed." },
+      { title: "Read the list", body: "Heroes are ranked by how they do into the enemy picks and in your lane. Each line says what it counts, with how many matches stand behind it." },
+      { title: "Fit with the placed heroes", body: "The table shows, for each hero you placed, how every other hero has done beside it (an ally) or against it (an enemy). Green and red mark what the heroes' own strength does not explain." },
       { title: "Your own record", body: "Your Steam account ID adds your own record on each hero to the ranking. It is optional." },
       { title: "Then build", body: "Open the Master builder from the draft for the hero you pick: the teams carry over." },
+    ],
+  },
+  {
+    key: "heroes",
+    title: "Hero tiers",
+    intro: "Every hero at the ranks you choose, from the last 30 days of matches.",
+    steps: [
+      { title: "Pick the ranks", body: "The same range as the Draft screen: changing it on one changes it on the other." },
+      { title: "Tiers", body: "Each hero is compared with the average one. S and A win clearly more, C and D clearly less. A hero played rarely is pulled toward 50% so a lucky run does not put it on top." },
+      { title: "Sort and open", body: "Click a column to sort by it. Click a hero to see what players build with it in the Build generator." },
     ],
   },
   {
@@ -161,11 +174,12 @@ const TOPICS_TR: Topic[] = [
   {
     key: "start",
     title: "Başlarken",
-    intro: "Deadlock BCMA, oyunun kendi sayılarından ve en iyi oyuncuların aldıklarından build çıkarır ve maçlarını inceler. Solda dört ekran var:",
+    intro: "Deadlock BCMA, oyunun kendi sayılarından ve en iyi oyuncuların aldıklarından build çıkarır ve maçlarını inceler. Solda beş ekran var:",
     steps: [
       { title: "Build kur", body: "Eşya eşya bir build kur ve verdiği her sayıyı gör: hasar, sağlık, dirençler, bir hedefe karşı savaş, yeteneklerin hangi sırayla yükseltileceği." },
       { title: "Build önerici", body: "Build'i uygulama kursun: en iyi oyuncuların popüler build'i ya da senin verdiğin rakip takıma göre maç için build kuran Usta build." },
       { title: "Kahraman seçimi", body: "Kahraman seçerken: hangi kahraman rakiplere karşı ve takımınla iyi gider, rakip büyük ihtimalle neyi yasaklar." },
+      { title: "Hero sıralaması", body: "Seçtiğin rütbelerde her hero: ne kadar kazanıyor, ne sıklıkla seçiliyor ve yasaklanıyor, oyuncuları ortalama ne yapıyor." },
       { title: "Maç analizi", body: "Herhangi bir maçı numarasıyla aç ya da Steam hesabınla son maçlarına bak: maç nasıl geçti, neden öldün, build'de ne eksikti." },
       {
         title: "İlk yapılacak ayar",
@@ -241,9 +255,21 @@ const TOPICS_TR: Topic[] = [
     intro: "Seçim sürerken hangi kahramanı alacağın.",
     steps: [
       { title: "Seçimleri gir", body: "Rakip seçimlerini ve takımının seçimlerini geldikçe ekle, yasakları da. -condebug ayarlıysa Canlı maçımı yükle bunları oyundan doldurur." },
-      { title: "Listeyi oku", body: "Kahramanlar, en iyi oyuncuların maçlarına göre rakip seçimlere karşı ve takımınla ne kadar iyi gittiklerine göre sıralanır. Her satır neyi saydığını ve arkasında kaç maç olduğunu söyler." },
+      { title: "Rütbeleri seç", body: "Kazanma oranları, üstte seçtiğin rütbelerde son 30 günde oynanan herkesin maçlarından gelir. Kendi maçlarına gerek yok." },
+      { title: "Listeyi oku", body: "Kahramanlar rakip seçimlere karşı ve lane'inde ne kadar iyi gittiklerine göre sıralanır. Her satır neyi saydığını ve arkasında kaç maç olduğunu söyler." },
+      { title: "Seçilen herolarla uyum", body: "Tablo, eklediğin her hero için diğer her heronun onunla birlikte (takım arkadaşı) ya da ona karşı (rakip) nasıl gittiğini gösterir. Yeşil ve kırmızı, heroların kendi gücüyle açıklanmayan farkı gösterir." },
       { title: "Kendi sonucun", body: "Steam hesap numaran, her kahramandaki kendi sonucunu da sıralamaya ekler. İstersen." },
       { title: "Sonra build", body: "Seçtiğin kahraman için seçim ekranından Usta build'i aç: takımlar da gelir." },
+    ],
+  },
+  {
+    key: "heroes",
+    title: "Hero sıralaması",
+    intro: "Seçtiğin rütbelerde her hero, son 30 günün maçlarından.",
+    steps: [
+      { title: "Rütbeleri seç", body: "Kahraman seçimi ekranıyla aynı aralık: birinde değiştirince öbüründe de değişir." },
+      { title: "Seviyeler", body: "Her hero ortalama bir heroyla karşılaştırılır. S ve A belirgin şekilde daha çok, C ve D belirgin şekilde daha az kazanır. Az oynanan bir hero %50'ye doğru çekilir, şanslı birkaç maçla tepeye çıkmasın diye." },
+      { title: "Sırala ve aç", body: "Sıralamak için bir sütuna tıkla. Oyuncuların o heroyla ne build yaptığını Build önericide görmek için heroya tıkla." },
     ],
   },
   {

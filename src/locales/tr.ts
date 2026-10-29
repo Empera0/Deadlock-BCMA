@@ -1226,4 +1226,21 @@ export const TR: Record<string, string> = {
   "the top players": "en iyi oyuncular",
   "Draft and hero ranks from": "Seçim ve hero rütbeleri:",
   "Builds from": "Build'lerin rütbesi:",
+  "Hero tiers": "Hero sıralaması",
+  "Win rate": "Kazanma",
+  "Its win rate; ranked by the same pulled toward 50% by its matches, so a hero played rarely is not put on top by a lucky run":
+    "Kazanma oranı. Sıralama, maç sayısına göre %50'ye çekilmiş haliyle yapılır: az oynanan bir hero şanslı birkaç maçla tepeye çıkmasın diye.",
+  Picked: "Seçilme",
+  "Share of matches it is in": "İçinde olduğu maçların payı",
+  Banned: "Yasaklanma",
+  "Its share of all bans": "Bütün yasaklar içindeki payı",
+  "Its players' kills, deaths and assists per match": "Oyuncularının maç başına leş, ölüm ve asist sayısı",
+  "Its players' souls per match": "Oyuncularının maç başına ruhu",
+  "Matches it was played in": "Oynandığı maç sayısı",
+  "Every type": "Her tür",
+  "From about {n} matches of the last 30 days in the chosen ranks. Tiers compare each hero with the average one: S and A win clearly more, C and D clearly less. Click a column to sort by it, and a hero to see its build.":
+    "Seçilen rütbelerde son 30 günün yaklaşık {n} maçından. Seviyeler her heroyu ortalama bir heroyla karşılaştırır: S ve A belirgin şekilde daha çok, C ve D belirgin şekilde daha az kazanır. Sıralamak için bir sütuna, build'ini görmek için bir heroya tıkla.",
+  Tier: "Seviye",
+  "See what players build with {hero}": "Oyuncuların {hero} ile ne build yaptığını gör",
+  "Ranked by {n}": "Sıralamadaki değeri: {n}",
 };

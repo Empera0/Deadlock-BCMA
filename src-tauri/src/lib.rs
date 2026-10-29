@@ -381,6 +381,21 @@ async fn draft_picks(
     .map_err(|e| e.to_string())?
 }
 
+/// The heroes ranked at a rank range, from the same statistics as the draft (so neither asks the service twice).
+#[tauri::command]
+async fn hero_tiers(app: AppHandle, state: State<'_, AppState>, badge: u32, max_badge: Option<u32>) -> Result<Vec<engine::tiers::HeroTier>, String> {
+    let data = state.data.read().unwrap().clone();
+    let cache = Cache::new(&app, &data)?;
+    tauri::async_runtime::spawn_blocking(move || {
+        prefetch(&cache, vec![("hero-stats", with_max("", max_badge), badge, DRAFT_DAYS), ("hero-ban-stats", with_max("", max_badge), badge, DRAFT_DAYS)]);
+        let rows: Vec<engine::tiers::HeroRow> = parse(&analytics_over(&cache, "hero-stats", &with_max("", max_badge), badge, DRAFT_DAYS)?)?;
+        let bans = engine::draft::parse_bans(&analytics_over(&cache, "hero-ban-stats", &with_max("", max_badge), badge, DRAFT_DAYS)?)?;
+        Ok(engine::tiers::tiers(&data, &rows, &bans))
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
 /// Matches this long are long ones, and this short short ones, when telling which heroes grow strong late.
 const LONG_MATCH_S: u32 = 35 * 60;
 const SHORT_MATCH_S: u32 = 25 * 60;
@@ -1108,6 +1123,7 @@ pub fn run() {
             popular_build,
             master_build,
             draft_picks,
+            hero_tiers,
             simulate_combo,
             refresh_data,
             save_build,

@@ -2820,6 +2820,7 @@ header {
 
 header.match,
 header.draft,
+header.heroes,
 header.settings {
   display: none;
 }
@@ -4710,4 +4711,81 @@ header.settings {
 }
 .gen-ranks select {
   width: auto;
+}
+
+/* Hero tier list */
+.tiers-view {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 10px 14px;
+  gap: 10px;
+  overflow: auto;
+}
+.hero-tiers {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 13px;
+}
+.hero-tiers th {
+  position: sticky;
+  top: 0;
+  background: var(--panel);
+  text-align: right;
+  padding: 4px 8px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.hero-tiers th:nth-child(-n + 2) {
+  text-align: left;
+  cursor: default;
+}
+.hero-tiers th.on {
+  color: var(--accent);
+}
+.hero-tiers td {
+  padding: 2px 8px;
+  text-align: right;
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+}
+.hero-tiers td:nth-child(-n + 2) {
+  text-align: left;
+}
+.tier-hero {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.tier-hero img {
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+}
+.tier-badge {
+  display: inline-block;
+  width: 24px;
+  text-align: center;
+  border-radius: 4px;
+  font-weight: 700;
+}
+.tier-badge.S {
+  background: #d4a93a;
+  color: #1a1a1a;
+}
+.tier-badge.A {
+  background: var(--vitality);
+  color: #1a1a1a;
+}
+.tier-badge.B {
+  background: var(--panel-2);
+}
+.tier-badge.C {
+  background: color-mix(in srgb, var(--danger) 45%, var(--panel-2));
+}
+.tier-badge.D {
+  background: var(--danger);
+  color: #1a1a1a;
 }
