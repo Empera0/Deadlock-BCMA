@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { api, ConsoleState } from "../api";
 import { CONDEBUG_HELP } from "../live";
 import { date, LANG, LANGUAGES, NAMES, setLang, setNames, t, tn } from "../i18n";
-import { accountFrom, SETTINGS, useSetting } from "../settings";
+import { accountFrom, SETTINGS, THEMES, useSetting } from "../settings";
 import RankRange from "./RankRange";
 import ErrorNote from "./ErrorNote";
 import { DAMAGES, FOCUSES } from "./GeneratorView";
@@ -16,6 +16,8 @@ export default function SettingsView({ version, fetchedAt, onRefresh, onGuide }:
   const [damage, setDamage] = useSetting(SETTINGS.masterDamage);
   const [watch, setWatch] = useSetting(SETTINGS.watchLive);
   const [share, setShare] = useSetting(SETTINGS.shareMatches);
+  const [theme, setTheme] = useSetting(SETTINGS.theme);
+  const [density, setDensity] = useSetting(SETTINGS.density);
   const [log, setLog] = useState<ConsoleState | null>(null);
   const [logError, setLogError] = useState("");
 
@@ -36,6 +38,34 @@ export default function SettingsView({ version, fetchedAt, onRefresh, onGuide }:
 
   return (
     <div className="settings-view">
+      <section className="group">
+        <h3>{t("Look")}</h3>
+        <div className="theme-grid">
+          {THEMES.map(([key, name, [bg, panel, text, accent]]) => (
+            <button key={key} className={"theme-card" + (theme === key ? " on" : "")} onClick={() => setTheme(key)}>
+              <span className="theme-swatch" style={{ background: bg }}>
+                <i style={{ background: panel }} />
+                <div>
+                  <b style={{ background: text, width: "70%" }} />
+                  <b style={{ background: text, width: "45%", opacity: 0.5 }} />
+                  <b style={{ background: accent, width: "35%" }} />
+                </div>
+              </span>
+              <span>{t(name)}</span>
+            </button>
+          ))}
+        </div>
+        <div className="fields">
+          <label className="field">
+            {t("Spacing")}
+            <select value={density} onChange={(e) => setDensity(e.target.value)}>
+              <option value="compact">{t("Compact")}</option>
+              <option value="comfortable">{t("Comfortable")}</option>
+            </select>
+          </label>
+        </div>
+      </section>
+
       <section className="group">
         <h3>{t("Language")}</h3>
         <div className="fields">

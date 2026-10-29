@@ -17,6 +17,9 @@ export const SETTINGS = {
   watchLive: "watch-live",
   /** Share finished matches with deadlock-api. */
   shareMatches: "share-matches",
+  /** The look: a theme of THEMES, and compact or comfortable spacing. */
+  theme: "theme",
+  density: "density",
 } as const;
 
 export const DEFAULTS: Record<string, string> = {
@@ -29,6 +32,8 @@ export const DEFAULTS: Record<string, string> = {
   [SETTINGS.masterDamage]: "auto",
   [SETTINGS.watchLive]: "0",
   [SETTINGS.shareMatches]: "1",
+  [SETTINGS.theme]: "obsidian",
+  [SETTINGS.density]: "compact",
 };
 
 /** The ranks, by their badge tier (badge = tier × 10 + subrank 1–6); the names are the game's own, shown as they are (not translated where shown). */
@@ -43,6 +48,23 @@ export function rankRange(fromKey: string, toKey: string): { minBadge: number | 
   const from = readSetting(fromKey);
   const to = readSetting(toKey);
   return { minBadge: from === "" ? null : Number(from), maxBadge: from === "" || to === "" ? null : Number(to) };
+}
+
+/** The themes, with the colors their swatch shows: background, panel, text, accent; the names translated where shown. */
+export const THEMES: [string, string, [string, string, string, string]][] = [
+  ["obsidian", "Obsidian", ["#0b0b0d", "#121215", "#ececef", "#e6cf9c"]],
+  ["graphite", "Graphite", ["#17181b", "#1e1f23", "#e8eaed", "#8ab4f8"]],
+  ["midnight", "Midnight", ["#0b1020", "#10172a", "#e4ebf7", "#5fd4e6"]],
+  ["moss", "Moss", ["#0e1311", "#131a17", "#e5ede8", "#7fd6a4"]],
+  ["plum", "Plum", ["#131016", "#19151d", "#efe8f2", "#f0a8d0"]],
+  ["paper", "Paper", ["#f4f3ef", "#ffffff", "#1d1c1a", "#a46a12"]],
+];
+
+/** Puts the chosen theme and density on the page; called at start and whenever either changes. */
+export function applyLook() {
+  const root = document.documentElement;
+  root.dataset.theme = readSetting(SETTINGS.theme);
+  root.dataset.density = readSetting(SETTINGS.density);
 }
 
 const EVENT = "bcma-setting";
@@ -62,6 +84,7 @@ export function writeSetting(key: string, value: string) {
     /* Not kept: the setting holds for this session only. */
   }
   window.dispatchEvent(new CustomEvent(EVENT, { detail: { key, value } }));
+  if (key === SETTINGS.theme || key === SETTINGS.density) applyLook();
 }
 
 /** A setting, kept in step across every screen that reads it. */
