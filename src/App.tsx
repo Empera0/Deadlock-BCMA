@@ -13,6 +13,7 @@ import StatsPanel from "./components/StatsPanel";
 import Guide, { GuideButton, useFirstStart, useGuide } from "./components/Guide";
 import SettingsView from "./components/SettingsView";
 import TiersView from "./components/TiersView";
+import CommandPalette, { heroCommands } from "./components/CommandPalette";
 import PatchNotes from "./components/PatchNotes";
 import ShareMatches from "./components/ShareMatches";
 import UpdateBanner from "./components/UpdateBanner";
@@ -58,6 +59,17 @@ function restoreBuild(): Build | null {
   }
 }
 
+type Mode = "build" | "generator" | "draft" | "heroes" | "match" | "settings";
+/** The screens, in the order of the top menu; the names translated where shown. */
+const SCREENS: [Mode, string][] = [
+  ["build", "Build maker"],
+  ["generator", "Build generator"],
+  ["draft", "Draft"],
+  ["heroes", "Hero tiers"],
+  ["match", "Match analysis"],
+  ["settings", "Settings"],
+];
+
 export default function App() {
   const [data, setData] = useState<GameData | null>(null);
   const [build, setBuild] = useState<Build | null>(null);
@@ -70,29 +82,25 @@ export default function App() {
   const [name, setName] = useState("");
   const [status, setStatus] = useState("");
   const [tab, setTab] = useState<"stats" | "combo" | "misc" | "compare">("stats");
-  const [mode, setMode] = useState<"build" | "generator" | "draft" | "heroes" | "match" | "settings">("build");
+  const [mode, setMode] = useState<Mode>("build");
   const guide = useGuide();
   useFirstStart(() => guide.show("start"));
   /** A match player handed to the master builder. */
   const [masterPreset, setMasterPreset] = useState<MatchPreset | null>(null);
   // Set to open the Build generator on its Popular tab, from the hero list.
   const [popularAt, setPopularAt] = useState(0);
-  const [navOpen, setNavOpen] = useState(() => {
-    try {
-      return localStorage.getItem("nav-open") !== "0";
-    } catch {
-      return true;
-    }
-  });
-  const toggleNav = () =>
-    setNavOpen((open) => {
-      try {
-        localStorage.setItem("nav-open", open ? "0" : "1");
-      } catch {
-        /* a convenience only */
+  const [searching, setSearching] = useState(false);
+  // Ctrl+K (or Cmd+K) opens the search from anywhere.
+  useEffect(() => {
+    const on = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setSearching((v) => !v);
       }
-      return !open;
-    });
+    };
+    window.addEventListener("keydown", on);
+    return () => window.removeEventListener("keydown", on);
+  }, []);
   const [combo, setCombo] = useState<Combo>(restoreCombo);
   const [comboResult, setComboResult] = useState<ComboResult | null>(null);
 
@@ -210,47 +218,55 @@ export default function App() {
   const souls = Math.max(build.souls ?? 0, sheet?.spent ?? 0);
 
   return (
-    <div className={"app" + (navOpen ? " nav-open" : "")}>
-      <nav className="sidebar">
-        <button className="nav-toggle" onClick={toggleNav} title={navOpen ? t("Collapse") : t("Expand")}>
-          <svg viewBox="0 0 24 24" width="20" height="20">
-            <path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    <div className="app">
+      <header className="topbar">
+        <span className="brand">
+          DEADLOCK <i>BCMA</i>
+        </span>
+        <nav className="tabs">
+          {SCREENS.map(([key, label]) => (
+            <button key={key} className={mode === key ? "on" : ""} onClick={() => setMode(key)}>
+              {t(label)}
+            </button>
+          ))}
+        </nav>
+        <button className="search" onClick={() => setSearching(true)} title={t("Search a screen, a hero or an action")}>
+          <svg viewBox="0 0 24 24" width="14" height="14">
+            <path d="M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-4-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
           </svg>
-          <b>Deadlock BCMA</b>
+          <span>{t("Search…")}</span>
+          <kbd>Ctrl K</kbd>
         </button>
-        {(
-          [
-            ["build", "Build maker", "M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.5-.5-.5-2.5z"],
-            ["generator", "Build generator", "M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9zM19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"],
-            ["draft", "Draft", "M4 5h6v6H4zM14 5h6v6h-6zM4 15h6v4H4zM14 15h6v4h-6z"],
-            ["heroes", "Hero tiers", "M4 6h3M4 12h3M4 18h3M10 6h10M10 12h7M10 18h4"],
-            ["match", "Match analysis", "M4 20V10M10 20V4M16 20v-7M22 20H2"],
-            ["settings", "Settings", "M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"],
-          ] as const
-        ).map(([key, label, icon]) => (
-          <button key={key} className={"nav-item" + (mode === key ? " on" : "")} onClick={() => setMode(key)} title={t(label)}>
-            <svg viewBox="0 0 24 24" width="20" height="20">
-              <path d={icon} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" strokeLinecap="round" />
-            </svg>
-            <span>{t(label)}</span>
-          </button>
-        ))}
-        <div className="nav-foot">
+        <div className="top-actions">
           <UpdateBanner />
           <WhatsNew />
           <PatchNotes dataAt={data.fetched_at} />
-          <ShareMatches />
-          <button className="ghost" onClick={() => guide.show("start")} title={t("How to use the app")}>
-            {t("Guide")}
+          <ShareMatches quiet />
+          <button
+            className="ghost icon"
+            onClick={refresh}
+            title={t("Update data") + " · " + t("Game") + ` ${data.client_version ?? "?"} · ${date(data.fetched_at)}`}
+          >
+            <svg viewBox="0 0 24 24" width="15" height="15">
+              <path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
           </button>
-          <small>
-            {t("Game")} {data.client_version ?? "?"} · {date(data.fetched_at)}
-          </small>
-          <button className="ghost" onClick={refresh}>
-            {t("Update data")}
-          </button>
+          <GuideButton onOpen={() => guide.show(mode)} />
         </div>
-      </nav>
+      </header>
+      <CommandPalette
+        open={searching}
+        onClose={() => setSearching(false)}
+        commands={[
+          ...SCREENS.map(([key, label]) => ({ key: "screen-" + key, label: t(label), hint: t("Screen"), run: () => setMode(key) })),
+          ...heroCommands(data.heroes, (h) => {
+            patch({ hero: h.class_name, ability_tiers: [0, 0, 0, 0] });
+            setMode("build");
+          }),
+          { key: "refresh", label: t("Update data"), hint: t("Action"), run: refresh },
+          { key: "guide", label: t("Open the guide"), hint: t("Action"), run: () => guide.show(mode) },
+        ]}
+      />
       <div className="page">
       <header className={mode}>
         <button className="hero-button" onClick={() => setPicking(true)}>
@@ -312,7 +328,6 @@ export default function App() {
         </div>
         <div className="data-info">{status && <small className="status">{status}</small>}</div>
       </header>
-      <GuideButton onOpen={() => guide.show(mode)} />
       <Guide open={guide.open} topic={guide.topic} onClose={guide.close} onTopic={guide.setTopic} />
 
       {/* Kept mounted while the builder is shown so a loaded match stays loaded. */}
@@ -440,7 +455,7 @@ export default function App() {
           }}
         />
       )}
-      <footer>
+      <footer style={mode === "build" ? undefined : { display: "none" }}>
         {t("Click a stat to see its formula and contributions.")}
         {sheet && ` · ${t("{n} souls", { n: fmt(sheet.souls) })}`}
       </footer>

@@ -17,7 +17,7 @@ const TOPICS_EN: Topic[] = [
   {
     key: "start",
     title: "Getting started",
-    intro: "Deadlock BCMA works out builds from the game's own numbers and from what top players buy, and studies your matches. Five screens, on the left:",
+    intro: "Deadlock BCMA works out builds from the game's own numbers and from what top players buy, and studies your matches. Five screens, in the menu at the top (Ctrl K finds any screen or hero):",
     steps: [
       { title: "Build maker", body: "Put a build together item by item and see every number it gives: damage, health, resists, a fight against a target, the order to upgrade abilities in." },
       { title: "Build generator", body: "Let the app build for you: the popular build of top players, or the Master builder, which builds for one match against the enemy team you give it." },
@@ -33,7 +33,7 @@ const TOPICS_EN: Topic[] = [
           </>
         ),
       },
-      { title: "Open this guide again", body: "The Guide button at the bottom of the side bar opens it any time, and the ? next to each screen's title opens it at that screen." },
+      { title: "Open this guide again", body: "The ? at the top right opens it at the screen you are on, any time." },
     ],
   },
   {
@@ -162,9 +162,9 @@ const TOPICS_EN: Topic[] = [
       },
       {
         title: "Share my finished matches",
-        body: "At the bottom of the side bar. When a match ends, the app asks deadlock-api for it, which keeps the match and, when Valve kept one, its replay, so it can be studied. Only the match number is sent; untick it to stop.",
+        body: "In Settings. When a match ends, the app asks deadlock-api for it, which keeps the match and, when Valve kept one, its replay, so it can be studied. Only the match number is sent; untick it to stop.",
       },
-      { title: "Updates", body: "The app updates itself and says what is new. Update data, at the bottom of the side bar, fetches the latest heroes and items after a patch." },
+      { title: "Updates", body: "The app updates itself and says what is new. The round arrow at the top right (Update data) fetches the latest heroes and items after a patch." },
     ],
   },
 ];
@@ -174,7 +174,7 @@ const TOPICS_TR: Topic[] = [
   {
     key: "start",
     title: "Başlarken",
-    intro: "Deadlock BCMA, oyunun kendi sayılarından ve en iyi oyuncuların aldıklarından build çıkarır ve maçlarını inceler. Solda beş ekran var:",
+    intro: "Deadlock BCMA, oyunun kendi sayılarından ve en iyi oyuncuların aldıklarından build çıkarır ve maçlarını inceler. Üstteki menüde beş ekran var (Ctrl K ile her ekranı ya da heroyu bulabilirsin):",
     steps: [
       { title: "Build kur", body: "Eşya eşya bir build kur ve verdiği her sayıyı gör: hasar, sağlık, dirençler, bir hedefe karşı savaş, yeteneklerin hangi sırayla yükseltileceği." },
       { title: "Build önerici", body: "Build'i uygulama kursun: en iyi oyuncuların popüler build'i ya da senin verdiğin rakip takıma göre maç için build kuran Usta build." },
@@ -190,7 +190,7 @@ const TOPICS_TR: Topic[] = [
           </>
         ),
       },
-      { title: "Bu rehberi tekrar aç", body: "Kenar çubuğunun altındaki Rehber düğmesi rehberi her zaman açar. Her ekranın sağ üstündeki ? de o ekranın rehberini açar." },
+      { title: "Bu rehberi tekrar aç", body: "Sağ üstteki ? rehberi bulunduğun ekranda her zaman açar." },
     ],
   },
   {
@@ -319,16 +319,16 @@ const TOPICS_TR: Topic[] = [
       },
       {
         title: "Biten maçlarımı paylaş",
-        body: "Kenar çubuğunun altında. Bir maç bitince uygulama bunu deadlock-api'ye bildirir. Servis maçı ve, Valve sakladıysa, tekrarını saklar, böylece incelenebilir. Sadece maç numarası gönderilir. Durdurmak için işareti kaldır.",
+        body: "Ayarlar'da. Bir maç bitince uygulama bunu deadlock-api'ye bildirir. Servis maçı ve, Valve sakladıysa, tekrarını saklar, böylece incelenebilir. Sadece maç numarası gönderilir. Durdurmak için işareti kaldır.",
       },
-      { title: "Güncellemeler", body: "Uygulama kendini günceller ve neyin yeni olduğunu söyler. Kenar çubuğunun altındaki Veriyi güncelle, bir yamadan sonra en yeni kahramanları ve eşyaları indirir." },
+      { title: "Güncellemeler", body: "Uygulama kendini günceller ve neyin yeni olduğunu söyler. Sağ üstteki yuvarlak ok (Veriyi güncelle), bir yamadan sonra en yeni kahramanları ve eşyaları indirir." },
     ],
   },
 ];
 
 const TOPICS = LANG === "tr" ? TOPICS_TR : TOPICS_EN;
 
-/** The guide: how to use each screen, opened on the first start and from the side bar or a screen's ? any time. */
+/** The guide: how to use each screen, opened on the first start and from the ? at the top right any time. */
 export default function Guide({ open, topic, onClose, onTopic }: { open: boolean; topic: GuideTopic; onClose: () => void; onTopic: (t: GuideTopic) => void }) {
   if (!open) return null;
   // The Settings screen is explained under Setup.

@@ -51,7 +51,7 @@ function due(e: Entry | undefined, now: number): boolean {
  * log: the service fetches its salts from Steam and keeps them, so the match and its replay can be studied. On by
  * default; the switch is remembered.
  */
-export default function ShareMatches() {
+export default function ShareMatches({ quiet = false }: { quiet?: boolean }) {
   const [setting, setSetting] = useSetting(SETTINGS.shareMatches);
   const on = setting !== "0";
   const setOn = (v: boolean) => setSetting(v ? "1" : "0");
@@ -89,6 +89,8 @@ export default function ShareMatches() {
     return () => window.clearInterval(timer);
   }, [on]);
 
+  // Running in the background only: the switch is in Settings.
+  if (quiet) return null;
   return (
     <label
       className="share-matches"

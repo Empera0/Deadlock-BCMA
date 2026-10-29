@@ -5,7 +5,7 @@ import RankRange from "./RankRange";
 import LobbyScout from "./LobbyScout";
 import { api, LiveMatch, DraftFocus, DraftPick, DraftReason, DraftReport, fmt, Hero, MatchPreset } from "../api";
 import ErrorNote from "./ErrorNote";
-import { t } from "../i18n";
+import { percent, t } from "../i18n";
 
 const TEAM_SIZE = 6;
 /** With an account, "my heroes" are the ones played at least this often. */
@@ -201,18 +201,52 @@ export default function DraftView({ heroes, onPlan }: { heroes: Hero[]; onPlan: 
   // Every hero can be placed; heroes with too few matches are only left out of the picks.
   const grid = heroes.filter((h) => !query || h.name.toLowerCase().includes(query.toLowerCase()));
 
+  const slots = (s: "allies" | "enemies") => {
+    const size = s === "allies" ? TEAM_SIZE - 1 : TEAM_SIZE;
+    return (
+      <div className={"lobby-team " + s + (side === s ? " on" : "")} onClick={() => setSide(s)}>
+        <h4>
+          <span>{s === "allies" ? t("Your team") : t("Enemy team")}</span>
+          <small>{s === "allies" ? t("{n}/{m} besides you", { n: teams.allies.length, m: size }) : `${teams.enemies.length}/${size}`}</small>
+          {side === s && <em>{t("adding here")}</em>}
+        </h4>
+        <div className="lobby-slots">
+          {Array.from({ length: size }, (_, i) => {
+            const id = teams[s][i];
+            const h = id !== undefined ? byId.get(id) : undefined;
+            if (!h) return <span key={i} className="lobby-slot empty" />;
+            const inLane = lane.includes(h.id);
+            return (
+              <span key={h.id} className={"lobby-slot " + s + (inLane ? " lane" : "")} title={h.name}>
+                <img src={h.icon} alt="" />
+                <button className="lobby-x" onClick={(e) => (e.stopPropagation(), remove(s, h.id))} title={t("Remove")}>
+                  ×
+                </button>
+                {s === "enemies" && (
+                  <button className="lobby-lane" onClick={(e) => (e.stopPropagation(), toggleLane(h.id))} title={t("Mark as an enemy in your lane")}>
+                    {inLane ? t("in lane") : t("lane?")}
+                  </button>
+                )}
+              </span>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
   return (
-    <div className="draft-view">
-      <div className="draft-bar">
+    <div className="draft-view lobby">
+      <div className="lobby-bar">
         <RankRange inline />
-        <span className="muted" title={t("Your own record on each hero comes from this account. Set it in Settings.")}>
+        <span className="pill muted" title={t("Your own record on each hero comes from this account. Set it in Settings.")}>
           {account.trim() ? t("Your account: {id}", { id: account.trim() }) : t("No account set: add it in Settings for your own record")}
         </span>
-        <button className="ghost" onClick={() => (setTeams({ allies: [], enemies: [], banned: [] }), setLane([]))}>
-          {t("Clear")}
-        </button>
+        {liveNote && <span className="muted">{liveNote}</span>}
+        {busy && <span className="muted">{t("Working…")}</span>}
+        <span className="spacer" />
+        <button onClick={() => (setTeams({ allies: [], enemies: [], banned: [] }), setLane([]))}>{t("Clear")}</button>
         <button
-          className="ghost"
           title={t("Fills both teams and your lane from the match you are playing now, read from the game's console log (-condebug)")}
           onClick={() => {
             setLiveNote(t("Looking for your match… the teams take about a minute the first time."));
@@ -228,151 +262,124 @@ export default function DraftView({ heroes, onPlan }: { heroes: Hero[]; onPlan: 
         >
           {t("Load my live match")}
         </button>
-        {liveNote && <span className="muted">{liveNote}</span>}
-        {busy && <span className="muted">{t("Working…")}</span>}
       </div>
 
-      <div className="draft-layout">
-        <div className="draft-left">
-          {SIDES.map(([s, label]) => (
-            <div key={s} className={"draft-side " + s + (side === s ? " on" : "")} onClick={() => setSide(s)}>
-              <div className="draft-side-head">
-                <strong>{t(label)}</strong>
-                <span className="muted">
-                  {s === "allies"
-                    ? t("{n}/{m} besides you", { n: teams.allies.length, m: TEAM_SIZE - 1 })
-                    : s === "enemies"
-                      ? `${teams.enemies.length}/${TEAM_SIZE}`
-                      : teams.banned.length}
-                </span>
-                {side === s && <span className="draft-adding">{t("adding here")}</span>}
-              </div>
-              <div className="draft-chips">
-                {teams[s].map((id) => {
-                  const h = byId.get(id);
-                  if (!h) return null;
-                  const inLane = lane.includes(id);
-                  return (
-                    <span key={id} className={"draft-chip" + (inLane ? " lane" : "")}>
-                      <img src={h.icon} alt="" />
-                      <span>{h.name}</span>
-                      {s === "enemies" && (
-                        <button
-                          className="ghost small"
-                          onClick={(e) => (e.stopPropagation(), toggleLane(id))}
-                          title={t("Mark as an enemy in your lane")}
-                        >
-                          {inLane ? t("in lane") : t("lane?")}
-                        </button>
-                      )}
-                      <button className="ghost small" onClick={(e) => (e.stopPropagation(), remove(s, id))} title={t("Remove")}>
-                        ×
-                      </button>
-                    </span>
-                  );
-                })}
-                {teams[s].length === 0 && <span className="muted">{t("Click a hero below to add it here.")}</span>}
-              </div>
-            </div>
-          ))}
+      <div className="lobby-board">
+        {slots("allies")}
+        <div className="lobby-chance">
+          <small>{t("Draft as it stands")}</small>
+          <b>{report?.team_rate != null ? percent(fmt(report.team_rate, 1)) : "–"}</b>
+          <div className="draft-meter">
+            <div style={{ width: `${report?.team_rate ?? 50}%` }} />
+          </div>
+        </div>
+        {slots("enemies")}
+      </div>
 
-          <input className="draft-search" placeholder={t("Find a hero…")} value={query} onChange={(e) => setQuery(e.target.value)} />
-          <div className="draft-grid">
-            {grid.map((h) => (
-              <button key={h.id} className={"draft-hero" + (placed.has(h.id) ? " used" : "")} disabled={placed.has(h.id)} onClick={() => add(h.id)} title={h.name}>
-                <img src={h.icon} alt="" loading="lazy" />
-                <span>{h.name}</span>
+      <div className="lobby-picker">
+        <div className="lobby-picker-head">
+          <div className="segmented">
+            {SIDES.map(([s, label]) => (
+              <button key={s} className={side === s ? "on " + s : s} onClick={() => setSide(s)}>
+                {t(label)}
+                {s === "banned" && teams.banned.length > 0 && ` · ${teams.banned.length}`}
               </button>
             ))}
           </div>
-        </div>
-
-        <div className="draft-right">
-          {live && <LobbyScout live={live} heroes={heroes} />}
-          <ErrorNote error={error} onRetry={() => setAttempt((a) => a + 1)} />
-          {report && (
-            <>
-              {report.team_rate !== null && (
-                <div className="draft-chance">
-                  <span>{t("Draft as it stands")}</span>
-                  <div className="draft-meter">
-                    <div style={{ width: `${report.team_rate}%` }} />
-                  </div>
-                  <b>{fmt(report.team_rate, 1)}%</b>
-                </div>
-              )}
-              {report.notes.map((n) => (
-                <div key={n} className="passive">
-                  {n}
-                </div>
-              ))}
-
-              <div className="group">
-                <h3>{t("Fit with the placed heroes")}</h3>
-                {report.fits.length === 0 ? (
-                  <p className="muted">{t("Add heroes to either team: this table then shows how every other hero has done beside your allies and against the enemies.")}</p>
-                ) : (
-                  <>
-                    <p className="muted">
-                      {t("Each column is a placed hero: beside an ally, the win rate of the two together; against an enemy, the row hero's win rate into it. Green and red mark what the heroes' own win rates do not explain. Click a hero to add it.")}
-                    </p>
-                    <FitTable fits={report.fits} byId={byId} placed={placed} onAdd={add} />
-                  </>
-                )}
-              </div>
-
-              <div className="group">
-                <h3>
-                  {t("Best picks")}
-                  {account.trim() && (
-                    <label className="check">
-                      <input type="checkbox" checked={onlyMine} onChange={(e) => setOnlyMine(e.target.checked)} />
-                      {t("Only heroes I play ({n}+ matches)", { n: MY_HERO_MATCHES })}
-                    </label>
-                  )}
-                </h3>
-                {shown.length === 0 && <p className="muted">{t("No hero fits.")}</p>}
-                {shown.map((p, i) => (
-                  <PickRow key={p.hero_id} pick={p} rank={i + 1} onPlan={() => plan(p)} />
-                ))}
-              </div>
-
-              {report.threats.length > 0 && (
-                <div className="group">
-                  <h3>{t("Enemy picks, the most dangerous first")}</h3>
-                  {report.threats.map((threat) => (
-                    <div key={threat.hero_id} className="draft-threat">
-                      <img src={threat.icon} alt="" />
-                      <strong>{threat.name}</strong>
-                      <b className={threat.edge > 0 ? "bad" : "good"}>{t("{n} pts", { n: signed(threat.edge, 2) })}</b>
-                      <Reasons reasons={threat.reasons} enemy />
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {report.bans.length > 0 && (
-                <div className="group">
-                  <h3>{t("Bans")}</h3>
-                  {report.bans.map((b) => (
-                    <div key={b.hero_id} className="draft-threat">
-                      <img src={b.icon} alt="" />
-                      <strong>{b.name}</strong>
-                      <b className="bad">{t("{n} pts", { n: signed(b.edge, 2) })}</b>
-                      <span className="muted">{t("{n}% of bans", { n: fmt(b.ban_share, 1) })}</span>
-                      <Reasons reasons={b.reasons} enemy />
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              <p className="muted">
-                {t("Win rates from the last 30 days of matches in the chosen ranks, from everyone who played them; your own record, only when an account is set, from your last 90 days. A pick counts its own win rate and its matchups against every enemy (and, in your lane, its lane results), weighted as fitted on 8,700 Ascendant+ matches: with these weights, drafts given 45% won 45% and drafts given 55% won 56%. Pairs of allies did not predict wins and are not counted in the picks; the fit table shows them apart. A draft moves a match by a few points at most.")}
-              </p>
-            </>
+          {teams.banned.length > 0 && (
+            <div className="lobby-bans">
+              {teams.banned.map((id) => {
+                const h = byId.get(id);
+                return h ? <img key={id} src={h.icon} alt="" title={`${h.name} · ${t("Remove")}`} onClick={() => remove("banned", id)} /> : null;
+              })}
+            </div>
           )}
+          <input className="draft-search" placeholder={t("Find a hero…")} value={query} onChange={(e) => setQuery(e.target.value)} />
+        </div>
+        <div className="lobby-heroes">
+          {grid.map((h) => (
+            <button key={h.id} className={"lobby-hero" + (placed.has(h.id) ? " used" : "")} disabled={placed.has(h.id)} onClick={() => add(h.id)} title={h.name}>
+              <img src={h.icon} alt="" loading="lazy" />
+            </button>
+          ))}
         </div>
       </div>
+
+      {live && <LobbyScout live={live} heroes={heroes} />}
+      <ErrorNote error={error} onRetry={() => setAttempt((a) => a + 1)} />
+      {report && (
+        <>
+          {report.notes.map((n) => (
+            <div key={n} className="passive">
+              {n}
+            </div>
+          ))}
+          <div className="lobby-cols">
+            <div className="group">
+              <h3>
+                {t("Best picks")}
+                {account.trim() && (
+                  <label className="check">
+                    <input type="checkbox" checked={onlyMine} onChange={(e) => setOnlyMine(e.target.checked)} />
+                    {t("Only heroes I play ({n}+ matches)", { n: MY_HERO_MATCHES })}
+                  </label>
+                )}
+              </h3>
+              {shown.length === 0 && <p className="muted">{t("No hero fits.")}</p>}
+              {shown.map((p, i) => (
+                <PickRow key={p.hero_id} pick={p} rank={i + 1} onPlan={() => plan(p)} />
+              ))}
+            </div>
+            <div className="group">
+              <h3>{t("Fit with the placed heroes")}</h3>
+              {report.fits.length === 0 ? (
+                <p className="muted">{t("Add heroes to either team: this table then shows how every other hero has done beside your allies and against the enemies.")}</p>
+              ) : (
+                <>
+                  <p className="muted">
+                    {t("Each column is a placed hero: beside an ally, the win rate of the two together; against an enemy, the row hero's win rate into it. Green and red mark what the heroes' own win rates do not explain. Click a hero to add it.")}
+                  </p>
+                  <FitTable fits={report.fits} byId={byId} placed={placed} onAdd={add} />
+                </>
+              )}
+            </div>
+          </div>
+
+          <div className="lobby-cols">
+            {report.threats.length > 0 && (
+              <div className="group">
+                <h3>{t("Enemy picks, the most dangerous first")}</h3>
+                {report.threats.map((threat) => (
+                  <div key={threat.hero_id} className="draft-threat">
+                    <img src={threat.icon} alt="" />
+                    <strong>{threat.name}</strong>
+                    <b className={threat.edge > 0 ? "bad" : "good"}>{t("{n} pts", { n: signed(threat.edge, 2) })}</b>
+                    <Reasons reasons={threat.reasons} enemy />
+                  </div>
+                ))}
+              </div>
+            )}
+            {report.bans.length > 0 && (
+              <div className="group">
+                <h3>{t("Bans")}</h3>
+                {report.bans.map((b) => (
+                  <div key={b.hero_id} className="draft-threat">
+                    <img src={b.icon} alt="" />
+                    <strong>{b.name}</strong>
+                    <b className="bad">{t("{n} pts", { n: signed(b.edge, 2) })}</b>
+                    <span className="muted">{t("{n}% of bans", { n: fmt(b.ban_share, 1) })}</span>
+                    <Reasons reasons={b.reasons} enemy />
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <p className="muted lobby-note">
+            {t("Win rates from the last 30 days of matches in the chosen ranks, from everyone who played them; your own record, only when an account is set, from your last 90 days. A pick counts its own win rate and its matchups against every enemy (and, in your lane, its lane results), weighted as fitted on 8,700 Ascendant+ matches: with these weights, drafts given 45% won 45% and drafts given 55% won 56%. Pairs of allies did not predict wins and are not counted in the picks; the fit table shows them apart. A draft moves a match by a few points at most.")}
+          </p>
+        </>
+      )}
     </div>
   );
 }

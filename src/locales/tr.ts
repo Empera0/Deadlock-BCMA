@@ -1268,4 +1268,11 @@ export const TR: Record<string, string> = {
   Spacing: "Sıklık",
   Compact: "Sıkı",
   Comfortable: "Rahat",
+  "Search a screen, a hero or an action": "Ekran, hero ya da işlem ara",
+  "Search…": "Ara…",
+  Screen: "Ekran",
+  Action: "İşlem",
+  Search: "Ara",
+  "Type a screen, a hero or an action…": "Bir ekran, hero ya da işlem yaz…",
+  "Nothing found.": "Bir şey bulunamadı.",
 };
