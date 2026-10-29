@@ -2,6 +2,13 @@
 
 Uygulamanın Türkçe yenilik notları. Her sürümde neyin değiştiği, kısa ve sade.
 
+## [0.4.1] – 2026-10-29
+
+### Düzeltilenler
+
+1. Dükkândaki eşya açıklamaları yeniden okunuyor: değerler koyu zemin üstünde koyu yazılıyordu. Oyunun adsız iç değerleri artık gösterilmiyor ve kutu pencereden taşmıyor.
+2. Build kur'un altındaki satın alma sırası artık kesilmiyor.
+
 ## [0.4.0] – 2026-10-29
 
 Baştan aşağı yeni bir görünüm, oyundaki gibi çizilmiş bir dükkân ve üç yeni araç: hero sıralaması, yama değişiklikleri ve kendi rütbende build'ler.

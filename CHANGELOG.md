@@ -2,6 +2,13 @@
 
 All notable changes to Deadlock BCMA are listed here. Versions follow [semantic versioning](https://semver.org).
 
+## [0.4.1] – 2026-10-29
+
+### Fixed
+
+1. Item tooltips in the shop are readable again: their values were drawn dark on dark. They also leave out the game's unnamed internal values and stay inside the window.
+2. The purchase order at the bottom of the Build maker is no longer cut off.
+
 ## [0.4.0] – 2026-10-29
 
 A new look from top to bottom, the shop drawn as the game draws it, and three new tools: hero tiers, patch changes and builds at your own ranks.
@@ -590,6 +597,7 @@ This release adds the **Build generator**, with builds read from top-ranked matc
   - trends across your last matches.
 - Windows installer with a desktop shortcut and automatic updates from GitHub releases.
 
+[0.4.1]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.3.2...v0.4.0
 [0.3.2]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.3.1...v0.3.2
 [0.3.1]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.3.0...v0.3.1
