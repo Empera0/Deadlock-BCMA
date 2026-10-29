@@ -295,7 +295,7 @@ fn ranked(cache: &Cache, endpoint: &str, query: &str, range: Range) -> Result<St
 }
 
 /// The game's rank names, by badge tier (badge = tier × 10 + subrank).
-const TIER_NAMES: [&str; 11] = ["Initiate", "Seeker", "Alchemist", "Arcanist", "Ritualist", "Emissary", "Archon", "Oracle", "Phantom", "Ascendant", "Eternus"];
+const TIER_NAMES: [&str; 11] = ["Initiate", "Seeker", "Acolyte", "Sentinel", "Mystic", "Ritualist", "Emissary", "Oracle", "Phantom", "Ascendant", "Eternus"];
 
 fn tier_name(badge: u32) -> Option<&'static str> {
     TIER_NAMES.get((badge / 10).checked_sub(1)? as usize).copied()

@@ -10,7 +10,7 @@ use crate::data::GameData;
 use crate::matches::LivePlayer;
 
 /// The ranks by badge tier (badge = tier × 10 + subrank).
-const RANKS: [&str; 12] = ["Obscurus", "Initiate", "Seeker", "Alchemist", "Arcanist", "Ritualist", "Emissary", "Archon", "Oracle", "Phantom", "Ascendant", "Eternus"];
+const RANKS: [&str; 12] = ["Obscurus", "Initiate", "Seeker", "Acolyte", "Sentinel", "Mystic", "Ritualist", "Emissary", "Oracle", "Phantom", "Ascendant", "Eternus"];
 /// A hero is a player's main when this share of their matches is on it, and new to them under this many matches.
 const MAIN_SHARE: f64 = 0.4;
 const NEW_ON_HERO: u64 = 5;

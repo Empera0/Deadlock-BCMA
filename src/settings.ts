@@ -37,7 +37,7 @@ export const DEFAULTS: Record<string, string> = {
 };
 
 /** The ranks, by their badge tier (badge = tier × 10 + subrank 1–6); the names are the game's own, shown as they are (not translated where shown). */
-export const TIERS = ["Initiate", "Seeker", "Alchemist", "Arcanist", "Ritualist", "Emissary", "Archon", "Oracle", "Phantom", "Ascendant", "Eternus"];
+export const TIERS = ["Initiate", "Seeker", "Acolyte", "Sentinel", "Mystic", "Ritualist", "Emissary", "Oracle", "Phantom", "Ascendant", "Eternus"];
 
 /** The lowest badge of a tier, and the highest. */
 export const tierFrom = (i: number) => (i + 1) * 10 + 1;

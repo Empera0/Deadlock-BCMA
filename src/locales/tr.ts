@@ -130,7 +130,6 @@ export const TR: Record<string, string> = {
 
   // Ranks
   "All ranks": "Tüm rütbeler",
-  "Archon and above": "Archon ve üstü",
   "Oracle and above": "Oracle ve üstü",
   "Phantom and above": "Phantom ve üstü",
   "Ascendant and above": "Ascendant ve üstü",
