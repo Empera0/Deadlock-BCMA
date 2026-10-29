@@ -6645,3 +6645,11 @@ main.arena > .shop.store {
   height: auto;
   min-height: 0;
 }
+/* The purchase order shows each item's shop art, framed in its category's color. */
+.buildbar .chip-slot {
+  background: var(--cat);
+  padding: 2px;
+}
+.buildbar .chip-slot img {
+  border-radius: calc(var(--r-sm) - 2px);
+}

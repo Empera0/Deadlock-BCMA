@@ -138,7 +138,7 @@ export default function BuildBar({ build, heroes, sheet, items, onChange }: Prop
             >
               <span className="chip-index">{i + 1}</span>
               <span className="chip-slot" title={item.name}>
-                <img src={item.glyph || item.icon} alt="" className={item.glyph ? "glyph" : ""} />
+                <img src={item.icon} alt="" />
               </span>
               <div className="chip-text">
                 <span>{item.name}</span>
