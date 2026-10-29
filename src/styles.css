@@ -4700,3 +4700,14 @@ header.settings {
 .draft-fit th img {
   background: var(--panel-2);
 }
+
+.gen-ranks {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+.gen-ranks select {
+  width: auto;
+}

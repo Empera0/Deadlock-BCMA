@@ -7,6 +7,9 @@ export const SETTINGS = {
   /** The ranks the Draft screen reads win rates at: the lowest average badge, and the highest ("" for no limit). */
   draftBadge: "draft-badge",
   draftMaxBadge: "draft-max-badge",
+  /** The ranks the Build generator reads what players build at: "" for the top of the ladder, else as the Draft's. */
+  buildBadge: "build-badge",
+  buildMaxBadge: "build-max-badge",
   /** The Master builder's focus and damage to start with. */
   masterFocus: "master-focus",
   masterDamage: "master-damage",
@@ -20,6 +23,8 @@ export const DEFAULTS: Record<string, string> = {
   [SETTINGS.account]: "",
   [SETTINGS.draftBadge]: "101",
   [SETTINGS.draftMaxBadge]: "",
+  [SETTINGS.buildBadge]: "",
+  [SETTINGS.buildMaxBadge]: "",
   [SETTINGS.masterFocus]: "auto",
   [SETTINGS.masterDamage]: "auto",
   [SETTINGS.watchLive]: "0",
@@ -32,6 +37,13 @@ export const TIERS = ["Initiate", "Seeker", "Alchemist", "Arcanist", "Ritualist"
 /** The lowest badge of a tier, and the highest. */
 export const tierFrom = (i: number) => (i + 1) * 10 + 1;
 export const tierTo = (i: number) => (i + 1) * 10 + 6;
+
+/** A rank range setting as the backend takes it: the lowest badge (null for the top of the ladder) and the highest. */
+export function rankRange(fromKey: string, toKey: string): { minBadge: number | null; maxBadge: number | null } {
+  const from = readSetting(fromKey);
+  const to = readSetting(toKey);
+  return { minBadge: from === "" ? null : Number(from), maxBadge: from === "" || to === "" ? null : Number(to) };
+}
 
 const EVENT = "bcma-setting";
 

@@ -116,7 +116,8 @@ export default function SettingsView({ version, fetchedAt, onRefresh, onGuide }:
       <section className="group">
         <h3>{t("Defaults")}</h3>
         <div className="fields">
-          <RankRange />
+          <RankRange label="Draft and hero ranks from" />
+          <RankRange fromKey={SETTINGS.buildBadge} toKey={SETTINGS.buildMaxBadge} top label="Builds from" />
           <label className="field">
             {t("Master builder role")}
             <select value={focus} onChange={(e) => setFocus(e.target.value)}>

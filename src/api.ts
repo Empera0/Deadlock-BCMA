@@ -1,6 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { engineError, translateDeep } from "./engineText";
 import { LOCALE } from "./i18n";
+import { rankRange, SETTINGS } from "./settings";
 
 /** A command of the app's backend, its answer and its errors in the app's language. */
 async function call<T>(command: string, args?: Record<string, unknown>): Promise<T> {
@@ -568,9 +569,10 @@ export const api = {
   compute: (build: Build) => call<Sheet>("compute", { build }),
   powerCurve: (builds: Build[]) => call<(PowerPoint | null)[]>("power_curve", { builds }),
   farmReport: (build: Build, minute: number) => call<FarmReport>("farm_report", { build, minute }),
-  popularBuild: (heroId: number) => call<PopularReport>("popular_build", { heroId }),
+  // Builds are read at the ranks set for them.
+  popularBuild: (heroId: number) => call<PopularReport>("popular_build", { heroId, ...rankRange(SETTINGS.buildBadge, SETTINGS.buildMaxBadge) }),
   masterBuild: (myHero: string, allies: number[], enemies: number[], lane: number[], focus: string, damage: string, bought: [string, number][] | null) =>
-    call<MasterReport>("master_build", { myHero, allies, enemies, lane, focus, damage, bought }),
+    call<MasterReport>("master_build", { myHero, allies, enemies, lane, focus, damage, bought, ...rankRange(SETTINGS.buildBadge, SETTINGS.buildMaxBadge) }),
   riftComeback: (minute: number, ownSouls: number, enemySouls: number) =>
     call<RiftComeback>("rift_comeback", { minute, ownSouls, enemySouls }),
   suggestBuilds: (build: Build, styles: string[]) => call<Suggestions>("suggest_builds", { build, styles }),

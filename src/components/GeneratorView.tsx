@@ -6,6 +6,7 @@ import { CONDEBUG_HELP, findLiveMatch, savedAccount } from "../live";
 import { readSetting, SETTINGS, useSetting } from "../settings";
 import SuggestPanel from "./SuggestPanel";
 import ErrorNote from "./ErrorNote";
+import RankRange from "./RankRange";
 import { LOCALE, t } from "../i18n";
 import { startsLike } from "../engineText";
 
@@ -67,6 +68,8 @@ function PopularPanel({ hero, onUse }: { hero: Hero; onUse: Props["onUse"] }) {
   const [busy, setBusy] = useState(false);
   const [counter, setCounter] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
+  const [minBadge] = useSetting(SETTINGS.buildBadge);
+  const [maxBadge] = useSetting(SETTINGS.buildMaxBadge);
   useEffect(() => {
     setBusy(true);
     setError("");
@@ -79,7 +82,7 @@ function PopularPanel({ hero, onUse }: { hero: Hero; onUse: Props["onUse"] }) {
         setError(String(e));
       })
       .finally(() => setBusy(false));
-  }, [hero.id, attempt]);
+  }, [hero.id, attempt, minBadge, maxBadge]);
 
   if (busy) return <p className="muted">{t("Reading what players build with {hero}…", { hero: hero.name })}</p>;
   if (error) return <ErrorNote error={error} onRetry={() => setAttempt((a) => a + 1)} />;
@@ -916,6 +919,11 @@ export default function GeneratorView({ heroes, hero, build, souls, preset, onUs
         </button>
       </div>
       <div className="gen-body">
+        {tab !== "calculated" && (
+          <div className="gen-ranks">
+            <RankRange inline fromKey={SETTINGS.buildBadge} toKey={SETTINGS.buildMaxBadge} top label="Builds from" />
+          </div>
+        )}
         {tab === "calculated" && <SuggestPanel hero={hero} build={build} souls={souls} onUse={(p) => onUse(p, t("Loaded a build the calculator put together"))} />}
         {tab === "popular" && <PopularPanel hero={hero} onUse={onUse} />}
         {tab === "master" && <MasterPanel heroes={heroes} hero={hero} preset={preset} onUse={onUse} onFight={onFight} />}

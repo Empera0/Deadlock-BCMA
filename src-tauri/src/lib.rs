@@ -222,24 +222,65 @@ fn parse<T: serde::de::DeserializeOwned>(json: &str) -> Result<T, String> {
 }
 
 /// A hero's popular build: what top players bought and kept over the last two weeks, and the rank it was read at.
-fn popular_for(data: &GameData, cache: &Cache, hero_id: u64) -> Result<(popular::PopularBuild, u32), String> {
-    for badge in [ETERNUS, ASCENDANT] {
-        let heroes: Vec<popular::HeroStat> = parse(&analytics(cache, "hero-stats", "", badge)?)?;
+/// The ranks a hero's build is read at, in turn: the next is tried when a hero has too few matches in one. At
+/// the top of the ladder that is Eternus, then Ascendant and up; a range the player chose is read as it is.
+fn popular_for(data: &GameData, cache: &Cache, hero_id: u64, ladder: &[Range]) -> Result<(popular::PopularBuild, usize), String> {
+    for (at, range) in ladder.iter().enumerate() {
+        let heroes: Vec<popular::HeroStat> = parse(&ranked(cache, "hero-stats", "", *range)?)?;
         let matches = heroes.iter().find(|h| h.hero_id == hero_id).map(|h| h.matches).unwrap_or(0);
-        if matches < ENOUGH_HERO_MATCHES && badge == ETERNUS {
+        if matches < ENOUGH_HERO_MATCHES && at + 1 < ladder.len() {
             continue;
         }
         if matches == 0 {
-            return Err("No recent matches of this hero at the top ranks.".into());
+            return Err("No recent matches of this hero in these ranks.".into());
         }
-        let stats: Vec<popular::ItemStat> = parse(&analytics(cache, "item-stats", &format!("hero_id={hero_id}"), badge)?)?;
-        return popular::popular_build(data, hero_id, matches, &stats).map(|b| (b, badge)).ok_or_else(|| "Unknown hero.".to_string());
+        let stats: Vec<popular::ItemStat> = parse(&ranked(cache, "item-stats", &format!("hero_id={hero_id}"), *range)?)?;
+        return popular::popular_build(data, hero_id, matches, &stats).map(|b| (b, at)).ok_or_else(|| "Unknown hero.".to_string());
     }
-    Err("No recent matches of this hero at the top ranks.".into())
+    Err("No recent matches of this hero in these ranks.".into())
 }
 
-fn rank_name(badge: u32) -> &'static str {
-    if badge >= ETERNUS { "Eternus" } else { "Ascendant and above" }
+/// A rank range: the lowest average badge of a match, and the highest when there is one.
+type Range = (u32, Option<u32>);
+
+/// The ranks builds are read at: the player's range, or the top of the ladder when none is set.
+fn ladder(min_badge: Option<u32>, max_badge: Option<u32>) -> Vec<Range> {
+    match min_badge {
+        Some(min) => vec![(min, max_badge)],
+        None => vec![(ETERNUS, None), (ASCENDANT, None)],
+    }
+}
+
+/// A query with the highest rank added, when there is one.
+fn with_max(query: &str, max: Option<u32>) -> String {
+    match max {
+        Some(max) if query.is_empty() => format!("max_average_badge={max}"),
+        Some(max) => format!("{query}&max_average_badge={max}"),
+        None => query.to_string(),
+    }
+}
+
+/// An analytics endpoint over a rank range, from the shared window.
+fn ranked(cache: &Cache, endpoint: &str, query: &str, range: Range) -> Result<String, String> {
+    analytics(cache, endpoint, &with_max(query, range.1), range.0)
+}
+
+/// The game's rank names, by badge tier (badge = tier × 10 + subrank).
+const TIER_NAMES: [&str; 11] = ["Initiate", "Seeker", "Alchemist", "Arcanist", "Ritualist", "Emissary", "Archon", "Oracle", "Phantom", "Ascendant", "Eternus"];
+
+fn tier_name(badge: u32) -> Option<&'static str> {
+    TIER_NAMES.get((badge / 10).checked_sub(1)? as usize).copied()
+}
+
+fn rank_name((min, max): Range) -> String {
+    match (tier_name(min), max.and_then(tier_name)) {
+        (Some("Eternus"), None) => "Eternus".into(),
+        (Some(a), Some(b)) if a == b => a.into(),
+        (Some(a), Some(b)) => format!("{a}–{b}"),
+        (Some(a), None) => format!("{a} and above"),
+        (None, Some(b)) => format!("up to {b}"),
+        (None, None) => "every rank".into(),
+    }
 }
 
 #[derive(serde::Serialize)]
@@ -261,12 +302,19 @@ struct PopularReport {
 }
 
 #[tauri::command]
-async fn popular_build(app: AppHandle, state: State<'_, AppState>, hero_id: u64) -> Result<PopularReport, String> {
+async fn popular_build(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    hero_id: u64,
+    min_badge: Option<u32>,
+    max_badge: Option<u32>,
+) -> Result<PopularReport, String> {
     let data = state.data.read().unwrap().clone();
     let cache = Cache::new(&app, &data)?;
     tauri::async_runtime::spawn_blocking(move || {
-        let (build, badge) = popular_for(&data, &cache, hero_id)?;
-        Ok(PopularReport { build, days: ANALYTICS_DAYS, rank: rank_name(badge).into() })
+        let ladder = ladder(min_badge, max_badge);
+        let (build, at) = popular_for(&data, &cache, hero_id, &ladder)?;
+        Ok(PopularReport { build, days: ANALYTICS_DAYS, rank: rank_name(ladder[at]) })
     })
     .await
     .map_err(|e| e.to_string())?
@@ -294,13 +342,7 @@ async fn draft_picks(
     let data = state.data.read().unwrap().clone();
     let cache = Cache::new(&app, &data)?;
     // A rank range: from `badge` up, and up to `max_badge` when one is given.
-    let upto = move |query: &str| -> String {
-        match max_badge {
-            Some(max) if query.is_empty() => format!("max_average_badge={max}"),
-            Some(max) => format!("{query}&max_average_badge={max}"),
-            None => query.to_string(),
-        }
-    };
+    let upto = move |query: &str| with_max(query, max_badge);
     tauri::async_runtime::spawn_blocking(move || {
         prefetch(
             &cache,
@@ -358,6 +400,8 @@ async fn master_build(
     focus: String,
     damage: String,
     bought: Option<Vec<(String, u32)>>,
+    min_badge: Option<u32>,
+    max_badge: Option<u32>,
 ) -> Result<MasterReport, String> {
     let data = state.data.read().unwrap().clone();
     let cache = Cache::new(&app, &data)?;
@@ -366,42 +410,47 @@ async fn master_build(
         // The same hero cannot be on both teams.
         let enemies: Vec<u64> = enemies.into_iter().filter(|id| *id != my_id && !allies.contains(id)).collect();
         let allies: Vec<u64> = allies.into_iter().filter(|id| *id != my_id).collect();
-        // Everything the build below may read, fetched at once; it then reads it from the cache. Both ranks are
-        // fetched, as which one a hero is read at is only known from the answers.
+        let ladder = ladder(min_badge, max_badge);
+        // The widest ranks of the ladder, for the statistics spread too thin at the top alone.
+        let wide = *ladder.last().unwrap();
+        // Everything the build below may read, fetched at once; it then reads it from the cache. Every rank of the
+        // ladder is fetched, as which one a hero is read at is only known from the answers.
+        let job = |endpoint: &'static str, query: String, (min, max): Range| (endpoint, with_max(&query, max), min, ANALYTICS_DAYS);
         let mut jobs = vec![
-            ("item-stats", format!("hero_id={my_id}&bucket=net_worth_by_1000"), ASCENDANT, ANALYTICS_DAYS),
-            ("hero-stats", format!("min_duration_s={LONG_MATCH_S}"), ASCENDANT, ANALYTICS_DAYS),
-            ("hero-stats", format!("max_duration_s={SHORT_MATCH_S}"), ASCENDANT, ANALYTICS_DAYS),
+            job("item-stats", format!("hero_id={my_id}&bucket=net_worth_by_1000"), wide),
+            job("hero-stats", format!("min_duration_s={LONG_MATCH_S}"), wide),
+            job("hero-stats", format!("max_duration_s={SHORT_MATCH_S}"), wide),
         ];
-        for badge in [ETERNUS, ASCENDANT] {
-            jobs.push(("hero-stats", String::new(), badge, ANALYTICS_DAYS));
-            jobs.push(("item-stats", String::new(), badge, ANALYTICS_DAYS));
+        for range in &ladder {
+            jobs.push(job("hero-stats", String::new(), *range));
+            jobs.push(job("item-stats", String::new(), *range));
             for id in allies.iter().chain(&enemies).chain([&my_id]) {
-                jobs.push(("item-stats", format!("hero_id={id}"), badge, ANALYTICS_DAYS));
+                jobs.push(job("item-stats", format!("hero_id={id}"), *range));
             }
             for id in &enemies {
-                jobs.push(("item-stats", format!("enemy_hero_ids={id}"), badge, ANALYTICS_DAYS));
+                jobs.push(job("item-stats", format!("enemy_hero_ids={id}"), *range));
             }
         }
         prefetch(&cache, jobs);
-        let ally_builds: Vec<popular::PopularBuild> = allies.iter().map(|id| popular_for(&data, &cache, *id).map(|b| b.0)).collect::<Result<_, _>>()?;
+        let ally_builds: Vec<popular::PopularBuild> = allies.iter().map(|id| popular_for(&data, &cache, *id, &ladder).map(|b| b.0)).collect::<Result<_, _>>()?;
         let ally_team: Vec<popular::Ally> = allies.iter().zip(&ally_builds).map(|(id, build)| popular::Ally { hero_id: *id, build }).collect();
         // What everybody buys against an enemy: one hero's own sample at the top ranks is too small to read.
-        let mut lowest = ETERNUS;
+        // The widest step of the ladder anything was read at.
+        let mut lowest = 0;
         let mut builds = vec![];
         let mut lifts = vec![];
         for id in &enemies {
-            let (build, badge) = popular_for(&data, &cache, *id)?;
-            lowest = lowest.min(badge);
+            let (build, at) = popular_for(&data, &cache, *id, &ladder)?;
+            lowest = lowest.max(at);
             builds.push(build);
             let mut found = vec![];
-            for badge in [ETERNUS, ASCENDANT] {
-                let general: Vec<popular::ItemStat> = parse(&analytics(&cache, "item-stats", "", badge)?)?;
-                let against: Vec<popular::ItemStat> = parse(&analytics(&cache, "item-stats", &format!("enemy_hero_ids={id}"), badge)?)?;
+            for (at, range) in ladder.iter().enumerate() {
+                let general: Vec<popular::ItemStat> = parse(&ranked(&cache, "item-stats", "", *range)?)?;
+                let against: Vec<popular::ItemStat> = parse(&ranked(&cache, "item-stats", &format!("enemy_hero_ids={id}"), *range)?)?;
                 let sample = against.iter().map(|r| r.matches).max().unwrap_or(0);
                 found = popular::lifts(&general, &against);
-                if sample >= ENOUGH_ITEM_MATCHES || badge == ASCENDANT {
-                    lowest = lowest.min(badge);
+                if sample >= ENOUGH_ITEM_MATCHES || at + 1 == ladder.len() {
+                    lowest = lowest.max(at);
                     break;
                 }
             }
@@ -411,20 +460,20 @@ async fn master_build(
             enemies.iter().zip(&builds).zip(&lifts).map(|((id, build), lifts)| popular::Enemy { hero_id: *id, build, lifts }).collect();
 
         // The player's hero: its usual build, and what its top players buy by their souls at the time.
-        let (mine, badge) = popular_for(&data, &cache, my_id)?;
-        lowest = lowest.min(badge);
+        let (mine, at) = popular_for(&data, &cache, my_id, &ladder)?;
+        lowest = lowest.max(at);
         let my_spirit = Some(popular::deals_spirit(&data, &mine));
         let my_core: Vec<String> = mine.core.iter().map(|c| c.item.clone()).collect();
         // Purchases by souls are spread over many phases: Eternus alone has too few late ones, so these come from
-        // Ascendant and up.
-        let heroes: Vec<popular::HeroStat> = parse(&analytics(&cache, "hero-stats", "", ASCENDANT)?)?;
+        // the widest ranks.
+        let heroes: Vec<popular::HeroStat> = parse(&ranked(&cache, "hero-stats", "", wide)?)?;
         let hero_matches = heroes.iter().find(|h| h.hero_id == my_id).map(|h| h.matches).unwrap_or(0);
         let phase_stats: Vec<popular::ItemStat> =
-            parse(&analytics(&cache, "item-stats", &format!("hero_id={my_id}&bucket=net_worth_by_1000"), ASCENDANT)?)?;
+            parse(&ranked(&cache, "item-stats", &format!("hero_id={my_id}&bucket=net_worth_by_1000"), wide)?)?;
 
         // Which heroes grow strong late: their win rate in long matches against short ones.
-        let long: Vec<popular::HeroStat> = parse(&analytics(&cache, "hero-stats", &format!("min_duration_s={LONG_MATCH_S}"), ASCENDANT)?)?;
-        let short: Vec<popular::HeroStat> = parse(&analytics(&cache, "hero-stats", &format!("max_duration_s={SHORT_MATCH_S}"), ASCENDANT)?)?;
+        let long: Vec<popular::HeroStat> = parse(&ranked(&cache, "hero-stats", &format!("min_duration_s={LONG_MATCH_S}"), wide)?)?;
+        let short: Vec<popular::HeroStat> = parse(&ranked(&cache, "hero-stats", &format!("max_duration_s={SHORT_MATCH_S}"), wide)?)?;
         let rate = |rows: &[popular::HeroStat], id: u64| {
             rows.iter().find(|h| h.hero_id == id).filter(|h| h.matches >= ENOUGH_SCALING_MATCHES).map(|h| h.wins as f64 / h.matches as f64 * 100.0)
         };
@@ -452,7 +501,7 @@ async fn master_build(
         };
         let master = master::master_build(&data, &input)?;
         let plan = master.counter.clone();
-        Ok(MasterReport { master, plan, builds: builds.clone(), days: ANALYTICS_DAYS, rank: rank_name(lowest).into() })
+        Ok(MasterReport { master, plan, builds: builds.clone(), days: ANALYTICS_DAYS, rank: rank_name(ladder[lowest]) })
     })
     .await
     .map_err(|e| e.to_string())?
@@ -861,7 +910,7 @@ async fn ability_order(app: AppHandle, state: State<'_, AppState>, build: BuildI
             .ok()
             .and_then(|json| engine::order::popular_orders(&data, hero_id, &json).ok())
             .unwrap_or_default();
-        Ok(OrderReport { order, popular, rank: rank_name(ASCENDANT).into() })
+        Ok(OrderReport { order, popular, rank: rank_name((ASCENDANT, None)) })
     })
     .await
     .map_err(|e| e.to_string())?

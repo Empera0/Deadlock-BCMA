@@ -1223,4 +1223,7 @@ export const TR: Record<string, string> = {
     "Takımlardan birine hero ekle: bu tablo diğer her heronun senin takımındakilerle birlikte ve düşmanlara karşı nasıl gittiğini gösterir.",
   "Each column is a placed hero: beside an ally, the win rate of the two together; against an enemy, the row hero's win rate into it. Green and red mark what the heroes' own win rates do not explain. Click a hero to add it.":
     "Her sütun seçilen bir hero. Takım arkadaşında: ikisi birlikteyken kazanma oranı. Düşmanda: satırdaki heronun ona karşı kazanma oranı. Yeşil ve kırmızı, heroların kendi kazanma oranlarıyla açıklanmayan farkı gösterir. Eklemek için bir heroya tıkla.",
+  "the top players": "en iyi oyuncular",
+  "Draft and hero ranks from": "Seçim ve hero rütbeleri:",
+  "Builds from": "Build'lerin rütbesi:",
 };
