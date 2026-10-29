@@ -2,6 +2,15 @@
 
 Uygulamanın Türkçe yenilik notları. Her sürümde neyin değiştiği, kısa ve sade.
 
+## [0.5.0] – 2026-10-29
+
+Her heronun kendi sayfası var, dükkânın eşyalarının da bir sıralaması.
+
+### Eklenenler
+
+1. **Hero sayfaları.** Hero sıralamasında bir heroya tıkla: seçtiğin rütbelerdeki değerleri, karşısında en güçlü ve en zayıf olduğu herolar, en iyi takım arkadaşları (her biri heroların kendi gücünden beklenenin üstünde ya da altında) ve popüler build'i; build'i açan bir düğmeyle.
+2. **Eşya sıralaması.** Yeni Eşyalar sekmesi dükkânı seçtiğin rütbelerde sıralar, bütün herolar ya da tek bir hero için: kazanma oranı, oyuncuların ne kadarının aldığı ve kaçıncı dakikada. Eşyalar kendi fiyatındakilerle karşılaştırılır, çünkü pahalıları zaten önde olanlar alır.
+
 ## [0.4.2] – 2026-10-29
 
 ### Düzeltilenler

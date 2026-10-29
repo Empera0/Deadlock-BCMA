@@ -2,6 +2,15 @@
 
 All notable changes to Deadlock BCMA are listed here. Versions follow [semantic versioning](https://semver.org).
 
+## [0.5.0] – 2026-10-29
+
+Every hero gets a page of its own, and the shop's items get a tier list.
+
+### Added
+
+1. **Hero pages.** Click a hero in Hero tiers: its numbers at your ranks, the heroes it is strongest and weakest against, its best teammates (each beyond what the heroes' own win rates make expected), and its popular build, with a button to open the build.
+2. **Item tiers.** A new Items tab ranks the shop at your ranks, for every hero or one: win rate, how many players buy it and at what minute. Items are compared within their own cost, as expensive ones are bought by players already ahead.
+
 ## [0.4.2] – 2026-10-29
 
 ### Fixed
@@ -603,6 +612,7 @@ This release adds the **Build generator**, with builds read from top-ranked matc
   - trends across your last matches.
 - Windows installer with a desktop shortcut and automatic updates from GitHub releases.
 
+[0.5.0]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.4.2...v0.5.0
 [0.4.2]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.4.1...v0.4.2
 [0.4.1]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.3.2...v0.4.0
