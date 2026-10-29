@@ -4789,3 +4789,55 @@ header.settings {
   background: var(--danger);
   color: #1a1a1a;
 }
+
+/* What the last patch changed */
+.patch-fresh {
+  color: var(--accent);
+  position: relative;
+}
+.patch-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-left: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  vertical-align: middle;
+}
+.patch-entry {
+  padding: 6px 0;
+  border-bottom: 1px solid var(--line);
+}
+.patch-entry.mine {
+  border-left: 3px solid var(--accent);
+  padding-left: 8px;
+}
+.patch-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.patch-head img {
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+}
+.patch-entry ul {
+  margin: 2px 0 0 32px;
+  padding: 0;
+}
+.patch-tag {
+  font-size: 11px;
+  padding: 0 6px;
+  border-radius: 4px;
+  background: var(--panel-2);
+}
+.patch-tag.added {
+  color: var(--vitality);
+}
+.patch-tag.removed {
+  color: var(--danger);
+}
+.patch-tag.mine {
+  color: var(--accent);
+}

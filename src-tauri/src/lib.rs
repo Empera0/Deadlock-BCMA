@@ -30,6 +30,35 @@ fn builds_dir(app: &AppHandle) -> Result<PathBuf, String> {
     Ok(dir)
 }
 
+/// Notes what changed when the game data in use is not the one used last: on a refresh after a patch, or with a
+/// newer snapshot shipped in an app update. The data used last is kept to compare against; the first run has none.
+fn note_patch(app: &AppHandle, data: &GameData) {
+    let Ok(dir) = data_dir(app) else { return };
+    let seen_path = dir.join("seen-data.json");
+    let seen: Option<GameData> = fs::read_to_string(&seen_path).ok().and_then(|s| serde_json::from_str(&s).ok());
+    if seen.as_ref().is_some_and(|old| old.fetched_at == data.fetched_at) {
+        return;
+    }
+    if let Some(old) = seen {
+        let notes = engine::patch::diff(&old, data);
+        if !notes.changes.is_empty() {
+            if let Ok(json) = serde_json::to_string(&notes) {
+                let _ = fs::write(dir.join("patch-notes.json"), json);
+            }
+        }
+    }
+    if let Ok(json) = serde_json::to_string(data) {
+        let _ = fs::write(seen_path, json);
+    }
+}
+
+/// What the last patch changed, when one was noted.
+#[tauri::command]
+fn patch_notes(app: AppHandle) -> Option<engine::patch::PatchNotes> {
+    let json = fs::read_to_string(data_dir(&app).ok()?.join("patch-notes.json")).ok()?;
+    serde_json::from_str(&json).ok()
+}
+
 /// Whichever is newer: the downloaded data or the snapshot embedded in the app.
 fn load_initial(app: &AppHandle) -> GameData {
     let embedded: GameData = serde_json::from_str(SNAPSHOT).expect("embedded snapshot is corrupt");
@@ -558,6 +587,7 @@ async fn refresh_data(app: AppHandle, state: State<'_, AppState>) -> Result<Game
         .map_err(|e| e.to_string())??;
     let json = serde_json::to_string(&data).map_err(|e| e.to_string())?;
     fs::write(data_dir(&app)?.join("gamedata.json"), json).map_err(|e| e.to_string())?;
+    note_patch(&app, &data);
     *state.data.write().unwrap() = data.clone();
     Ok(data)
 }
@@ -1108,6 +1138,7 @@ pub fn run() {
         .plugin(tauri_plugin_process::init())
         .setup(|app| {
             let data = load_initial(app.handle());
+            note_patch(app.handle(), &data);
             app.manage(AppState { data: RwLock::new(data) });
             Ok(())
         })
@@ -1124,6 +1155,7 @@ pub fn run() {
             master_build,
             draft_picks,
             hero_tiers,
+            patch_notes,
             simulate_combo,
             refresh_data,
             save_build,

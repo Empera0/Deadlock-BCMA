@@ -13,6 +13,7 @@ import StatsPanel from "./components/StatsPanel";
 import Guide, { GuideButton, useFirstStart, useGuide } from "./components/Guide";
 import SettingsView from "./components/SettingsView";
 import TiersView from "./components/TiersView";
+import PatchNotes from "./components/PatchNotes";
 import ShareMatches from "./components/ShareMatches";
 import UpdateBanner from "./components/UpdateBanner";
 import WhatsNew from "./components/WhatsNew";
@@ -237,6 +238,7 @@ export default function App() {
         <div className="nav-foot">
           <UpdateBanner />
           <WhatsNew />
+          <PatchNotes dataAt={data.fetched_at} />
           <ShareMatches />
           <button className="ghost" onClick={() => guide.show("start")} title={t("How to use the app")}>
             {t("Guide")}
