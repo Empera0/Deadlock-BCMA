@@ -6804,3 +6804,18 @@ main.arena > .shop.store {
     grid-template-columns: 1fr;
   }
 }
+
+/* A select's open list is drawn by the system from the select's own colors: a transparent select (the pills) would
+   open a white list with the theme's light text on it. Every list gets the theme's colors. */
+select,
+option,
+optgroup {
+  background-color: var(--panel);
+  color: var(--text);
+}
+option:checked {
+  background-color: var(--panel-2);
+}
+.field.inline select {
+  background-color: var(--panel);
+}
