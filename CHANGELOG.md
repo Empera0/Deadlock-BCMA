@@ -2,6 +2,13 @@
 
 All notable changes to Deadlock BCMA are listed here. Versions follow [semantic versioning](https://semver.org).
 
+## [0.5.1] – 2026-10-29
+
+### Fixed
+
+1. **Rank names.** Ranks 3 to 7 had the wrong names: they are Acolyte, Sentinel, Mystic, Ritualist and Emissary. The numbers behind them were right, so the statistics came from the ranks picked; only their names were wrong. Fixed in the rank range, the build rank names and lobby scouting.
+2. Drop-down lists are readable: the rank pickers opened a white list with light text on Windows.
+
 ## [0.5.0] – 2026-10-29
 
 Every hero gets a page of its own, and the shop's items get a tier list.
@@ -612,6 +619,7 @@ This release adds the **Build generator**, with builds read from top-ranked matc
   - trends across your last matches.
 - Windows installer with a desktop shortcut and automatic updates from GitHub releases.
 
+[0.5.1]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.4.2...v0.5.0
 [0.4.2]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.4.1...v0.4.2
 [0.4.1]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.4.0...v0.4.1

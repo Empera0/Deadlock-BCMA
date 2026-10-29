@@ -2,6 +2,13 @@
 
 Uygulamanın Türkçe yenilik notları. Her sürümde neyin değiştiği, kısa ve sade.
 
+## [0.5.1] – 2026-10-29
+
+### Düzeltilenler
+
+1. **Rütbe isimleri.** 3 ile 7 arasındaki rütbelerin isimleri yanlıştı: doğrusu Acolyte, Sentinel, Mystic, Ritualist ve Emissary. Arkadaki numaralar doğruydu, yani istatistikler seçilen rütbelerden geliyordu; sadece isimler yanlış yazıyordu. Rütbe aralığında, build'lerin rütbe adlarında ve lobi taramasında düzeltildi.
+2. Açılır listeler okunuyor: rütbe seçicileri Windows'ta beyaz bir liste üstünde açık renk yazıyla açılıyordu.
+
 ## [0.5.0] – 2026-10-29
 
 Her heronun kendi sayfası var, dükkânın eşyalarının da bir sıralaması.
