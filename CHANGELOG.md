@@ -2,6 +2,12 @@
 
 All notable changes to Deadlock BCMA are listed here. Versions follow [semantic versioning](https://semver.org).
 
+## [0.4.2] – 2026-10-29
+
+### Fixed
+
+1. The purchase order at the bottom of the Build maker shows each item's shop art again, framed in its category's color, instead of a mix of plain icons and art.
+
 ## [0.4.1] – 2026-10-29
 
 ### Fixed
@@ -597,6 +603,7 @@ This release adds the **Build generator**, with builds read from top-ranked matc
   - trends across your last matches.
 - Windows installer with a desktop shortcut and automatic updates from GitHub releases.
 
+[0.4.2]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.4.1...v0.4.2
 [0.4.1]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.3.2...v0.4.0
 [0.3.2]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.3.1...v0.3.2

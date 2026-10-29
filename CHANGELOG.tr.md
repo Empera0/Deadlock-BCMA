@@ -2,6 +2,12 @@
 
 Uygulamanın Türkçe yenilik notları. Her sürümde neyin değiştiği, kısa ve sade.
 
+## [0.4.2] – 2026-10-29
+
+### Düzeltilenler
+
+1. Build kur'un altındaki satın alma sırası yeniden her eşyanın dükkândaki resmini gösteriyor, kategorisinin renginde çerçeveli. Önceden düz ikonlarla resimler karışık görünüyordu.
+
 ## [0.4.1] – 2026-10-29
 
 ### Düzeltilenler
