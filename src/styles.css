@@ -6609,3 +6609,39 @@ main.arena > .shop.store {
 .store-tier.t5 .store-items {
   grid-template-columns: repeat(12, var(--card));
 }
+
+/* The item tooltip keeps the app's own type and colors, wherever it is drawn (the shop's paper sets dark ink). */
+.tooltip {
+  color: var(--text);
+  font: 13px/1.4 var(--font);
+  width: 320px;
+  padding: 12px 14px;
+  background: color-mix(in srgb, var(--bg-deep) 96%, transparent);
+  border-color: var(--line-strong);
+}
+.tooltip-title {
+  font-size: 15px;
+  font-weight: 700;
+}
+.tooltip-desc {
+  color: color-mix(in srgb, var(--text) 78%, var(--muted));
+  font-size: 12.5px;
+}
+.tooltip-section-title {
+  margin-bottom: 2px;
+  font-weight: 600;
+}
+.tooltip-row span:last-child {
+  font-weight: 600;
+  white-space: nowrap;
+}
+.tooltip .tag {
+  color: var(--muted);
+}
+
+/* Under the top menu the page takes what is left of the window, not the whole of it. */
+.app > .page {
+  flex: 1;
+  height: auto;
+  min-height: 0;
+}

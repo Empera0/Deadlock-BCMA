@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Category, CATEGORY_LABEL, fmt, Item } from "../api";
 import { t } from "../i18n";
 
@@ -19,10 +19,16 @@ const SECTIONS: [string, string][] = [
 ];
 
 function Tooltip({ item, x, y }: { item: Item; x: number; y: number }) {
-  const left = Math.min(x + 16, window.innerWidth - 330);
-  const top = Math.min(y + 16, window.innerHeight - 320);
+  const box = useRef<HTMLDivElement>(null);
+  const [size, setSize] = useState({ w: 340, h: 320 });
+  useLayoutEffect(() => {
+    if (box.current) setSize({ w: box.current.offsetWidth, h: box.current.offsetHeight });
+  }, [item]);
+  // Beside the cursor, flipped to the other side when it would run off the window.
+  const left = x + 16 + size.w > window.innerWidth ? Math.max(8, x - 16 - size.w) : x + 16;
+  const top = Math.max(8, y + 16 + size.h > window.innerHeight ? Math.min(y - 16, window.innerHeight - 8) - size.h : y + 16);
   return (
-    <div className="tooltip" style={{ left, top }}>
+    <div ref={box} className="tooltip" style={{ left, top }}>
       <div className={"tooltip-title " + item.category}>
         {item.name}
         <span className="cost">{fmt(item.cost)}</span>
@@ -31,14 +37,15 @@ function Tooltip({ item, x, y }: { item: Item; x: number; y: number }) {
       {item.components.length > 0 && <div className="tag">{t("Upgrade: discounted if you own the component")}</div>}
       {item.description && <div className="tooltip-desc">{item.description}</div>}
       {SECTIONS.map(([section, title]) => {
-        const props = item.props.filter((p) => p.section === section);
+        // Values without a label are the game's own bookkeeping: not shown.
+        const props = item.props.filter((p) => p.section === section && p.label.trim() !== "");
         if (props.length === 0) return null;
         return (
           <div key={section} className="tooltip-section">
             <div className="tooltip-section-title">{t(title)}</div>
             {props.map((p) => (
               <div key={p.key} className="tooltip-row">
-                <span>{p.label || p.key}</span>
+                <span>{p.label}</span>
                 <span>
                   {p.value > 0 && p.modifier ? "+" : ""}
                   {fmt(p.value)}
