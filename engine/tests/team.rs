@@ -24,8 +24,9 @@ fn ability_effects_last_their_own_duration_over_the_upgraded_cooldown() {
     let d = data();
     // Flog, fully upgraded: -30% fire rate for 3s every 26 - 16 = 10s.
     assert!((uptime(&d, "Lash", "Flog", Effect::FireRateCut) - 0.3).abs() < 0.01);
-    // Baba's Brew: the third upgrade raises the 3s silence by a third (a percentage, not 33 seconds).
-    assert!((uptime(&d, "Baba", "Baba's Brew", Effect::Silence) - 4.0 / 13.0).abs() < 0.01);
+    // Baba's Brew: the third upgrade raises the 2.75s silence by a third (a percentage, not 33 seconds), every
+    // 27 - 14 = 13s.
+    assert!((uptime(&d, "Baba", "Baba's Brew", Effect::Silence) - 2.75 * 4.0 / 3.0 / 13.0).abs() < 0.01);
     // A charged ability with no cooldown of its own uses the time between charges.
     assert!(uptime(&d, "Graves", "Jar of Dead", Effect::Slow) < 0.2);
 }
