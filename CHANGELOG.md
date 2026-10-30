@@ -2,6 +2,12 @@
 
 All notable changes to Deadlock BCMA are listed here. Versions follow [semantic versioning](https://semver.org).
 
+## [0.5.2] – 2026-10-30
+
+### Changed
+
+1. **Game data for patch 6821.** The heroes, abilities and items the app ships with, and the game's Turkish texts, now match the latest patch: 90 changes, among them nerfs to Mo & Krill, Rat King and Solomon, stronger lifesteal and anti-heal items, and Shadow Weave's ambush giving weapon damage. The app also fetches the data on its own at start, and Patch changes lists every change.
+
 ## [0.5.1] – 2026-10-29
 
 ### Fixed
@@ -619,6 +625,7 @@ This release adds the **Build generator**, with builds read from top-ranked matc
   - trends across your last matches.
 - Windows installer with a desktop shortcut and automatic updates from GitHub releases.
 
+[0.5.2]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.5.1...v0.5.2
 [0.5.1]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.4.2...v0.5.0
 [0.4.2]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.4.1...v0.4.2

@@ -2,6 +2,12 @@
 
 Uygulamanın Türkçe yenilik notları. Her sürümde neyin değiştiği, kısa ve sade.
 
+## [0.5.2] – 2026-10-30
+
+### Değişenler
+
+1. **6821 yamasının oyun verisi.** Uygulamanın içindeki herolar, yetenekler ve eşyalar ile oyunun Türkçe metinleri son yamaya uyuyor: 90 değişiklik. Aralarında Mo & Krill, Rat King ve Solomon'a nerf, güçlenen can çalma ve iyileşme azaltan eşyalar, pususu artık silah hasarı veren Shadow Weave var. Uygulama veriyi açılışta da kendisi indiriyor; Yama değişiklikleri hepsini listeliyor.
+
 ## [0.5.1] – 2026-10-29
 
 ### Düzeltilenler
