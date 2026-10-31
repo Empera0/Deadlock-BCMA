@@ -2,6 +2,12 @@
 
 All notable changes to Deadlock BCMA are listed here. Versions follow [semantic versioning](https://semver.org).
 
+## [0.5.3] – 2026-10-31
+
+### Changed
+
+1. **Live match.** The match is found from the game's console log (-condebug) and its teams are read from the match's broadcast only; the lookup in the game's watch list of top matches is gone. When Valve does not broadcast a match, the app now says so plainly: the match was found, its teams cannot be read, and they can be entered by hand.
+
 ## [0.5.2] – 2026-10-30
 
 ### Changed
@@ -625,6 +631,7 @@ This release adds the **Build generator**, with builds read from top-ranked matc
   - trends across your last matches.
 - Windows installer with a desktop shortcut and automatic updates from GitHub releases.
 
+[0.5.3]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.5.2...v0.5.3
 [0.5.2]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.5.1...v0.5.2
 [0.5.1]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.4.2...v0.5.0

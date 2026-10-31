@@ -2,6 +2,12 @@
 
 Uygulamanın Türkçe yenilik notları. Her sürümde neyin değiştiği, kısa ve sade.
 
+## [0.5.3] – 2026-10-31
+
+### Değişenler
+
+1. **Canlı maç.** Maç oyunun konsol kaydından (-condebug) bulunuyor, takımları da sadece maçın yayınından okunuyor; oyunun en iyi maçlar izleme listesine bakılmıyor. Valve bir maçı yayınlamazsa uygulama bunu açıkça söylüyor: maç bulundu, takımları okunamıyor, elle girilebilir.
+
 ## [0.5.2] – 2026-10-30
 
 ### Değişenler
