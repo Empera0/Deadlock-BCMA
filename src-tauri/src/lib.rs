@@ -762,19 +762,6 @@ async fn death_trend(app: AppHandle, state: State<'_, AppState>, account_id: Str
     Ok(engine::deaths::trend(&analyses))
 }
 
-/// The player's match being played now, from the game's watch list.
-#[tauri::command]
-async fn live_match(account_id: String) -> Result<matches::LiveMatch, String> {
-    let id = steam_account(&account_id)?;
-    let url = format!("{MATCH_API}/matches/active?account_id={id}");
-    let json = tauri::async_runtime::spawn_blocking(move || get(&url, "No live match found."))
-        .await
-        .map_err(|e| e.to_string())??;
-    matches::parse_live(&json, id)?.ok_or_else(|| {
-        "Your match is not in the game's watch list: it holds only the top 200 matches being played, and a match only once it has started.".to_string()
-    })
-}
-
 /// Where Deadlock's console log is: every Steam library's Deadlock folder. The game writes it when it is started
 /// with the -condebug launch option.
 fn console_logs() -> Vec<PathBuf> {
@@ -947,14 +934,6 @@ async fn share_match(app: AppHandle, match_id: u64) -> Result<Shared, String> {
 async fn match_teams(match_id: u64, account_id: String) -> Result<matches::LiveMatch, String> {
     let account = steam_account(&account_id)?;
     tauri::async_runtime::spawn_blocking(move || {
-        // The game's watch list answers at once and names every player: tried first. Most matches are not in it.
-        if let Ok(json) = get(&format!("{MATCH_API}/matches/active?account_id={account}"), "") {
-            if let Ok(Some(live)) = matches::parse_live(&json, account) {
-                if live.match_id == match_id {
-                    return Ok(live);
-                }
-            }
-        }
         let query = r#"SELECT "m_steamID", "m_iTeamNum", "m_PlayerDataGlobal__m_nHeroID" AS hero, "m_nAssignedLane" AS lane FROM CCitadelPlayerController WHERE "m_PlayerDataGlobal__m_nHeroID" > 0 LIMIT 24"#;
         let resp = match ureq::get(&format!("{MATCH_API}/matches/demo/live/query"))
             .query("match_id", &match_id.to_string())
@@ -1245,7 +1224,6 @@ pub fn run() {
             fetch_match,
             death_analysis,
             death_trend,
-            live_match,
             console_match,
             match_teams,
             share_match,

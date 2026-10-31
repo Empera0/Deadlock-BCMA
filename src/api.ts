@@ -662,7 +662,6 @@ export const api = {
   heroTiers: (badge: number, maxBadge: number | null) => call<HeroTier[]>("hero_tiers", { badge, maxBadge }),
   abilityOrder: (build: Build) => call<OrderReport>("ability_order", { build }),
   deathTrend: (accountId: string, count: number) => call<DeathTrend>("death_trend", { accountId, count }),
-  liveMatch: (accountId: string) => call<LiveMatch>("live_match", { accountId }),
   consoleMatch: () => call<ConsoleState>("console_match"),
   shareMatch: (matchId: number) => call<SharedMatch>("share_match", { matchId }),
   itemTiming: (matchId: number, slot: number) => call<ItemTimingReport>("item_timing", { matchId, slot }),

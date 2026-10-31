@@ -13,8 +13,7 @@ export const CONDEBUG_HELP = t(
 
 /**
  * The match being played, with both teams and the lane: the match number and the account come from the game's
- * console log (written with -condebug), the teams from the statistics service watching that match. Without the
- * log, the game's watch list of top matches is tried.
+ * console log (written with -condebug), the teams from the statistics service watching that match.
  */
 export async function findLiveMatch(): Promise<LiveMatch> {
   const c = await api.consoleMatch();
@@ -22,13 +21,6 @@ export async function findLiveMatch(): Promise<LiveMatch> {
   if (c.found && c.match_id) {
     if (!account) throw new Error(t("The console log names no account: set your Steam account ID in Settings."));
     return api.matchTeams(c.match_id, account);
-  }
-  if (account) {
-    try {
-      return await api.liveMatch(account);
-    } catch {
-      /* Not in the watch list either: say what would make it work. */
-    }
   }
   throw new Error(c.found ? t("No match in progress in the game's console log yet.") : `${t("The game's console log was not found ({path}).", { path: c.path })} ${CONDEBUG_HELP}`);
 }

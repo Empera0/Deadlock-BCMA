@@ -1204,7 +1204,6 @@ export const SENTENCES: [string, string][] = [
   ["Match not found. Very recent matches can take a while to become available.", "Maç bulunamadı. Çok yeni maçların gelmesi biraz zaman alabilir."],
   ["No match history found for this account.", "Bu hesap için maç geçmişi bulunamadı."],
   ["No live match found.", "Canlı maç bulunamadı."],
-  ["Your match is not in the game's watch list: it holds only the top 200 matches being played, and a match only once it has started.", "Maçın oyunun izleme listesinde yok: liste sadece oynanan en iyi 200 maçı tutar, bir maçı da ancak başladıktan sonra."],
   ["The statistics service answered in an unexpected form: no job", "İstatistik servisi beklenmedik bir şekilde cevap verdi: iş yok"],
   ["The replay query was lost.", "Tekrar sorgusu kayboldu."],
   ["The replay query finished without a result.", "Tekrar sorgusu sonuçsuz bitti."],

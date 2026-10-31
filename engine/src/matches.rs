@@ -3425,7 +3425,7 @@ pub fn parse_history(data: &GameData, json: &str, limit: usize) -> Result<Vec<Hi
     Ok(out)
 }
 
-/// A match being played, as the game's watch list shows it, from the player's side.
+/// A match being played, from the player's side.
 #[derive(Debug, Clone, Serialize)]
 pub struct LiveMatch {
     pub match_id: u64,
@@ -3448,33 +3448,6 @@ pub struct LivePlayer {
     pub ally: bool,
     /// The lane the game assigned, when known (0 otherwise).
     pub lane: i64,
-}
-
-/// The player's match in the API's list of active matches, if it is there.
-pub fn parse_live(json: &str, account_id: u64) -> Result<Option<LiveMatch>, String> {
-    let rows: Vec<Value> = serde_json::from_str(json).map_err(|e| format!("Unreadable live match data: {e}"))?;
-    for m in &rows {
-        let players = list(m, "players");
-        let Some(me) = players.iter().find(|p| p.get("account_id").and_then(Value::as_u64) == Some(account_id)) else { continue };
-        let team = int(me, "team");
-        let hero = |p: &Value| p.get("hero_id").and_then(Value::as_u64).unwrap_or(0);
-        let others = |same: bool| players.iter().filter(|p| !std::ptr::eq(*p, me) && (int(p, "team") == team) == same).map(hero).filter(|h| *h > 0).collect();
-        let mut everyone: Vec<LivePlayer> = players
-            .iter()
-            .map(|p| LivePlayer { account_id: p.get("account_id").and_then(Value::as_u64).unwrap_or(0), hero: hero(p), ally: int(p, "team") == team, lane: 0 })
-            .collect();
-        everyone.sort_by_key(|p| (p.account_id != account_id, !p.ally));
-        return Ok(Some(LiveMatch {
-            match_id: m.get("match_id").and_then(Value::as_u64).unwrap_or(0),
-            duration_s: int(m, "duration_s"),
-            hero: hero(me),
-            allies: others(true),
-            enemies: others(false),
-            lane: vec![],
-            players: everyone,
-        }));
-    }
-    Ok(None)
 }
 
 /// What the game's console log (written with the -condebug launch option) says about the match being played.

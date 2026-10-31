@@ -390,7 +390,7 @@ function MasterPanel({
       .finally(() => setBusy(false));
   };
   const find = () => run(mine, allies, enemies, lane);
-  // The player's match being played now, from the game's watch list, with the account set on the Draft or Match screen.
+  // The player's match being played now, from the game's console log.
   const [liveNote, setLiveNote] = useState("");
   // The match the teams were last filled from, so a watched match is built once.
   const [liveId, setLiveId] = useState<number | null>(null);

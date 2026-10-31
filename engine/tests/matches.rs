@@ -885,18 +885,6 @@ fn deaths_add_up_over_matches() {
     assert!(t.solo_kills <= t.deaths && !t.summary.is_empty());
 }
 
-#[test]
-fn the_live_match_is_read_from_the_players_side() {
-    let json = r#"[
-        {"match_id": 7, "duration_s": 300, "players": [
-            {"account_id": 1, "team": 0, "hero_id": 10}, {"account_id": 2, "team": 1, "hero_id": 20},
-            {"account_id": 3, "team": 1, "hero_id": 21}, {"account_id": 4, "team": 0, "hero_id": 11}]},
-        {"match_id": 8, "duration_s": 100, "players": [{"account_id": 9, "team": 0, "hero_id": 5}]}
-    ]"#;
-    let live = engine::matches::parse_live(json, 3).unwrap().unwrap();
-    assert_eq!((live.match_id, live.hero, live.allies, live.enemies), (7, 21, vec![20], vec![10, 11]));
-    assert!(engine::matches::parse_live(json, 42).unwrap().is_none());
-}
 
 #[test]
 fn the_console_log_names_the_match_and_the_account() {
