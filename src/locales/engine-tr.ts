@@ -1168,6 +1168,7 @@ export const SENTENCES: [string, string][] = [
   ["Harder to use: it cleanses one stun or silence, and their team has {n} ({list}), so the first one baits it", "Kullanması zor: tek bir sersemletme ya da susturmayı temizler. Rakip takımda {n} tane var ({list}), yani ilki bunu boşa harcatır"],
   ["No recent matches of this hero in these ranks.", "Bu kahramanın bu rütbelerde yakın zamanda oynanmış maçı yok."],
   ["{rank} and above", "{rank} ve üstü"],
+  ["Match {id} was found, but Valve is not broadcasting it, so its teams cannot be read. Try again in a few minutes, or enter the teams by hand.", "{id} numaralı maç bulundu, ama Valve bu maçı yayınlamıyor, bu yüzden takımlar okunamıyor. Birkaç dakika sonra tekrar dene ya da takımları elle gir."],
   ["Light Melee Damage", "Hafif Yakın Dövüş Hasarı"],
   ["Reload Speed", "Şarjör Değiştirme Hızı"],
   ["Air Dash Distance", "Havada Atılma Mesafesi"],

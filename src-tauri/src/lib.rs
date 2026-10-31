@@ -947,6 +947,14 @@ async fn share_match(app: AppHandle, match_id: u64) -> Result<Shared, String> {
 async fn match_teams(match_id: u64, account_id: String) -> Result<matches::LiveMatch, String> {
     let account = steam_account(&account_id)?;
     tauri::async_runtime::spawn_blocking(move || {
+        // The game's watch list answers at once and names every player: tried first. Most matches are not in it.
+        if let Ok(json) = get(&format!("{MATCH_API}/matches/active?account_id={account}"), "") {
+            if let Ok(Some(live)) = matches::parse_live(&json, account) {
+                if live.match_id == match_id {
+                    return Ok(live);
+                }
+            }
+        }
         let query = r#"SELECT "m_steamID", "m_iTeamNum", "m_PlayerDataGlobal__m_nHeroID" AS hero, "m_nAssignedLane" AS lane FROM CCitadelPlayerController WHERE "m_PlayerDataGlobal__m_nHeroID" > 0 LIMIT 24"#;
         let resp = match ureq::get(&format!("{MATCH_API}/matches/demo/live/query"))
             .query("match_id", &match_id.to_string())
@@ -974,7 +982,14 @@ async fn match_teams(match_id: u64, account_id: String) -> Result<matches::LiveM
                 break;
             }
         }
-        matches::parse_live_query(&text, match_id, account)
+        matches::parse_live_query(&text, match_id, account).map_err(|e| {
+            // Valve's relay sometimes never broadcasts a match: say so plainly rather than pass on the relay's words.
+            if e.to_lowercase().contains("broadcast") {
+                format!("Match {match_id} was found, but Valve is not broadcasting it, so its teams cannot be read. Try again in a few minutes, or enter the teams by hand.")
+            } else {
+                e
+            }
+        })
     })
     .await
     .map_err(|e| e.to_string())?
