@@ -292,6 +292,14 @@ pub fn matchups(data: &GameData, d: &DraftData, hero: u64) -> (Vec<Fit>, Vec<Fit
     (against, with)
 }
 
+/// How `hero` has done against `enemy` over the whole match and when the two shared the lane.
+pub fn matchup(d: &DraftData, hero: u64, enemy: u64) -> (Fit, Fit) {
+    let strength = strengths(d);
+    let s = |id: u64| strength.get(&id).map(|x| x.0).unwrap_or(0.0);
+    let expected = s(hero) - s(enemy);
+    (fit(enemy, by_pair(&d.counters).get(&(hero, enemy)).copied(), expected), fit(enemy, by_pair(&d.lane_counters).get(&(hero, enemy)).copied(), expected))
+}
+
 pub fn draft(data: &GameData, d: &DraftData, input: &DraftInput) -> DraftReport {
     let all_bans: u64 = d.bans.iter().map(|b| b.1).sum();
     let m = Model { data, strength: strengths(d), counters: by_pair(&d.counters), lane: by_pair(&d.lane_counters) };

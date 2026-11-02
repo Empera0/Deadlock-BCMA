@@ -15,6 +15,7 @@ import SettingsView from "./components/SettingsView";
 import TiersView from "./components/TiersView";
 import CommandPalette, { heroCommands } from "./components/CommandPalette";
 import PostMatch from "./components/PostMatch";
+import LaneNote from "./components/LaneNote";
 import PatchNotes from "./components/PatchNotes";
 import ShareMatches from "./components/ShareMatches";
 import UpdateBanner from "./components/UpdateBanner";
@@ -331,6 +332,7 @@ export default function App() {
         </div>
         <div className="data-info">{status && <small className="status">{status}</small>}</div>
       </header>
+      <LaneNote heroes={data.heroes} />
       <PostMatch
         onOpen={(id) => {
           setOpenMatch({ id, key: Date.now() });

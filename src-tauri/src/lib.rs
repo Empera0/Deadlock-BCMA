@@ -527,6 +527,60 @@ async fn my_heroes(app: AppHandle, state: State<'_, AppState>, account_id: Strin
     .map_err(|e| e.to_string())?
 }
 
+/// The note for the player's lane at the start of a match: how the player's hero does against each lane enemy, when
+/// that enemy is strong, and what is bought against it. Read at the draft's ranks, from cached statistics.
+#[tauri::command]
+async fn lane_note(app: AppHandle, state: State<'_, AppState>, hero_id: u64, lane: Vec<u64>, badge: u32, max_badge: Option<u32>) -> Result<Vec<engine::tiers::LaneEnemy>, String> {
+    let data = state.data.read().unwrap().clone();
+    let cache = Cache::new(&app, &data)?;
+    tauri::async_runtime::spawn_blocking(move || {
+        let upto = |query: &str| with_max(query, max_badge);
+        let mut jobs = vec![
+            ("hero-stats", upto(""), badge, DRAFT_DAYS),
+            ("hero-counter-stats", upto("same_lane_filter=false"), badge, DRAFT_DAYS),
+            ("hero-counter-stats", upto("same_lane_filter=true"), badge, DRAFT_DAYS),
+            ("hero-stats", upto(&format!("min_duration_s={LONG_MATCH_S}")), badge, DRAFT_DAYS),
+            ("hero-stats", upto(&format!("max_duration_s={SHORT_MATCH_S}")), badge, DRAFT_DAYS),
+            ("item-stats", upto(""), badge, DRAFT_DAYS),
+        ];
+        for id in &lane {
+            jobs.push(("item-stats", upto(&format!("enemy_hero_ids={id}")), badge, DRAFT_DAYS));
+        }
+        prefetch(&cache, jobs);
+        let read = |endpoint: &str, query: &str| analytics_over(&cache, endpoint, &upto(query), badge, DRAFT_DAYS);
+        let stats = engine::draft::DraftData {
+            heroes: parse(&read("hero-stats", "")?)?,
+            counters: engine::draft::parse_counters(&read("hero-counter-stats", "same_lane_filter=false")?)?,
+            lane_counters: engine::draft::parse_counters(&read("hero-counter-stats", "same_lane_filter=true")?)?,
+            ..Default::default()
+        };
+        let long: Vec<popular::HeroStat> = parse(&read("hero-stats", &format!("min_duration_s={LONG_MATCH_S}"))?)?;
+        let short: Vec<popular::HeroStat> = parse(&read("hero-stats", &format!("max_duration_s={SHORT_MATCH_S}"))?)?;
+        let rate = |rows: &[popular::HeroStat], id: u64| {
+            rows.iter().find(|h| h.hero_id == id).filter(|h| h.matches >= ENOUGH_SCALING_MATCHES).map(|h| h.wins as f64 / h.matches as f64 * 100.0)
+        };
+        let general: Vec<popular::ItemStat> = parse(&read("item-stats", "")?)?;
+        lane.iter()
+            .filter_map(|id| data.heroes.iter().find(|h| h.id == *id))
+            .map(|h| {
+                let (overall, lane_fit) = engine::draft::matchup(&stats, hero_id, h.id);
+                let against: Vec<popular::ItemStat> = parse(&read("item-stats", &format!("enemy_hero_ids={}", h.id))?)?;
+                Ok(engine::tiers::LaneEnemy {
+                    hero_id: h.id,
+                    name: h.name.clone(),
+                    icon: h.icon.clone(),
+                    lane: lane_fit,
+                    overall,
+                    late: rate(&long, h.id).zip(rate(&short, h.id)).map(|(l, s)| l - s),
+                    counters: engine::tiers::counter_items(&data, &popular::lifts(&general, &against)),
+                })
+            })
+            .collect()
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
 /// Matches this long are long ones, and this short short ones, when telling which heroes grow strong late.
 const LONG_MATCH_S: u32 = 35 * 60;
 const SHORT_MATCH_S: u32 = 25 * 60;
@@ -1062,7 +1116,14 @@ async fn share_cached_salts(app: AppHandle, state: State<'_, AppState>) -> Resul
 #[tauri::command]
 async fn match_teams(match_id: u64, account_id: String) -> Result<matches::LiveMatch, String> {
     let account = steam_account(&account_id)?;
-    tauri::async_runtime::spawn_blocking(move || {
+    // A match's teams are read once: the build, the draft and the lane note all ask for them as it starts.
+    static TEAMS: std::sync::Mutex<Option<(u64, u64, matches::LiveMatch)>> = std::sync::Mutex::new(None);
+    if let Some((m, a, live)) = TEAMS.lock().unwrap().as_ref() {
+        if *m == match_id && *a == account {
+            return Ok(live.clone());
+        }
+    }
+    let live = tauri::async_runtime::spawn_blocking(move || {
         let query = r#"SELECT "m_steamID", "m_iTeamNum", "m_PlayerDataGlobal__m_nHeroID" AS hero, "m_nAssignedLane" AS lane FROM CCitadelPlayerController WHERE "m_PlayerDataGlobal__m_nHeroID" > 0 LIMIT 24"#;
         let resp = match ureq::get(&format!("{MATCH_API}/matches/demo/live/query"))
             .query("match_id", &match_id.to_string())
@@ -1100,7 +1161,9 @@ async fn match_teams(match_id: u64, account_id: String) -> Result<matches::LiveM
         })
     })
     .await
-    .map_err(|e| e.to_string())?
+    .map_err(|e| e.to_string())??;
+    *TEAMS.lock().unwrap() = Some((match_id, account, live.clone()));
+    Ok(live)
 }
 
 /// The players of a match: rank, record on their hero, most played heroes, streak and party, from three batch
@@ -1359,6 +1422,7 @@ pub fn run() {
             hero_tiers,
             hero_page,
             my_heroes,
+            lane_note,
             item_tiers,
             patch_notes,
             simulate_combo,

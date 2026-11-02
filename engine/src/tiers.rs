@@ -270,3 +270,55 @@ pub fn mastery(data: &GameData, mine: &[MyHeroRow], average: &[HeroRow]) -> Vec<
     out.sort_by(|a, b| b.matches.cmp(&a.matches));
     out
 }
+
+/// One enemy in the player's lane, as the lane note shows it at the start of a match.
+#[derive(Debug, Clone, Serialize)]
+pub struct LaneEnemy {
+    pub hero_id: u64,
+    pub name: String,
+    pub icon: String,
+    /// The player's hero against this one: in the lane, and over the whole match.
+    pub lane: crate::draft::Fit,
+    pub overall: crate::draft::Fit,
+    /// Win rate points this hero gains in long matches over short ones: above zero it grows strong late.
+    pub late: Option<f64>,
+    /// Items bought against it that win more than usual, the cheapest first.
+    pub counters: Vec<CounterItem>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct CounterItem {
+    pub item: String,
+    pub name: String,
+    pub icon: String,
+    pub cost: u32,
+    /// Win rate points over the item's usual against this hero, beyond the median item against it.
+    pub win_pp: f64,
+}
+
+/// Items bought against an enemy at least this many times as often as usual, and winning at least this many points
+/// more, count as answers to it.
+const COUNTER_BOUGHT: f64 = 1.2;
+const COUNTER_WIN_PP: f64 = 0.5;
+const COUNTERS: usize = 3;
+
+/// The answers to an enemy among the items bought against it: the cheapest first, so the first is what to buy early.
+/// Facing a strong enemy lowers every item's win rate, so each is measured against the median item against it.
+pub fn counter_items(data: &GameData, lifts: &[crate::popular::Lift]) -> Vec<CounterItem> {
+    let mut shifts: Vec<f64> = lifts.iter().map(|l| l.win_pp).collect();
+    shifts.sort_by(f64::total_cmp);
+    let median = shifts.get(shifts.len() / 2).copied().unwrap_or(0.0);
+    let mut out: Vec<CounterItem> = lifts
+        .iter()
+        .map(|l| (l, l.win_pp - median))
+        .filter(|(l, win)| l.bought >= COUNTER_BOUGHT && *win >= COUNTER_WIN_PP)
+        .filter_map(|(l, win)| {
+            let i = data.items.iter().find(|i| i.id == l.item_id)?;
+            Some(CounterItem { item: i.class_name.clone(), name: i.name.clone(), icon: i.icon.clone(), cost: i.cost, win_pp: win })
+        })
+        .collect();
+    out.sort_by(|a, b| b.win_pp.total_cmp(&a.win_pp));
+    out.truncate(COUNTERS);
+    out.sort_by(|a, b| a.cost.cmp(&b.cost).then(b.win_pp.total_cmp(&a.win_pp)));
+    out
+}

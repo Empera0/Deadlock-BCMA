@@ -17,6 +17,7 @@ export default function SettingsView({ version, fetchedAt, onRefresh, onGuide }:
   const [watch, setWatch] = useSetting(SETTINGS.watchLive);
   const [share, setShare] = useSetting(SETTINGS.shareMatches);
   const [postMatch, setPostMatch] = useSetting(SETTINGS.postMatch);
+  const [laneNote, setLaneNote] = useSetting(SETTINGS.laneNote);
   const [theme, setTheme] = useSetting(SETTINGS.theme);
   const [density, setDensity] = useSetting(SETTINGS.density);
   const [log, setLog] = useState<ConsoleState | null>(null);
@@ -179,6 +180,15 @@ export default function SettingsView({ version, fetchedAt, onRefresh, onGuide }:
           <span>
             <b>{t("Watch for my match")}</b>
             <small className="muted">{t("While the Build generator is open, build for your match as soon as it starts. Needs -condebug.")}</small>
+          </span>
+        </label>
+        <label className="toggle-row">
+          <input type="checkbox" checked={laneNote !== "0"} onChange={(e) => setLaneNote(e.target.checked ? "1" : "0")} />
+          <span>
+            <b>{t("Lane note at the start of a match")}</b>
+            <small className="muted">
+              {t("When a match starts, show how your hero does against your lane enemies, when they are strongest and what is bought against them. Read once, from the draft's ranks. Needs -condebug.")}
+            </small>
           </span>
         </label>
         <label className="toggle-row">

@@ -20,6 +20,8 @@ export const SETTINGS = {
   /** The look: a theme of THEMES, and compact or comfortable spacing. */
   /** Show how the last match went once it ends. */
   postMatch: "post-match",
+  /** Show the lane note when a match starts. */
+  laneNote: "lane-note",
   theme: "theme",
   density: "density",
 } as const;
@@ -35,6 +37,7 @@ export const DEFAULTS: Record<string, string> = {
   [SETTINGS.watchLive]: "0",
   [SETTINGS.shareMatches]: "1",
   [SETTINGS.postMatch]: "1",
+  [SETTINGS.laneNote]: "1",
   [SETTINGS.theme]: "obsidian",
   [SETTINGS.density]: "compact",
 };

@@ -78,3 +78,22 @@ fn a_players_heroes_stand_beside_the_average_player() {
     let acc = x.accuracy.unwrap();
     assert_eq!((acc.mine, acc.average), (50.0, 40.0));
 }
+
+#[test]
+fn answers_to_an_enemy_are_measured_against_the_median_item_against_it() {
+    use engine::popular::Lift;
+    let d: GameData = serde_json::from_str(include_str!("../../src-tauri/data/snapshot.json")).unwrap();
+    let ids: Vec<u64> = d.items.iter().take(5).map(|i| i.id).collect();
+    // A strong enemy: everything wins about 2 points less against it; one item loses less and is bought more.
+    let lifts = vec![
+        Lift { item_id: ids[0], bought: 1.5, win_pp: 0.0 },
+        Lift { item_id: ids[1], bought: 1.0, win_pp: -2.0 },
+        Lift { item_id: ids[2], bought: 1.0, win_pp: -2.1 },
+        Lift { item_id: ids[3], bought: 1.0, win_pp: -1.9 },
+        Lift { item_id: ids[4], bought: 1.5, win_pp: -2.0 },
+    ];
+    let c = engine::tiers::counter_items(&d, &lifts);
+    assert_eq!(c.len(), 1);
+    assert_eq!(c[0].item, d.items[0].class_name);
+    assert!((c[0].win_pp - 2.0).abs() < 1e-9);
+}
