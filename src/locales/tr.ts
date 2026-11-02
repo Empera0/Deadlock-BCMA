@@ -1346,4 +1346,11 @@ export const TR: Record<string, string> = {
   "The patch changed {n} thing you use": "Yama kullandığın {n} şeyi değiştirdi",
   "The patch changed {n} things you use": "Yama kullandığın {n} şeyi değiştirdi",
   "See every change": "Bütün değişiklikleri gör",
+  "Saved to {path}": "Kaydedildi: {path}",
+  "Restored {b} builds and {m} matches; the app starts again.": "{b} build ve {m} maç geri yüklendi; uygulama yeniden açılıyor.",
+  Backup: "Yedekleme",
+  "Your settings, saved builds and, if you like, the matches kept on this computer, in one file: to move to another computer or keep safe.": "Ayarların, kayıtlı build'lerin ve istersen bu bilgisayarda tutulan maçlar tek bir dosyada: başka bilgisayara taşımak ya da güvende tutmak için.",
+  "Include the kept matches (a larger file)": "Tutulan maçları da ekle (dosya büyür)",
+  "Save a backup": "Yedek al",
+  "Restore a backup": "Yedeği geri yükle",
 };

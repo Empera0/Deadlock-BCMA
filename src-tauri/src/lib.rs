@@ -1416,6 +1416,85 @@ fn delete_build(app: AppHandle, name: String) -> Result<(), String> {
     fs::remove_file(build_path(&app, &name)?).map_err(|e| e.to_string())
 }
 
+/// What a backup file holds: the app's settings (as the window keeps them), the saved builds, and optionally the
+/// matches kept on this computer.
+#[derive(serde::Serialize, serde::Deserialize)]
+struct Backup {
+    app: String,
+    version: u32,
+    exported_at: u64,
+    settings: serde_json::Value,
+    builds: std::collections::BTreeMap<String, serde_json::Value>,
+    #[serde(default)]
+    matches: std::collections::BTreeMap<String, String>,
+}
+
+const BACKUP_APP: &str = "deadlock-bcma";
+const BACKUP_VERSION: u32 = 1;
+
+/// Writes a backup to the Downloads folder and says where.
+#[tauri::command]
+async fn export_backup(app: AppHandle, settings: serde_json::Value, include_matches: bool) -> Result<String, String> {
+    let builds_dir = builds_dir(&app)?;
+    let matches_dir = data_dir(&app)?.join("matches");
+    let out_dir = app.path().download_dir().or_else(|_| data_dir(&app)).map_err(|e| e.to_string())?;
+    tauri::async_runtime::spawn_blocking(move || {
+        let read_dir = |dir: &PathBuf| fs::read_dir(dir).into_iter().flatten().flatten().map(|e| e.path()).filter(|p| p.extension().is_some_and(|x| x == "json")).collect::<Vec<_>>();
+        let stem = |p: &PathBuf| p.file_stem().and_then(|s| s.to_str()).map(String::from);
+        let builds = read_dir(&builds_dir)
+            .iter()
+            .filter_map(|p| Some((stem(p)?, serde_json::from_str(&fs::read_to_string(p).ok()?).ok()?)))
+            .collect();
+        let matches = if include_matches { read_dir(&matches_dir).iter().filter_map(|p| Some((stem(p)?, fs::read_to_string(p).ok()?))).collect() } else { Default::default() };
+        let now = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0);
+        let backup = Backup { app: BACKUP_APP.into(), version: BACKUP_VERSION, exported_at: now, settings, builds, matches };
+        let path = out_dir.join(format!("deadlock-bcma-backup-{}.json", now / 86_400 * 86_400));
+        fs::write(&path, serde_json::to_string(&backup).map_err(|e| e.to_string())?).map_err(|e| e.to_string())?;
+        Ok(path.display().to_string())
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+#[derive(serde::Serialize)]
+struct Restored {
+    /// The settings to put back in the window.
+    settings: serde_json::Value,
+    builds: usize,
+    matches: usize,
+}
+
+/// Restores a backup file's builds and matches, and hands back its settings. A build of the same name is replaced.
+#[tauri::command]
+async fn import_backup(app: AppHandle, content: String) -> Result<Restored, String> {
+    let builds_dir = builds_dir(&app)?;
+    let matches_dir = data_dir(&app)?.join("matches");
+    tauri::async_runtime::spawn_blocking(move || {
+        let backup: Backup = serde_json::from_str(&content).map_err(|_| "This is not a Deadlock BCMA backup file.".to_string())?;
+        if backup.app != BACKUP_APP {
+            return Err("This is not a Deadlock BCMA backup file.".to_string());
+        }
+        // Names and match ids become file names: only plain ones are written.
+        let plain = |s: &str| !s.is_empty() && !s.contains(['/', '\\', ':']) && !s.starts_with('.');
+        let mut builds = 0;
+        for (name, build) in &backup.builds {
+            if plain(name) && fs::write(builds_dir.join(format!("{name}.json")), serde_json::to_string_pretty(build).unwrap_or_default()).is_ok() {
+                builds += 1;
+            }
+        }
+        let _ = fs::create_dir_all(&matches_dir);
+        let mut matches = 0;
+        for (id, json) in &backup.matches {
+            if plain(id) && fs::write(matches_dir.join(format!("{id}.json")), json).is_ok() {
+                matches += 1;
+            }
+        }
+        Ok(Restored { settings: backup.settings, builds, matches })
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -1445,6 +1524,8 @@ pub fn run() {
             my_heroes,
             lane_note,
             played_heroes,
+            export_backup,
+            import_backup,
             item_tiers,
             patch_notes,
             simulate_combo,

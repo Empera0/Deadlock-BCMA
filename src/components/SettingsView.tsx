@@ -4,6 +4,7 @@ import { CONDEBUG_HELP } from "../live";
 import { date, LANG, LANGUAGES, NAMES, setLang, setNames, t, tn } from "../i18n";
 import { accountFrom, SETTINGS, THEMES, useSetting } from "../settings";
 import RankRange from "./RankRange";
+import BackupPanel from "./BackupPanel";
 import ErrorNote from "./ErrorNote";
 import { DAMAGES, FOCUSES } from "./GeneratorView";
 
@@ -208,6 +209,8 @@ export default function SettingsView({ version, fetchedAt, onRefresh, onGuide }:
           </span>
         </label>
       </section>
+
+      <BackupPanel />
 
       <section className="group">
         <h3>{t("Game data")}</h3>
