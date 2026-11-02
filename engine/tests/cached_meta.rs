@@ -13,12 +13,10 @@ fn service_json() -> String {
     out
 }
 
-/// The file as Steam keeps it: its header names the request, the body follows (here at byte 1106, as in a real one).
+/// The file as Steam keeps it on the PC that opened the match: the header naming the request (the response's headers
+/// blanked), then the body from byte 1106.
 fn cache_file() -> Vec<u8> {
-    let mut bytes = vec![2, 0, 0, 0, 0, 3, 0xcc, 0x12, 0, 0, 0, 0, 0xae, 0x89, 0xd9, 0x68, 1, 0, 0, 0];
-    bytes.extend(b"replay429.valve.net\0/1422450/124883102_846075101.meta.bz2\0");
-    bytes.extend(b"user-agent\0Valve/Steam HTTP Client 1.0 (1422450)\0Host\0replay429.valve.net\0");
-    bytes.resize(1106, 0);
+    let mut bytes = include_bytes!("cached-meta/124883102.cache-header.bin").to_vec();
     bytes.extend(FILE);
     bytes
 }
