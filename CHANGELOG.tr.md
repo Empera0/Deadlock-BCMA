@@ -2,6 +2,14 @@
 
 Uygulamanın Türkçe yenilik notları. Her sürümde neyin değiştiği, kısa ve sade.
 
+## [0.6.0] – 2026-11-02
+
+Maçlar artık kendi bilgisayarından açılıyor, istatistik servisi onları tanımasa bile.
+
+### Eklenenler
+
+1. **Steam önbelleğinden maçlar.** Oyunda açtığın her maç (skor tablosu ya da tekrarı) bütün ayrıntılarını Steam'in bilgisayarındaki önbelleğine bırakır. Maç analizi artık önce oradan okuyor, sonra Valve'ın tekrar sunucularından, istatistik servisine en son soruyor; böylece servisin görmediği bir maç da açılıyor. "Bu bilgisayardaki maçlar" ayrıntıları zaten diskinde olanları işaretliyor.
+
 ## [0.5.3] – 2026-10-31
 
 ### Değişenler

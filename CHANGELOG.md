@@ -2,6 +2,14 @@
 
 All notable changes to Deadlock BCMA are listed here. Versions follow [semantic versioning](https://semver.org).
 
+## [0.6.0] – 2026-11-02
+
+Matches open from your own PC, even when the statistics service does not know them.
+
+### Added
+
+1. **Matches from Steam's cache.** Every match you open in the game (its scoreboard or its replay) leaves its full details in Steam's cache on your PC. Match analysis now reads them from there first, then from Valve's replay servers, and asks the statistics service only last, so a match the service has not seen still opens. Matches on this PC marks the ones whose details are already on your disk.
+
 ## [0.5.3] – 2026-10-31
 
 ### Changed
@@ -631,6 +639,7 @@ This release adds the **Build generator**, with builds read from top-ranked matc
   - trends across your last matches.
 - Windows installer with a desktop shortcut and automatic updates from GitHub releases.
 
+[0.6.0]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.5.3...v0.6.0
 [0.5.3]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.5.2...v0.5.3
 [0.5.2]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.5.1...v0.5.2
 [0.5.1]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.5.0...v0.5.1
