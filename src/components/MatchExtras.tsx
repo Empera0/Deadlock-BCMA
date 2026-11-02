@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { fmt, MatchPlayer, MatchReport, MatchSummary } from "../api";
 import { Bars, clock } from "./MatchCharts";
-import { date, t } from "../i18n";
+import { date, percent, t } from "../i18n";
 
 const TEAM_NAME = ["Hidden King", "Archmother"];
 const TEAM_COLOR = ["#f2b84b", "#4fc3f7"];
@@ -339,7 +339,7 @@ export function MatchTrend({ rows, skipped, onOpen }: { rows: MatchSummary[]; sk
         <h3>{t("Over time")}</h3>
         <div className="muted">{t("Each dot is a match, oldest on the left: green won, red lost. Above each chart, the first half of the matches against the second.")}</div>
         <div className="trend-charts">
-          <TrendChart rows={timeline} title={t("Win rate (last 5)")} help={t("Matches won out of the five up to each one")} value={rolling} format={(v) => `${fmt(v, 0)}%`} better="higher" />
+          <TrendChart rows={timeline} title={t("Win rate (last 5)")} help={t("Matches won out of the five up to each one")} value={rolling} format={(v) => percent(fmt(v, 0))} better="higher" />
           <TrendChart rows={timeline} title={t("Score")} help={t("The match score, the same as in the player ranking")} value={(r) => r.score} format={(v) => fmt(v, 1)} better="higher" />
           <TrendChart rows={timeline} title={t("Deaths")} help={t("Deaths per match")} value={(r) => r.deaths} format={(v) => fmt(v, 1)} better="lower" />
           <TrendChart
