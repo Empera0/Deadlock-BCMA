@@ -2,6 +2,22 @@
 
 Uygulamanın Türkçe yenilik notları. Her sürümde neyin değiştiği, kısa ve sade.
 
+## [0.7.0] – 2026-11-02
+
+Maçın lobiden sonuca kendiliğinden takip ediliyor ve nasıl oynadığına daha yakından bakılıyor.
+
+### Eklenenler
+
+1. **Canlı ekranı.** Bir maç başlayınca uygulama Canlı ekranını kendiliğinden açar: iki takım oyuncu oyuncu (hero, rütbe, o herodaki sonuçlar, en çok oynadığı herolar, seriler, birlikte girenler) ve lane'in için bir not. Maç başında maçın yayınından bir kez okunur; maçı takip etmez. Build'imi planla, Usta build'i iki takımla açar.
+2. **Lane notu.** Lane'indeki her rakip için: herona karşı lane'de ve maç genelinde nasıl gittiği, geç oyunda mı güçlendiği yoksa erken mi en güçlü olduğu, ve ona karşı alınıp her zamankinden çok kazandıran eşyalar.
+3. **Maçtan sonra.** Bir maç bitince sonucu, heronu, Ö/Ö/A'yı, ruhu ve sıralamanı gösteren bir kart çıkar; tam analize giden bir düğmeyle.
+4. **Benim herolarım.** Hero sıralamasında oynadığın her hero, rütbendeki ortalama oyuncuyla yan yana: kazanma, öldürme, ölüm, asist, ruh, kahraman hasarı, son vuruş ve isabet.
+5. **Zaman içinde.** Son maçlar raporu kazanma oranını, puanını, ölümlerini ve ilk büyük eşyanın dakikasını maç maç grafikle gösterir.
+6. **Build resmi.** Paylaş'ın yanındaki Resim, build'i bir resim olarak kopyalar (hero, sırayla eşyalar, temel değerler, kod); bir sohbete yapıştırırsın.
+7. **Yama uyarısı.** Bir yamadan sonra oynadığın herolarda ve kayıtlı build'lerindeki eşyalarda neyin değiştiğini bir kart listeler.
+8. **Yedekleme.** Ayarlar'dan ayarlarını, build'lerini ve tutulan maçları tek dosyaya kaydedebilir, başka bir bilgisayarda geri yükleyebilirsin.
+9. **Önbellekteki maçların paylaşımı.** Biten maçlarımı paylaş açıksa oyunda açtığın maçlar deadlock-api'ye bildirilir; böylece herkes okuyabilir.
+
 ## [0.6.1] – 2026-11-02
 
 ### Düzeltilenler

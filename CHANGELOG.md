@@ -2,6 +2,22 @@
 
 All notable changes to Deadlock BCMA are listed here. Versions follow [semantic versioning](https://semver.org).
 
+## [0.7.0] – 2026-11-02
+
+Your match followed on its own, from the lobby to the result, and a closer look at how you play.
+
+### Added
+
+1. **Live screen.** When a match starts, the app opens a Live screen on its own: both teams player by player (hero, rank, record on the hero, most played heroes, streaks, parties), and a note for your lane. Read once at the start from the match's broadcast; it does not follow the match. Plan my build opens the Master builder for both teams.
+2. **Lane note.** For each enemy in your lane: how your hero does against it in the lane and over the match, whether it grows strong late or is strongest early, and the items bought against it that win more than usual.
+3. **After the match.** When a match ends, a card shows the result, your hero, K/D/A, souls and place, with a button to the full analysis.
+4. **My heroes.** In Hero tiers, every hero you play beside the average player of your rank on it: win rate, kills, deaths, assists, souls, hero damage, last hits and accuracy.
+5. **Over time.** The recent matches report charts your win rate, score, deaths and the minute of your first big item, match by match.
+6. **Build picture.** Picture, next to Share, copies the build as an image (hero, items in order, main numbers, code) to paste in a chat.
+7. **Patch alert.** After a patch, a card lists what it changed of the heroes you play and the items in your saved builds.
+8. **Backup.** Settings can save your settings, builds and kept matches to one file, and restore them on another computer.
+9. **Sharing cached matches.** With Share my finished matches on, the matches you opened in the game are offered to deadlock-api, so anyone can read them.
+
 ## [0.6.1] – 2026-11-02
 
 ### Fixed
@@ -645,6 +661,7 @@ This release adds the **Build generator**, with builds read from top-ranked matc
   - trends across your last matches.
 - Windows installer with a desktop shortcut and automatic updates from GitHub releases.
 
+[0.7.0]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.6.1...v0.7.0
 [0.6.1]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.5.3...v0.6.0
 [0.5.3]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.5.2...v0.5.3
