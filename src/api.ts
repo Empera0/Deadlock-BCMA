@@ -698,6 +698,7 @@ export const api = {
   patchNotes: () => call<PatchNotes | null>("patch_notes"),
   myHeroes: (accountId: string, badge: number, maxBadge: number | null) => call<MyHeroes>("my_heroes", { accountId, badge, maxBadge }),
   laneNote: (heroId: number, lane: number[], badge: number, maxBadge: number | null) => call<LaneEnemy[]>("lane_note", { heroId, lane, badge, maxBadge }),
+  playedHeroes: (accountId: string) => call<string[]>("played_heroes", { accountId }),
   heroPage: (heroId: number, badge: number, maxBadge: number | null) => call<HeroPageReport>("hero_page", { heroId, badge, maxBadge }),
   itemTiers: (badge: number, maxBadge: number | null, heroId: number | null) => call<ItemTier[]>("item_tiers", { badge, maxBadge, heroId }),
   heroTiers: (badge: number, maxBadge: number | null) => call<HeroTier[]>("hero_tiers", { badge, maxBadge }),

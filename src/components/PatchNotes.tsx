@@ -1,8 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { api, fmt, PatchChange, PatchNotes as Notes, PatchValue } from "../api";
 import { date, percent, t, tn } from "../i18n";
+import { SETTINGS, useSetting } from "../settings";
 
 const SEEN_KEY = "patch-seen";
+/** Changes listed in the alert; the rest are a click away. */
+const ALERT_ROWS = 5;
 
 /** A value's change: old → new, and by how much. */
 function Change({ v }: { v: PatchValue }) {
@@ -57,8 +60,11 @@ export default function PatchNotes({ dataAt }: { dataAt: number }) {
       return "";
     }
   });
-  // The heroes and items of the player's saved builds, to mark what touches them.
+  // The heroes and items of the player's saved builds and the heroes the player plays, to mark what touches them.
   const [used, setUsed] = useState<Set<string>>(new Set());
+  const [played, setPlayed] = useState<Set<string>>(new Set());
+  const [account] = useSetting(SETTINGS.account);
+  const [dismissed, setDismissed] = useState(false);
 
   // Read again whenever the game data changes: a refresh may have brought a patch.
   useEffect(() => {
@@ -68,13 +74,19 @@ export default function PatchNotes({ dataAt }: { dataAt: number }) {
       .catch(() => {});
   }, [dataAt]);
   useEffect(() => {
-    if (!open) return;
+    if (!account.trim()) return;
+    api
+      .playedHeroes(account.trim())
+      .then((h) => setPlayed(new Set(h)))
+      .catch(() => {});
+  }, [account, dataAt]);
+  useEffect(() => {
     api
       .listBuilds()
       .then((names) => Promise.all(names.map((n) => api.loadBuild(n).catch(() => null))))
       .then((builds) => setUsed(new Set(builds.flatMap((b) => (b ? [b.hero, ...b.purchases] : [])))))
       .catch(() => {});
-  }, [open]);
+  }, [open, dataAt]);
 
   const groups = useMemo(() => {
     const changes = notes?.changes ?? [];
@@ -95,11 +107,45 @@ export default function PatchNotes({ dataAt }: { dataAt: number }) {
       /* Shown as new again next time. */
     }
   };
-  const touches = (c: PatchChange) => used.has(c.class_name) || (c.hero !== null && used.has(c.hero));
+  const touches = (c: PatchChange) => used.has(c.class_name) || (c.hero !== null && used.has(c.hero)) || played.has(c.class_name) || (c.hero !== null && played.has(c.hero));
   const mine = notes.changes.filter(touches).length;
+  const yours = fresh && !dismissed ? notes.changes.filter(touches) : [];
+  const markSeen = () => {
+    setSeen(String(notes.to_fetched));
+    try {
+      localStorage.setItem(SEEN_KEY, String(notes.to_fetched));
+    } catch {
+      /* Shown as new again next time. */
+    }
+  };
 
   return (
     <>
+      {yours.length > 0 && (
+        <div className="patch-alert" role="status">
+          <div className="patch-alert-head">
+            <b>{tn(yours.length, "The patch changed {n} thing you use", "The patch changed {n} things you use")}</b>
+            <button className="ghost small" onClick={() => (setDismissed(true), markSeen())} title={t("Close")}>
+              ×
+            </button>
+          </div>
+          {yours.slice(0, ALERT_ROWS).map((c) => (
+            <div key={c.kind + c.class_name} className="patch-alert-row">
+              <img src={c.icon} alt="" />
+              <span>
+                <b>{c.owner ? `${c.owner}: ${c.name}` : c.name}</b>
+                {c.values[0] && (
+                  <small>
+                    {c.values[0].label}: <Change v={c.values[0]} />
+                  </small>
+                )}
+                {c.status !== "changed" && <small>{c.status === "added" ? t("new") : t("removed")}</small>}
+              </span>
+            </div>
+          ))}
+          <button onClick={() => (setDismissed(true), show())}>{t("See every change")}</button>
+        </div>
+      )}
       <button className={"ghost" + (fresh ? " patch-fresh" : "")} onClick={show} title={t("What the last game patch changed in heroes, abilities and items")}>
         {t("Patch changes")}
         {fresh && <span className="patch-dot" />}

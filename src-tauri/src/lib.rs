@@ -581,6 +581,27 @@ async fn lane_note(app: AppHandle, state: State<'_, AppState>, hero_id: u64, lan
     .map_err(|e| e.to_string())?
 }
 
+/// The heroes the player plays: the most played of those played in the last 60 days, by class name.
+#[tauri::command]
+async fn played_heroes(state: State<'_, AppState>, account_id: String) -> Result<Vec<String>, String> {
+    const RECENT_S: u64 = 60 * 86_400;
+    const AT_LEAST: u64 = 3;
+    const MOST: usize = 8;
+    let id = steam_account(&account_id)?;
+    let data = state.data.read().unwrap().clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let rows: Vec<serde_json::Value> = parse(&get(&format!("{MATCH_API}/players/hero-stats?account_ids={id}"), "No matches found for this account.")?)?;
+        let now = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0);
+        let num = |r: &serde_json::Value, k: &str| r.get(k).and_then(serde_json::Value::as_u64).unwrap_or(0);
+        let mut played: Vec<&serde_json::Value> =
+            rows.iter().filter(|r| num(r, "matches_played") >= AT_LEAST && now.saturating_sub(num(r, "last_played")) <= RECENT_S).collect();
+        played.sort_by_key(|r| std::cmp::Reverse(num(r, "matches_played")));
+        Ok(played.iter().take(MOST).filter_map(|r| data.heroes.iter().find(|h| h.id == num(r, "hero_id")).map(|h| h.class_name.clone())).collect())
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
 /// Matches this long are long ones, and this short short ones, when telling which heroes grow strong late.
 const LONG_MATCH_S: u32 = 35 * 60;
 const SHORT_MATCH_S: u32 = 25 * 60;
@@ -1423,6 +1444,7 @@ pub fn run() {
             hero_page,
             my_heroes,
             lane_note,
+            played_heroes,
             item_tiers,
             patch_notes,
             simulate_combo,

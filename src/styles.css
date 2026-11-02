@@ -6991,3 +6991,45 @@ option:checked {
   height: 20px;
   border-radius: 50%;
 }
+
+/* After a patch: what it changed of the player's heroes and builds. */
+.patch-alert {
+  position: fixed;
+  top: 62px;
+  right: 18px;
+  z-index: 25;
+  width: 380px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: var(--panel);
+  border: 1px solid var(--line-strong);
+  border-left: 4px solid var(--accent);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow);
+  animation: rise-in 0.25s var(--ease);
+}
+.patch-alert-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.patch-alert-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.patch-alert-row img {
+  width: 30px;
+  height: 30px;
+  border-radius: 6px;
+}
+.patch-alert-row span {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.patch-alert-row small {
+  color: var(--muted);
+}

@@ -1343,4 +1343,7 @@ export const TR: Record<string, string> = {
   "Build picture saved": "Build resmi kaydedildi",
   "Copy the build as a picture: the hero, its items in order, its numbers and its code": "Build'i resim olarak kopyala: hero, sırayla eşyalar, değerler ve build kodu",
   Picture: "Resim",
+  "The patch changed {n} thing you use": "Yama kullandığın {n} şeyi değiştirdi",
+  "The patch changed {n} things you use": "Yama kullandığın {n} şeyi değiştirdi",
+  "See every change": "Bütün değişiklikleri gör",
 };
