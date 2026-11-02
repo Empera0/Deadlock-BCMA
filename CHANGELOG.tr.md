@@ -2,6 +2,12 @@
 
 Uygulamanın Türkçe yenilik notları. Her sürümde neyin değiştiği, kısa ve sade.
 
+## [0.6.1] – 2026-11-02
+
+### Düzeltilenler
+
+1. Deadlock birden fazla Steam kütüphanesinde kuruluysa canlı maç eski bir konsol kaydını okuyordu; artık en son yazılan kayıt okunuyor.
+
 ## [0.6.0] – 2026-11-02
 
 Maçlar artık kendi bilgisayarından açılıyor, istatistik servisi onları tanımasa bile.
