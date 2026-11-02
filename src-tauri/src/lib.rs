@@ -978,6 +978,57 @@ async fn share_match(app: AppHandle, match_id: u64) -> Result<Shared, String> {
     Ok(shared)
 }
 
+/// Matches sent to the statistics service per request, and the name the shares are sent under.
+const SALTS_PER_POST: usize = 100;
+const SALTS_USERNAME: &str = "deadlock-bcma";
+
+/// Sends the statistics service where Valve serves the matches in Steam's cache (server, metadata and replay salts),
+/// so that anyone can read them; each match once. Only these numbers are sent. Returns how many were sent.
+#[tauri::command]
+async fn share_cached_salts(app: AppHandle, state: State<'_, AppState>) -> Result<usize, String> {
+    let sent_path = data_dir(&app)?.join("shared-salts.json");
+    let scanned = tauri::async_runtime::spawn_blocking(|| cache_folder().ok().map(|f| scan_cache(&f).2)).await.map_err(|e| e.to_string())?;
+    let Some(cached) = scanned else { return Ok(0) };
+    *state.cache.lock().unwrap() = Some(cached.clone());
+    let mut sent: std::collections::BTreeSet<u64> =
+        fs::read_to_string(&sent_path).ok().and_then(|s| serde_json::from_str(&s).ok()).unwrap_or_default();
+    let rows: Vec<serde_json::Value> = cached
+        .iter()
+        .filter(|(id, c)| !sent.contains(id) && c.cluster > 0 && c.meta_salt.is_some())
+        .map(|(id, c)| {
+            serde_json::json!({
+                "match_id": id,
+                "cluster_id": c.cluster,
+                "metadata_salt": c.meta_salt,
+                "replay_salt": c.replay_salt,
+                "username": SALTS_USERNAME,
+            })
+        })
+        .collect();
+    let mut count = 0;
+    for chunk in rows.chunks(SALTS_PER_POST) {
+        let body = serde_json::Value::Array(chunk.to_vec());
+        let posted = tauri::async_runtime::spawn_blocking(move || {
+            ureq::post(&format!("{MATCH_API}/matches/salts")).timeout(Duration::from_secs(60)).set("Content-Type", "application/json").send_string(&body.to_string()).map(|_| ()).map_err(|e| e.to_string())
+        })
+        .await
+        .map_err(|e| e.to_string())?;
+        if posted.is_err() {
+            break;
+        }
+        for row in chunk {
+            if let Some(id) = row["match_id"].as_u64() {
+                sent.insert(id);
+            }
+        }
+        count += chunk.len();
+    }
+    if count > 0 {
+        let _ = fs::write(&sent_path, serde_json::to_string(&sent).unwrap_or_default());
+    }
+    Ok(count)
+}
+
 /// Every player of a match being played, with team, hero and lane, from the statistics service's live query: it
 /// spectates the match and reads its broadcast, which takes about a minute the first time.
 #[tauri::command]
@@ -1299,6 +1350,7 @@ pub fn run() {
             ability_order,
             match_history,
             find_local_matches,
+            share_cached_salts,
             analyze_history
         ])
         .run(tauri::generate_context!())

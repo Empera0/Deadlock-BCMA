@@ -16,6 +16,8 @@ interface Props {
   onOpenBuild: (build: Build, target?: Build["target"]) => void;
   /** Opens a player of the match in the master builder, teams and purchases included. */
   onOpenMaster: (preset: MatchPreset) => void;
+  /** A match to open, handed over from elsewhere; `key` changes with each hand-over. */
+  open?: { id: number; key: number } | null;
 }
 
 /** A player of the match as the master builder takes it: both teams, the lane, and every purchase with the
@@ -1605,7 +1607,7 @@ function Report({
   );
 }
 
-export default function MatchView({ onOpenBuild, onOpenMaster }: Props) {
+export default function MatchView({ onOpenBuild, onOpenMaster, open }: Props) {
   const [matchId, setMatchId] = useState("");
   // Starts on the player's own account from Settings; another player's typed here is looked at without
   // changing it.
@@ -1644,6 +1646,11 @@ export default function MatchView({ onOpenBuild, onOpenMaster }: Props) {
       setBusy(false);
     }
   };
+
+  // A match handed over from elsewhere (the card after a match): opened once per hand-over.
+  useEffect(() => {
+    if (open) loadMatch(String(open.id));
+  }, [open?.key]);
 
   const loadHistory = async () => {
     const id = accountId.trim();

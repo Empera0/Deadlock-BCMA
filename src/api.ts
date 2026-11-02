@@ -677,6 +677,7 @@ export const api = {
   fetchMatch: (matchId: number) => call<MatchReport>("fetch_match", { matchId }),
   deathAnalysis: (matchId: number, slot: number) => call<DeathAnalysis>("death_analysis", { matchId, slot }),
   matchHistory: (accountId: string) => call<HistoryEntry[]>("match_history", { accountId }),
+  shareCachedSalts: () => call<number>("share_cached_salts"),
   findLocalMatches: () => call<LocalScan>("find_local_matches"),
   analyzeHistory: (accountId: string, count: number) => call<{ rows: MatchSummary[]; skipped: number }>("analyze_history", { accountId, count }),
 };
@@ -865,6 +866,8 @@ export interface MatchReport {
 }
 
 export interface MatchSummary {
+  /** The minute the first item of 3,200 souls or more was bought. */
+  first_big_item_minute: number | null;
   match_id: number;
   start_time: number;
   duration_s: number;

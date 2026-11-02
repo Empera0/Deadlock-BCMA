@@ -3287,13 +3287,19 @@ pub struct MatchSummary {
     /// Roams in which an enemy died in the lane visited.
     pub roams_paid: u32,
     pub wins_farmed: u32,
+    /// The minute the first item of 3,200 souls or more was bought; `None` without one.
+    pub first_big_item_minute: Option<f64>,
 }
+
+/// An item of this cost or more is a big one: the third tier and up.
+const BIG_ITEM_COST: u32 = 3_200;
 
 /// The row for the player with this account in a match, if they played in it.
 pub fn summarize(report: &MatchReport, account_id: u64) -> Option<MatchSummary> {
     let p = report.players.iter().find(|p| p.account_id == account_id)?;
     let place = report.ranking.iter().position(|r| r.slot == p.slot)?;
     let rank = &report.ranking[place];
+    let first_big_item_minute = p.purchases.iter().filter(|b| b.cost >= BIG_ITEM_COST).map(|b| b.time).min().map(|t| t as f64 / 60.0);
     Some(MatchSummary {
         match_id: report.match_id,
         start_time: report.start_time,
@@ -3340,6 +3346,7 @@ pub fn summarize(report: &MatchReport, account_id: u64) -> Option<MatchSummary> 
         roams: p.roams.len() as u32,
         roams_paid: p.roams.iter().filter(|r| r.enemy_deaths > 0).count() as u32,
         wins_farmed: p.wins_farmed,
+        first_big_item_minute,
     })
 }
 

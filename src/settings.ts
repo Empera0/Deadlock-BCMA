@@ -18,6 +18,8 @@ export const SETTINGS = {
   /** Share finished matches with deadlock-api. */
   shareMatches: "share-matches",
   /** The look: a theme of THEMES, and compact or comfortable spacing. */
+  /** Show how the last match went once it ends. */
+  postMatch: "post-match",
   theme: "theme",
   density: "density",
 } as const;
@@ -32,6 +34,7 @@ export const DEFAULTS: Record<string, string> = {
   [SETTINGS.masterDamage]: "auto",
   [SETTINGS.watchLive]: "0",
   [SETTINGS.shareMatches]: "1",
+  [SETTINGS.postMatch]: "1",
   [SETTINGS.theme]: "obsidian",
   [SETTINGS.density]: "compact",
 };

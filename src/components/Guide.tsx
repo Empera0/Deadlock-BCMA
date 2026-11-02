@@ -163,7 +163,7 @@ const TOPICS_EN: Topic[] = [
       },
       {
         title: "Share my finished matches",
-        body: "In Settings. When a match ends, the app asks deadlock-api for it, which keeps the match and, when Valve kept one, its replay, so it can be studied. Only the match number is sent; untick it to stop.",
+        body: "In Settings. When a match ends, the app asks deadlock-api for it, which keeps the match and, when Valve kept one, its replay, so it can be studied. Matches you opened in the game are offered too, with where Valve serves them. Only these numbers are sent; untick it to stop.",
       },
       { title: "Updates", body: "The app updates itself and says what is new. The round arrow at the top right (Update data) fetches the latest heroes and items after a patch." },
     ],
@@ -321,7 +321,7 @@ const TOPICS_TR: Topic[] = [
       },
       {
         title: "Biten maçlarımı paylaş",
-        body: "Ayarlar'da. Bir maç bitince uygulama bunu deadlock-api'ye bildirir. Servis maçı ve, Valve sakladıysa, tekrarını saklar, böylece incelenebilir. Sadece maç numarası gönderilir. Durdurmak için işareti kaldır.",
+        body: "Ayarlar'da. Bir maç bitince uygulama bunu deadlock-api'ye bildirir. Servis maçı ve, Valve sakladıysa, tekrarını saklar, böylece incelenebilir. Oyunda açtığın maçlar da, Valve'ın onları sunduğu yerle birlikte bildirilir. Sadece bu numaralar gönderilir; durdurmak için işareti kaldır.",
       },
       { title: "Güncellemeler", body: "Uygulama kendini günceller ve neyin yeni olduğunu söyler. Sağ üstteki yuvarlak ok (Veriyi güncelle), bir yamadan sonra en yeni kahramanları ve eşyaları indirir." },
     ],

@@ -121,8 +121,8 @@ export const TR: Record<string, string> = {
   "Watch for my match": "Maçımı takip et",
   "While the Build generator is open, build for your match as soon as it starts. Needs -condebug.":
     "Build önerici açıkken maçın başlar başlamaz senin maçına göre build hazırlar. -condebug gerekir.",
-  "When a match ends, ask deadlock-api for it, which keeps the match and its replay for anyone to study. Only the match number is sent. Needs -condebug.":
-    "Bir maç bitince deadlock-api'ye bildirir. Servis maçı ve tekrarını herkesin inceleyebileceği şekilde saklar. Sadece maç numarası gönderilir. -condebug gerekir.",
+  "When a match ends, ask deadlock-api for it, which keeps the match and its replay for anyone to study. Matches you opened in the game are offered too, with where Valve serves them (its server and file keys). Only these numbers are sent. Needs -condebug for matches as they end.":
+    "Bir maç bitince deadlock-api'ye bildirir. Servis maçı ve tekrarını herkesin inceleyebileceği şekilde saklar. Oyunda açtığın maçlar da, Valve'ın onları sunduğu yerle (sunucusu ve dosya anahtarları) birlikte bildirilir. Sadece bu numaralar gönderilir. Biten maçlar için -condebug gerekir.",
   "Game data": "Oyun verisi",
   "Game version {v}, read on {date}. After a patch, update it to get the new heroes and items.":
     "Oyun sürümü {v}, {date} tarihinde okundu. Bir yamadan sonra güncelle, yeni kahramanlar ve eşyalar gelsin.",
@@ -1304,4 +1304,18 @@ export const TR: Record<string, string> = {
   "Items are compared with the others of the same cost: an expensive item is bought by players already ahead, so its raw win rate is high whatever it does. S and A win clearly more than their cost's average, C and D clearly less.": "Eşyalar aynı fiyattaki diğerleriyle karşılaştırılır: pahalı bir eşyayı zaten önde olan oyuncular alır, bu yüzden ham kazanma oranı ne işe yararsa yarasın yüksek çıkar. S ve A kendi fiyatının ortalamasından belirgin şekilde çok, C ve D belirgin şekilde az kazanır.",
   "To see a match here, open its scoreboard once in the game. Matches with their details here open without the statistics service.": "Bir maçı burada görmek için oyunda skor tablosunu bir kez açman yeterli. Ayrıntıları bu bilgisayarda olan maçlar istatistik servisine sormadan açılır.",
   "details on this PC": "ayrıntılar bu bilgisayarda",
+  oldest: "en eski",
+  newest: "en yeni",
+  "Each dot is a match, oldest on the left: green won, red lost. Above each chart, the first half of the matches against the second.": "Her nokta bir maç, en eskisi solda: yeşil kazanılan, kırmızı kaybedilen. Her grafiğin üstünde maçların ilk yarısı ile ikinci yarısının ortalaması.",
+  "Win rate (last 5)": "Kazanma (son 5)",
+  "Matches won out of the five up to each one": "Her maça kadarki son beş maçta kazanılanlar",
+  "The match score, the same as in the player ranking": "Maç skoru, oyuncu sıralamasındakiyle aynı",
+  "Deaths per match": "Maç başına ölüm",
+  "First big item": "İlk büyük eşya",
+  "The minute the first item of 3,200 souls or more was bought": "3.200 ruh ve üstündeki ilk eşyanın alındığı dakika",
+  Defeat: "Yenilgi",
+  "{n}. of the twelve players": "On iki oyuncu içinde {n}.",
+  "Open the analysis": "Analizi aç",
+  "Show how my match went": "Maçımın nasıl geçtiğini göster",
+  "When a match ends, show a short card with the result, K/D/A and place, and a button to its full analysis. Needs -condebug.": "Bir maç bitince sonucu, Ö/Ö/A'yı ve sıralamanı gösteren kısa bir kart ve tam analizi açan bir düğme gösterir. -condebug gerekir.",
 };

@@ -14,6 +14,7 @@ import Guide, { GuideButton, useFirstStart, useGuide } from "./components/Guide"
 import SettingsView from "./components/SettingsView";
 import TiersView from "./components/TiersView";
 import CommandPalette, { heroCommands } from "./components/CommandPalette";
+import PostMatch from "./components/PostMatch";
 import PatchNotes from "./components/PatchNotes";
 import ShareMatches from "./components/ShareMatches";
 import UpdateBanner from "./components/UpdateBanner";
@@ -90,6 +91,8 @@ export default function App() {
   // Set to open the Build generator on its Popular tab, from the hero list.
   const [popularAt, setPopularAt] = useState(0);
   const [searching, setSearching] = useState(false);
+  // A match to open in Match analysis, from the card shown after a match.
+  const [openMatch, setOpenMatch] = useState<{ id: number; key: number } | null>(null);
   // Ctrl+K (or Cmd+K) opens the search from anywhere.
   useEffect(() => {
     const on = (e: KeyboardEvent) => {
@@ -328,11 +331,18 @@ export default function App() {
         </div>
         <div className="data-info">{status && <small className="status">{status}</small>}</div>
       </header>
+      <PostMatch
+        onOpen={(id) => {
+          setOpenMatch({ id, key: Date.now() });
+          setMode("match");
+        }}
+      />
       <Guide open={guide.open} topic={guide.topic} onClose={guide.close} onTopic={guide.setTopic} />
 
       {/* Kept mounted while the builder is shown so a loaded match stays loaded. */}
       <div style={{ display: mode === "match" ? "contents" : "none" }}>
         <MatchView
+          open={openMatch}
           onOpenBuild={(b, target) => {
             // The builder keeps its own target unless the build is opened against an enemy of the match.
             setBuild({ ...emptyBuild(b.hero), ...b, target: target ?? build.target });

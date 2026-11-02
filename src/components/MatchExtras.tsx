@@ -212,6 +212,55 @@ export function MatchMap({ report }: { report: MatchReport }) {
 const average = (values: number[]) => (values.length ? values.reduce((a, b) => a + b, 0) / values.length : 0);
 
 /** A player's recent matches side by side: averages, where the points go missing, and each match. */
+/** One value per match, oldest first: a line with a dot per match, green for a win and red for a loss. */
+function TrendChart({ rows, title, help, value, format, better }: { rows: MatchSummary[]; title: string; help: string; value: (r: MatchSummary) => number | null; format: (v: number) => string; better: "higher" | "lower" }) {
+  const W = 320;
+  const H = 110;
+  const PAD = { left: 30, right: 8, top: 8, bottom: 16 };
+  const points = rows.map((r, i) => ({ r, i, v: value(r) })).filter((p): p is { r: MatchSummary; i: number; v: number } => p.v !== null);
+  if (points.length < 2) return null;
+  const vs = points.map((p) => p.v);
+  const lo = Math.min(...vs);
+  const hi = Math.max(...vs);
+  const span = hi - lo || 1;
+  const x = (i: number) => PAD.left + (rows.length > 1 ? (i / (rows.length - 1)) * (W - PAD.left - PAD.right) : 0);
+  const y = (v: number) => PAD.top + (1 - (v - lo) / span) * (H - PAD.top - PAD.bottom);
+  // The first half against the second: is it getting better?
+  const half = Math.floor(points.length / 2);
+  const before = average(points.slice(0, half).map((p) => p.v));
+  const after = average(points.slice(points.length - half).map((p) => p.v));
+  const improving = better === "higher" ? after > before : after < before;
+  const flat = Math.abs(after - before) < span * 0.1;
+  return (
+    <div className="trend-chart" title={help}>
+      <div className="trend-chart-head">
+        <span>{title}</span>
+        <b className={flat ? "muted" : improving ? "good" : "bad"}>
+          {format(before)} → {format(after)}
+        </b>
+      </div>
+      <svg viewBox={`0 0 ${W} ${H}`}>
+        <text x={2} y={PAD.top + 8} className="axis">
+          {format(hi)}
+        </text>
+        <text x={2} y={H - PAD.bottom} className="axis">
+          {format(lo)}
+        </text>
+        <polyline points={points.map((p) => `${x(p.i)},${y(p.v)}`).join(" ")} />
+        {points.map((p) => (
+          <circle key={p.r.match_id} cx={x(p.i)} cy={y(p.v)} r={3.2} className={p.r.won ? "won" : "lost"}>
+            <title>{`${p.r.hero_name} · ${format(p.v)} · ${t("Match {id}", { id: p.r.match_id })}`}</title>
+          </circle>
+        ))}
+      </svg>
+      <div className="trend-chart-foot muted">
+        <small>{t("oldest")}</small>
+        <small>{t("newest")}</small>
+      </div>
+    </div>
+  );
+}
+
 export function MatchTrend({ rows, skipped, onOpen }: { rows: MatchSummary[]; skipped: number; onOpen: (matchId: number) => void }) {
   if (rows.length === 0) {
     return (
@@ -262,6 +311,13 @@ export function MatchTrend({ rows, skipped, onOpen }: { rows: MatchSummary[]; sk
     .map((h) => ({ label: h.label, matches: h.games.length, times: h.games.reduce((sum, r) => sum + h.total(r), 0) }))
     .filter((h) => h.matches > 0)
     .sort((a, b) => b.matches - a.matches || b.times - a.times);
+  // Oldest first for the charts; the rows come newest first.
+  const timeline = [...rows].sort((a, b) => a.start_time - b.start_time);
+  const rolling = (r: MatchSummary) => {
+    const at = timeline.indexOf(r);
+    const last = timeline.slice(Math.max(0, at - 4), at + 1);
+    return (last.filter((m) => m.won).length / last.length) * 100;
+  };
   // Titles by how often they were earned.
   const tally = (pick: (r: MatchSummary) => string[]) =>
     [...new Set(rows.flatMap(pick))]
@@ -278,6 +334,23 @@ export function MatchTrend({ rows, skipped, onOpen }: { rows: MatchSummary[]; sk
       <div className="match-title">
         {t("{n} recent matches", { n: rows.length })}
         {skipped > 0 ? ` ${t("({n} more were not available from the match service)", { n: skipped })}` : ""}
+      </div>
+      <div className="group">
+        <h3>{t("Over time")}</h3>
+        <div className="muted">{t("Each dot is a match, oldest on the left: green won, red lost. Above each chart, the first half of the matches against the second.")}</div>
+        <div className="trend-charts">
+          <TrendChart rows={timeline} title={t("Win rate (last 5)")} help={t("Matches won out of the five up to each one")} value={rolling} format={(v) => `${fmt(v, 0)}%`} better="higher" />
+          <TrendChart rows={timeline} title={t("Score")} help={t("The match score, the same as in the player ranking")} value={(r) => r.score} format={(v) => fmt(v, 1)} better="higher" />
+          <TrendChart rows={timeline} title={t("Deaths")} help={t("Deaths per match")} value={(r) => r.deaths} format={(v) => fmt(v, 1)} better="lower" />
+          <TrendChart
+            rows={timeline}
+            title={t("First big item")}
+            help={t("The minute the first item of 3,200 souls or more was bought")}
+            value={(r) => r.first_big_item_minute}
+            format={(v) => t("{n} min", { n: fmt(v, 1) })}
+            better="lower"
+          />
+        </div>
       </div>
       <div className="tiles">
         <div>

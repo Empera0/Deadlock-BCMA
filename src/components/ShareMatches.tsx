@@ -60,11 +60,18 @@ export default function ShareMatches({ quiet = false }: { quiet?: boolean }) {
   useEffect(() => {
     if (!on) return;
     let busy = false;
+    // The matches in Steam's cache are offered once at start and again whenever a match has ended.
+    let ended = -1;
     const tick = async () => {
       if (busy) return;
       busy = true;
       try {
         const c = await api.consoleMatch();
+        const count = c.finished?.length ?? 0;
+        if (count !== ended) {
+          ended = count;
+          api.shareCachedSalts().catch(() => {});
+        }
         if (!c.found) return;
         const state = load();
         const now = Date.now();

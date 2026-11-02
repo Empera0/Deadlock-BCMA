@@ -16,6 +16,7 @@ export default function SettingsView({ version, fetchedAt, onRefresh, onGuide }:
   const [damage, setDamage] = useSetting(SETTINGS.masterDamage);
   const [watch, setWatch] = useSetting(SETTINGS.watchLive);
   const [share, setShare] = useSetting(SETTINGS.shareMatches);
+  const [postMatch, setPostMatch] = useSetting(SETTINGS.postMatch);
   const [theme, setTheme] = useSetting(SETTINGS.theme);
   const [density, setDensity] = useSetting(SETTINGS.density);
   const [log, setLog] = useState<ConsoleState | null>(null);
@@ -181,11 +182,18 @@ export default function SettingsView({ version, fetchedAt, onRefresh, onGuide }:
           </span>
         </label>
         <label className="toggle-row">
+          <input type="checkbox" checked={postMatch !== "0"} onChange={(e) => setPostMatch(e.target.checked ? "1" : "0")} />
+          <span>
+            <b>{t("Show how my match went")}</b>
+            <small className="muted">{t("When a match ends, show a short card with the result, K/D/A and place, and a button to its full analysis. Needs -condebug.")}</small>
+          </span>
+        </label>
+        <label className="toggle-row">
           <input type="checkbox" checked={share !== "0"} onChange={(e) => setShare(e.target.checked ? "1" : "0")} />
           <span>
             <b>{t("Share my finished matches")}</b>
             <small className="muted">
-              {t("When a match ends, ask deadlock-api for it, which keeps the match and its replay for anyone to study. Only the match number is sent. Needs -condebug.")}
+              {t("When a match ends, ask deadlock-api for it, which keeps the match and its replay for anyone to study. Matches you opened in the game are offered too, with where Valve serves them (its server and file keys). Only these numbers are sent. Needs -condebug for matches as they end.")}
             </small>
           </span>
         </label>
