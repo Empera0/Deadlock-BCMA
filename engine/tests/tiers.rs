@@ -42,3 +42,39 @@ fn items_are_ranked_against_their_own_cost() {
     assert!((t[0].pick_rate - 25.0).abs() < 1e-9);
     assert!((t[0].buy_minute - 5.0).abs() < 1e-9);
 }
+
+#[test]
+fn a_players_heroes_stand_beside_the_average_player() {
+    use engine::tiers::{mastery, MyHeroRow};
+    let d: GameData = serde_json::from_str(include_str!("../../src-tauri/data/snapshot.json")).unwrap();
+    let (a, b) = (d.heroes[0].id, d.heroes[1].id);
+    // Ten matches of 30 minutes: 600 souls a minute is 18,000 a match.
+    let mine = vec![
+        MyHeroRow { hero_id: a, matches_played: 10, time_played: 18_000, wins: 6, kills: 50, deaths: 80, assists: 90, total_player_damage: 200_000, networth_per_min: 600.0, last_hits_per_min: 5.0, accuracy: 0.5 },
+        MyHeroRow { hero_id: b, matches_played: 2, ..Default::default() },
+    ];
+    let average = vec![HeroRow {
+        hero_id: a,
+        matches: 1_000,
+        wins: 500,
+        total_kills: 6_000,
+        total_deaths: 6_000,
+        total_assists: 9_000,
+        total_net_worth: 20_000_000,
+        total_player_damage: 25_000_000,
+        total_last_hits: 150_000,
+        total_shots_hit: 40,
+        total_shots_missed: 60,
+        ..Default::default()
+    }];
+    let m = mastery(&d, &mine, &average);
+    // The hero with no average at these ranks is left out.
+    assert_eq!(m.len(), 1);
+    let x = &m[0];
+    assert_eq!((x.win_rate.mine, x.win_rate.average), (60.0, 50.0));
+    assert_eq!((x.deaths.mine, x.deaths.average), (8.0, 6.0));
+    assert!((x.souls.mine - 18_000.0).abs() < 1e-6 && (x.souls.average - 20_000.0).abs() < 1e-6);
+    assert!((x.last_hits.mine - 150.0).abs() < 1e-6);
+    let acc = x.accuracy.unwrap();
+    assert_eq!((acc.mine, acc.average), (50.0, 40.0));
+}

@@ -1318,4 +1318,11 @@ export const TR: Record<string, string> = {
   "Open the analysis": "Analizi aç",
   "Show how my match went": "Maçımın nasıl geçtiğini göster",
   "When a match ends, show a short card with the result, K/D/A and place, and a button to its full analysis. Needs -condebug.": "Bir maç bitince sonucu, Ö/Ö/A'yı ve sıralamanı gösteren kısa bir kart ve tam analizi açan bir düğme gösterir. -condebug gerekir.",
+  "Average: {n}": "Ortalama: {n}",
+  "Set your Steam account ID in Settings to see your heroes here.": "Herolarını burada görmek için Ayarlar'a Steam hesap numaranı gir.",
+  "Your rank: {rank}. Each hero beside the average {tier} player on it, over the last 30 days; your numbers are from all your matches on it.": "Rütben: {rank}. Her hero, o heroyu oynayan ortalama {tier} oyuncusuyla yan yana (son 30 gün); senin değerlerin o herodaki bütün maçlarından.",
+  "No rank yet: each hero beside the average player of the ranks chosen above ({tier}), over the last 30 days; your numbers are from all your matches on it.": "Henüz rütben yok: her hero, yukarıda seçilen rütbelerdeki ({tier}) ortalama oyuncuyla yan yana (son 30 gün); senin değerlerin o herodaki bütün maçlarından.",
+  "Green is better than the average, red worse; the small number is the difference per match.": "Yeşil ortalamadan iyi, kırmızı kötü; küçük sayı maç başına fark.",
+  "No matches found for this account.": "Bu hesap için maç bulunamadı.",
+  "My heroes": "Benim herolarım",
 };

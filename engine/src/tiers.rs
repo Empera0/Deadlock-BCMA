@@ -26,6 +26,10 @@ pub struct HeroRow {
     pub total_deaths: u64,
     pub total_assists: u64,
     pub total_net_worth: u64,
+    pub total_player_damage: u64,
+    pub total_last_hits: u64,
+    pub total_shots_hit: u64,
+    pub total_shots_missed: u64,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -64,6 +68,10 @@ pub fn tiers(data: &GameData, rows: &[HeroRow], bans: &[(u64, u64)]) -> Vec<Hero
         e.total_deaths += r.total_deaths;
         e.total_assists += r.total_assists;
         e.total_net_worth += r.total_net_worth;
+        e.total_player_damage += r.total_player_damage;
+        e.total_last_hits += r.total_last_hits;
+        e.total_shots_hit += r.total_shots_hit;
+        e.total_shots_missed += r.total_shots_missed;
     }
     let slots: u64 = by_hero.values().map(|r| r.matches).sum();
     let all_matches = slots as f64 / PLAYERS;
@@ -164,5 +172,101 @@ pub fn item_tiers(data: &GameData, rows: &[crate::popular::ItemStat], players: u
         })
         .collect();
     out.sort_by(|a, b| a.cost.cmp(&b.cost).then(b.ranked_rate.total_cmp(&a.ranked_rate)));
+    out
+}
+
+/// A row of the API's per-player hero statistics (`/v1/players/hero-stats`): one player's matches on one hero.
+#[derive(Debug, Clone, Default, Deserialize)]
+#[serde(default)]
+pub struct MyHeroRow {
+    pub hero_id: u64,
+    pub matches_played: u64,
+    /// Seconds.
+    pub time_played: u64,
+    pub wins: u64,
+    pub kills: u64,
+    pub deaths: u64,
+    pub assists: u64,
+    pub total_player_damage: u64,
+    pub networth_per_min: f64,
+    pub last_hits_per_min: f64,
+    /// Share of shots that hit, 0 to 1.
+    pub accuracy: f64,
+}
+
+/// The player's value and the average player's, per match.
+#[derive(Debug, Clone, Copy, Serialize)]
+pub struct Versus {
+    pub mine: f64,
+    pub average: f64,
+}
+
+/// How a player does on a hero against the average player of their rank on it.
+#[derive(Debug, Clone, Serialize)]
+pub struct Mastery {
+    pub hero_id: u64,
+    pub hero: String,
+    pub name: String,
+    pub icon: String,
+    pub matches: u64,
+    /// Percent.
+    pub win_rate: Versus,
+    pub kills: Versus,
+    pub deaths: Versus,
+    pub assists: Versus,
+    pub souls: Versus,
+    pub damage: Versus,
+    pub last_hits: Versus,
+    /// Percent of shots that hit; `None` when the average has no shots counted.
+    pub accuracy: Option<Versus>,
+}
+
+/// Every hero the player has matches on, the most played first, beside the average player of the given ranks
+/// (`average` is the API's hero statistics at those ranks).
+pub fn mastery(data: &GameData, mine: &[MyHeroRow], average: &[HeroRow]) -> Vec<Mastery> {
+    let mut avg: BTreeMap<u64, HeroRow> = BTreeMap::new();
+    for r in average {
+        let e = avg.entry(r.hero_id).or_default();
+        e.matches += r.matches;
+        e.wins += r.wins;
+        e.total_kills += r.total_kills;
+        e.total_deaths += r.total_deaths;
+        e.total_assists += r.total_assists;
+        e.total_net_worth += r.total_net_worth;
+        e.total_player_damage += r.total_player_damage;
+        e.total_last_hits += r.total_last_hits;
+        e.total_shots_hit += r.total_shots_hit;
+        e.total_shots_missed += r.total_shots_missed;
+    }
+    let mut out: Vec<Mastery> = mine
+        .iter()
+        .filter(|m| m.matches_played > 0)
+        .filter_map(|m| {
+            let h = data.heroes.iter().find(|h| h.id == m.hero_id)?;
+            let a = avg.get(&m.hero_id).filter(|a| a.matches > 0)?;
+            let n = m.matches_played as f64;
+            let an = a.matches as f64;
+            // Per-minute values back to per match, over the minutes actually played.
+            let minutes = m.time_played as f64 / 60.0;
+            let vs = |mine: f64, average: f64| Versus { mine, average };
+            let shots = a.total_shots_hit + a.total_shots_missed;
+            Some(Mastery {
+                hero_id: h.id,
+                hero: h.class_name.clone(),
+                name: h.name.clone(),
+                icon: h.icon.clone(),
+                matches: m.matches_played,
+                win_rate: vs(m.wins as f64 / n * 100.0, a.wins as f64 / an * 100.0),
+                kills: vs(m.kills as f64 / n, a.total_kills as f64 / an),
+                deaths: vs(m.deaths as f64 / n, a.total_deaths as f64 / an),
+                assists: vs(m.assists as f64 / n, a.total_assists as f64 / an),
+                souls: vs(m.networth_per_min * minutes / n, a.total_net_worth as f64 / an),
+                damage: vs(m.total_player_damage as f64 / n, a.total_player_damage as f64 / an),
+                last_hits: vs(m.last_hits_per_min * minutes / n, a.total_last_hits as f64 / an),
+                accuracy: (shots > 0).then(|| vs(m.accuracy * 100.0, a.total_shots_hit as f64 / shots as f64 * 100.0)),
+            })
+        })
+        .collect();
+    out.sort_by(|a, b| b.matches.cmp(&a.matches));
     out
 }

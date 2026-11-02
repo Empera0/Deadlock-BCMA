@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { api, fmt, Hero, HeroTier } from "../api";
 import HeroPage from "./HeroPage";
 import ItemTiers from "./ItemTiers";
+import MyHeroes from "./MyHeroes";
 import { percent, t } from "../i18n";
 import { SETTINGS, useSetting } from "../settings";
 import ErrorNote from "./ErrorNote";
@@ -24,7 +25,7 @@ const kda = (h: HeroTier) => (h.kills + h.assists) / Math.max(h.deaths, 1);
 
 /** Every hero at the chosen ranks: how often it wins, is picked and banned, and what its players average. */
 export default function TiersView({ heroes, onBuild }: { heroes: Hero[]; onBuild: (heroClass: string) => void }) {
-  const [view, setView] = useState<"heroes" | "items">("heroes");
+  const [view, setView] = useState<"heroes" | "items" | "mine">("heroes");
   const [open, setOpen] = useState<number | null>(null);
   const [itemHero, setItemHero] = useState<number | null>(null);
   const [badgeSetting] = useSetting(SETTINGS.draftBadge);
@@ -71,6 +72,9 @@ export default function TiersView({ heroes, onBuild }: { heroes: Hero[]; onBuild
         <button className={view === "items" ? "on" : ""} onClick={() => (setView("items"), setOpen(null))}>
           {t("Items")}
         </button>
+        <button className={view === "mine" && open === null ? "on" : ""} onClick={() => (setView("mine"), setOpen(null))}>
+          {t("My heroes")}
+        </button>
       </div>
       <RankRange inline />
     </div>
@@ -88,6 +92,13 @@ export default function TiersView({ heroes, onBuild }: { heroes: Hero[]; onBuild
           onBuild={() => onBuild(opened.class_name)}
           onItems={() => (setItemHero(opened.id), setView("items"), setOpen(null))}
         />
+      </div>
+    );
+  if (view === "mine")
+    return (
+      <div className="tiers-view">
+        {tabs}
+        <MyHeroes badge={badge} maxBadge={maxBadge} onOpen={setOpen} />
       </div>
     );
   if (view === "items")

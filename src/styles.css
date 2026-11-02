@@ -6914,3 +6914,13 @@ option:checked {
   align-items: center;
   gap: 6px;
 }
+.my-heroes td small {
+  display: block;
+  font-size: 10.5px;
+}
+.my-heroes td small.good {
+  color: var(--vitality);
+}
+.my-heroes td small.bad {
+  color: var(--danger);
+}

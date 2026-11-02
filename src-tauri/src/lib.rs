@@ -499,6 +499,34 @@ async fn item_tiers(app: AppHandle, state: State<'_, AppState>, badge: u32, max_
     .map_err(|e| e.to_string())?
 }
 
+#[derive(serde::Serialize)]
+struct MyHeroes {
+    /// The player's rank badge (0 when unranked), and the ranks the averages come from.
+    badge: u32,
+    min_badge: u32,
+    max_badge: Option<u32>,
+    heroes: Vec<engine::tiers::Mastery>,
+}
+
+/// The player's heroes beside the average player of their rank: the rank's own tier when the player has a rank,
+/// the ranks given otherwise.
+#[tauri::command]
+async fn my_heroes(app: AppHandle, state: State<'_, AppState>, account_id: String, badge: u32, max_badge: Option<u32>) -> Result<MyHeroes, String> {
+    let id = steam_account(&account_id)?;
+    let data = state.data.read().unwrap().clone();
+    let cache = Cache::new(&app, &data)?;
+    tauri::async_runtime::spawn_blocking(move || {
+        let rank: serde_json::Value = get(&format!("{MATCH_API}/players/{id}/rank"), "").ok().and_then(|s| serde_json::from_str(&s).ok()).unwrap_or_default();
+        let own = rank.get("badge").and_then(serde_json::Value::as_u64).unwrap_or(0) as u32;
+        let (min, max) = if own >= 10 { (own / 10 * 10 + 1, Some(own / 10 * 10 + 6)) } else { (badge, max_badge) };
+        let mine: Vec<engine::tiers::MyHeroRow> = parse(&get(&format!("{MATCH_API}/players/hero-stats?account_ids={id}"), "No matches found for this account.")?)?;
+        let average: Vec<engine::tiers::HeroRow> = parse(&analytics_over(&cache, "hero-stats", &with_max("", max), min, DRAFT_DAYS)?)?;
+        Ok(MyHeroes { badge: own, min_badge: min, max_badge: max, heroes: engine::tiers::mastery(&data, &mine, &average) })
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
 /// Matches this long are long ones, and this short short ones, when telling which heroes grow strong late.
 const LONG_MATCH_S: u32 = 35 * 60;
 const SHORT_MATCH_S: u32 = 25 * 60;
@@ -1330,6 +1358,7 @@ pub fn run() {
             draft_picks,
             hero_tiers,
             hero_page,
+            my_heroes,
             item_tiers,
             patch_notes,
             simulate_combo,

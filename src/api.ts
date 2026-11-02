@@ -558,6 +558,34 @@ export interface ItemTier {
   buy_minute: number;
 }
 
+export interface Versus {
+  mine: number;
+  average: number;
+}
+
+export interface Mastery {
+  hero_id: number;
+  hero: string;
+  name: string;
+  icon: string;
+  matches: number;
+  win_rate: Versus;
+  kills: Versus;
+  deaths: Versus;
+  assists: Versus;
+  souls: Versus;
+  damage: Versus;
+  last_hits: Versus;
+  accuracy: Versus | null;
+}
+
+export interface MyHeroes {
+  badge: number;
+  min_badge: number;
+  max_badge: number | null;
+  heroes: Mastery[];
+}
+
 export interface AdviceMove {
   kind: "buy" | "upgrade" | "swap";
   sell: string | null;
@@ -657,6 +685,7 @@ export const api = {
   draftPicks: (allies: number[], enemies: number[], lane: number[], banned: number[], badge: number, maxBadge: number | null, accountId: string | null) =>
     call<DraftReport>("draft_picks", { allies, enemies, lane, banned, badge, maxBadge, accountId }),
   patchNotes: () => call<PatchNotes | null>("patch_notes"),
+  myHeroes: (accountId: string, badge: number, maxBadge: number | null) => call<MyHeroes>("my_heroes", { accountId, badge, maxBadge }),
   heroPage: (heroId: number, badge: number, maxBadge: number | null) => call<HeroPageReport>("hero_page", { heroId, badge, maxBadge }),
   itemTiers: (badge: number, maxBadge: number | null, heroId: number | null) => call<ItemTier[]>("item_tiers", { badge, maxBadge, heroId }),
   heroTiers: (badge: number, maxBadge: number | null) => call<HeroTier[]>("hero_tiers", { badge, maxBadge }),
