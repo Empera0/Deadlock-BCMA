@@ -3,7 +3,7 @@ import { LANG, t } from "../i18n";
 
 const SEEN_KEY = "guide-seen";
 
-export type GuideTopic = "start" | "build" | "generator" | "draft" | "heroes" | "match" | "setup" | "settings";
+export type GuideTopic = "start" | "build" | "generator" | "draft" | "live" | "heroes" | "match" | "setup" | "settings";
 
 interface Step {
   title: string;
@@ -103,6 +103,16 @@ const TOPICS_EN: Topic[] = [
       { title: "Fit with the placed heroes", body: "The table shows, for each hero you placed, how every other hero has done beside it (an ally) or against it (an enemy). Green and red mark what the heroes' own strength does not explain." },
       { title: "Your own record", body: "Your Steam account ID adds your own record on each hero to the ranking. It is optional." },
       { title: "Then build", body: "Open the Master builder from the draft for the hero you pick: the teams carry over." },
+    ],
+  },
+  {
+    key: "live",
+    title: "Live",
+    intro: "Your match as it starts, followed on its own.",
+    steps: [
+      { title: "On its own", body: "With -condebug, the app reads from the game's console log when a match starts and opens this screen. Nothing to click." },
+      { title: "The lobby", body: "Both teams player by player: hero, rank, record on the hero, most played heroes, streaks and who likely queued together. Read once at the start from the match's broadcast; when Valve does not broadcast a match, the teams cannot be read." },
+      { title: "Your lane", body: "How your hero does against each enemy in your lane, when they are strongest and what is bought against them. Plan my build opens the Master builder with both teams." },
     ],
   },
   {
@@ -261,6 +271,16 @@ const TOPICS_TR: Topic[] = [
       { title: "Seçilen herolarla uyum", body: "Tablo, eklediğin her hero için diğer her heronun onunla birlikte (takım arkadaşı) ya da ona karşı (rakip) nasıl gittiğini gösterir. Yeşil ve kırmızı, heroların kendi gücüyle açıklanmayan farkı gösterir." },
       { title: "Kendi sonucun", body: "Steam hesap numaran, her kahramandaki kendi sonucunu da sıralamaya ekler. İstersen." },
       { title: "Sonra build", body: "Seçtiğin kahraman için seçim ekranından Usta build'i aç: takımlar da gelir." },
+    ],
+  },
+  {
+    key: "live",
+    title: "Canlı",
+    intro: "Maçın başlarken, kendiliğinden takip edilir.",
+    steps: [
+      { title: "Kendiliğinden", body: "-condebug açıkken uygulama maçın başladığını oyunun konsol kaydından okur ve bu ekranı açar. Bir şeye tıklamana gerek yok." },
+      { title: "Lobi", body: "İki takım oyuncu oyuncu: hero, rütbe, o herodaki sonuçlar, en çok oynadığı herolar, seriler ve kimlerin büyük ihtimalle birlikte girdiği. Maç başında maçın yayınından bir kez okunur; Valve bir maçı yayınlamazsa takımlar okunamaz." },
+      { title: "Lane'in", body: "Herona karşı lane'indeki her rakibin nasıl gittiği, ne zaman en güçlü oldukları ve onlara karşı ne alındığı. Build'imi planla, Usta build'i iki takımla açar." },
     ],
   },
   {

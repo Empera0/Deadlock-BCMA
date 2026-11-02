@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { api, fmt, Hero, LiveMatch, Scout } from "../api";
 import ErrorNote from "./ErrorNote";
-import { t } from "../i18n";
+import { percent, t } from "../i18n";
 
 /** Tags that are only worth knowing, not a warning: a losing streak or a new hero. Matched in both languages. */
 const soft = (tag: string) => /losses in a row|^New on this hero|^First match|mağlubiyet|^Bu kahramanda/.test(tag);
@@ -21,7 +21,7 @@ function PlayerCard({ s, icon, myLane, me }: { s: Scout; icon?: string; myLane: 
       </div>
       <div className="scout-stats">
         <span title={t("Matches on this hero, and the win rate on it (pulled toward 50% while there are few)")}>
-          {t("{n} on hero", { n: fmt(s.hero_matches) })} · <b>{fmt(s.hero_win_pct, 0)}%</b>
+          {t("{n} on hero", { n: fmt(s.hero_matches) })} · <b>{percent(fmt(s.hero_win_pct, 0))}</b>
         </span>
         {s.hero_matches > 0 && (
           <span title={t("Kills, deaths and assists per match on this hero")}>

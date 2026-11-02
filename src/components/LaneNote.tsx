@@ -1,69 +1,20 @@
-import { useEffect, useRef, useState } from "react";
-import { api, fmt, Hero, LaneEnemy } from "../api";
+import { useState } from "react";
+import { fmt, Hero, LaneEnemy } from "../api";
 import { percent, t } from "../i18n";
-import { savedAccount } from "../live";
+import { useLive } from "../liveMatch";
 import { SETTINGS, useSetting } from "../settings";
 
-/** How often the console log is read for a match that started, ms. */
-const EVERY_MS = 30_000;
 /** Late-game strength (win rate points, long matches over short) that is worth a word. */
 const LATE_PP = 2;
 
 const signed = (v: number) => `${v >= 0 ? "+" : "−"}${fmt(Math.abs(v), 1)}`;
 
-/**
- * When a match starts, a card for the player's lane: how the player's hero has done against each lane enemy, when
- * that enemy is strongest, and what players buy against it. Read once, at the start; it does not follow the match.
- */
-export default function LaneNote({ heroes }: { heroes: Hero[] }) {
-  const [setting] = useSetting(SETTINGS.laneNote);
-  const [badgeSetting] = useSetting(SETTINGS.draftBadge);
-  const [maxSetting] = useSetting(SETTINGS.draftMaxBadge);
-  const on = setting !== "0";
-  const [note, setNote] = useState<{ hero: number; enemies: LaneEnemy[] } | null>(null);
-  // The match the note was made for, so it is made once.
-  const done = useRef<number | null>(null);
-
-  useEffect(() => {
-    if (!on) return;
-    let busy = false;
-    const tick = async () => {
-      if (busy) return;
-      busy = true;
-      try {
-        const c = await api.consoleMatch();
-        const account = c.account_id ? String(c.account_id) : savedAccount();
-        if (!c.found || !c.match_id || done.current === c.match_id || !account) return;
-        done.current = c.match_id;
-        try {
-          const live = await api.matchTeams(c.match_id, account);
-          if (live.lane.length === 0) return;
-          const enemies = await api.laneNote(live.hero, live.lane, Number(badgeSetting) || 0, maxSetting ? Number(maxSetting) : null);
-          if (enemies.length > 0) setNote({ hero: live.hero, enemies });
-        } catch {
-          // The teams could not be read (Valve not broadcasting): no note for this match.
-        }
-      } finally {
-        busy = false;
-      }
-    };
-    tick();
-    const timer = window.setInterval(tick, EVERY_MS);
-    return () => window.clearInterval(timer);
-  }, [on, badgeSetting, maxSetting]);
-
-  if (!note) return null;
-  const mine = heroes.find((h) => h.id === note.hero);
+/** Each enemy in the player's lane: how the player's hero has done against it, when it is strongest, and what is
+ *  bought against it. */
+export function LaneEnemies({ enemies }: { enemies: LaneEnemy[] }) {
   return (
-    <div className="lane-note" role="status">
-      <div className="lane-note-head">
-        <b>{t("Your lane")}</b>
-        {mine && <span className="muted">{t("as {hero}", { hero: mine.name })}</span>}
-        <button className="ghost small" onClick={() => setNote(null)} title={t("Close")}>
-          ×
-        </button>
-      </div>
-      {note.enemies.map((e) => (
+    <>
+      {enemies.map((e) => (
         <div key={e.hero_id} className="lane-note-enemy">
           <img src={e.icon} alt="" />
           <div>
@@ -95,6 +46,31 @@ export default function LaneNote({ heroes }: { heroes: Hero[] }) {
           </div>
         </div>
       ))}
+    </>
+  );
+}
+
+/**
+ * When a match starts, a card for the player's lane, from the match the app follows (read once, at the start; it
+ * does not follow the match). Not shown on the Live screen, which shows the same.
+ */
+export default function LaneNote({ heroes, hidden }: { heroes: Hero[]; hidden: boolean }) {
+  const [setting] = useSetting(SETTINGS.laneNote);
+  const live = useLive();
+  // The match whose card was closed.
+  const [closed, setClosed] = useState<number | null>(null);
+  if (setting === "0" || hidden || live.phase !== "ready" || !live.lane?.length || closed === live.matchId) return null;
+  const mine = heroes.find((h) => h.id === live.live?.hero);
+  return (
+    <div className="lane-note" role="status">
+      <div className="lane-note-head">
+        <b>{t("Your lane")}</b>
+        {mine && <span className="muted">{t("as {hero}", { hero: mine.name })}</span>}
+        <button className="ghost small" onClick={() => setClosed(live.matchId)} title={t("Close")}>
+          ×
+        </button>
+      </div>
+      <LaneEnemies enemies={live.lane} />
     </div>
   );
 }

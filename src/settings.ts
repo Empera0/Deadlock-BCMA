@@ -20,6 +20,9 @@ export const SETTINGS = {
   /** The look: a theme of THEMES, and compact or comfortable spacing. */
   /** Show how the last match went once it ends. */
   postMatch: "post-match",
+  /** Follow the match being played on its own, and go to the Live screen when one starts. */
+  liveTrack: "live-track",
+  liveSwitch: "live-switch",
   /** Show the lane note when a match starts. */
   laneNote: "lane-note",
   theme: "theme",
@@ -38,6 +41,8 @@ export const DEFAULTS: Record<string, string> = {
   [SETTINGS.shareMatches]: "1",
   [SETTINGS.postMatch]: "1",
   [SETTINGS.laneNote]: "1",
+  [SETTINGS.liveTrack]: "1",
+  [SETTINGS.liveSwitch]: "1",
   [SETTINGS.theme]: "obsidian",
   [SETTINGS.density]: "compact",
 };

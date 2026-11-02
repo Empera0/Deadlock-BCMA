@@ -7033,3 +7033,78 @@ option:checked {
 .patch-alert-row small {
   color: var(--muted);
 }
+
+/* The Live screen. */
+.live-view {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  width: 100%;
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 14px 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.live-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.live-status {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+.live-status b {
+  font-size: 15px;
+}
+.live-status button {
+  align-self: flex-start;
+  margin-top: 6px;
+}
+.live-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--muted);
+  flex: none;
+}
+.live-dot.loading,
+.live-dot.ready {
+  background: var(--danger);
+  box-shadow: 0 0 0 0 color-mix(in srgb, var(--danger) 60%, transparent);
+  animation: live-pulse 1.6s infinite;
+}
+.live-dot.waiting {
+  background: var(--accent);
+}
+@keyframes live-pulse {
+  70% {
+    box-shadow: 0 0 0 10px transparent;
+  }
+}
+.live-lane-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 14px;
+}
+.live-lane .lane-note-enemy > img {
+  width: 48px;
+  height: 48px;
+}
+.live-tab-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-left: 6px;
+  border-radius: 50%;
+  background: var(--danger);
+  vertical-align: middle;
+  animation: live-pulse 1.6s infinite;
+}
+.page > header.live {
+  display: none;
+}

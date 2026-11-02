@@ -19,6 +19,8 @@ export default function SettingsView({ version, fetchedAt, onRefresh, onGuide }:
   const [share, setShare] = useSetting(SETTINGS.shareMatches);
   const [postMatch, setPostMatch] = useSetting(SETTINGS.postMatch);
   const [laneNote, setLaneNote] = useSetting(SETTINGS.laneNote);
+  const [liveTrack, setLiveTrack] = useSetting(SETTINGS.liveTrack);
+  const [liveSwitch, setLiveSwitch] = useSetting(SETTINGS.liveSwitch);
   const [theme, setTheme] = useSetting(SETTINGS.theme);
   const [density, setDensity] = useSetting(SETTINGS.density);
   const [log, setLog] = useState<ConsoleState | null>(null);
@@ -181,6 +183,20 @@ export default function SettingsView({ version, fetchedAt, onRefresh, onGuide }:
           <span>
             <b>{t("Watch for my match")}</b>
             <small className="muted">{t("While the Build generator is open, build for your match as soon as it starts. Needs -condebug.")}</small>
+          </span>
+        </label>
+        <label className="toggle-row">
+          <input type="checkbox" checked={liveTrack !== "0"} onChange={(e) => setLiveTrack(e.target.checked ? "1" : "0")} />
+          <span>
+            <b>{t("Follow my matches")}</b>
+            <small className="muted">{t("When a match starts, read its teams and players once for the Live screen and the lane note. Needs -condebug.")}</small>
+          </span>
+        </label>
+        <label className="toggle-row">
+          <input type="checkbox" checked={liveSwitch !== "0"} onChange={(e) => setLiveSwitch(e.target.checked ? "1" : "0")} />
+          <span>
+            <b>{t("Open the Live screen when a match starts")}</b>
+            <small className="muted">{t("Otherwise the Live tab is only marked.")}</small>
           </span>
         </label>
         <label className="toggle-row">

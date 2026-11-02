@@ -1,6 +1,7 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";
+import { LiveProvider } from "./liveMatch";
 import { LANG } from "./i18n";
 import { applyLook } from "./settings";
 import "@fontsource/barlow-condensed/600.css";
@@ -16,6 +17,8 @@ applyLook();
 
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
   <React.StrictMode>
-    <App />
+    <LiveProvider>
+      <App />
+    </LiveProvider>
   </React.StrictMode>,
 );

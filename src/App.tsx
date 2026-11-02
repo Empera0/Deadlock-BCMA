@@ -16,6 +16,9 @@ import TiersView from "./components/TiersView";
 import CommandPalette, { heroCommands } from "./components/CommandPalette";
 import PostMatch from "./components/PostMatch";
 import LaneNote from "./components/LaneNote";
+import LiveView from "./components/LiveView";
+import { useLive } from "./liveMatch";
+import { SETTINGS, useSetting } from "./settings";
 import PatchNotes from "./components/PatchNotes";
 import ShareMatches from "./components/ShareMatches";
 import UpdateBanner from "./components/UpdateBanner";
@@ -61,12 +64,13 @@ function restoreBuild(): Build | null {
   }
 }
 
-type Mode = "build" | "generator" | "draft" | "heroes" | "match" | "settings";
+type Mode = "build" | "generator" | "draft" | "live" | "heroes" | "match" | "settings";
 /** The screens, in the order of the top menu; the names translated where shown. */
 const SCREENS: [Mode, string][] = [
   ["build", "Build maker"],
   ["generator", "Build generator"],
   ["draft", "Draft"],
+  ["live", "Live"],
   ["heroes", "Hero tiers"],
   ["match", "Match analysis"],
   ["settings", "Settings"],
@@ -92,6 +96,12 @@ export default function App() {
   // Set to open the Build generator on its Popular tab, from the hero list.
   const [popularAt, setPopularAt] = useState(0);
   const [searching, setSearching] = useState(false);
+  // The match being played: the Live tab is marked while one is on, and opens when one starts.
+  const live = useLive();
+  const [liveSwitch] = useSetting(SETTINGS.liveSwitch);
+  useEffect(() => {
+    if ((live.phase === "loading" || live.phase === "ready") && live.matchId !== null && liveSwitch !== "0") setMode("live");
+  }, [live.matchId]);
   // A match to open in Match analysis, from the card shown after a match.
   const [openMatch, setOpenMatch] = useState<{ id: number; key: number } | null>(null);
   // Ctrl+K (or Cmd+K) opens the search from anywhere.
@@ -231,6 +241,7 @@ export default function App() {
           {SCREENS.map(([key, label]) => (
             <button key={key} className={mode === key ? "on" : ""} onClick={() => setMode(key)}>
               {t(label)}
+              {key === "live" && (live.phase === "loading" || live.phase === "ready") && <span className="live-tab-dot" />}
             </button>
           ))}
         </nav>
@@ -332,7 +343,7 @@ export default function App() {
         </div>
         <div className="data-info">{status && <small className="status">{status}</small>}</div>
       </header>
-      <LaneNote heroes={data.heroes} />
+      <LaneNote heroes={data.heroes} hidden={mode === "live"} />
       <PostMatch
         onOpen={(id) => {
           setOpenMatch({ id, key: Date.now() });
@@ -372,6 +383,16 @@ export default function App() {
           }}
         />
       </div>
+
+      {mode === "live" && (
+        <LiveView
+          heroes={data.heroes}
+          onPlan={(preset) => {
+            setMasterPreset(preset);
+            setMode("generator");
+          }}
+        />
+      )}
 
       {mode === "heroes" && (
         <TiersView
