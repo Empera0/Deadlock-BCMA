@@ -1336,4 +1336,11 @@ export const TR: Record<string, string> = {
   "{name}: {p} pts more wins than usual against this hero": "{name}: bu heroya karşı her zamankinden {p} puan fazla kazandırıyor",
   "Lane note at the start of a match": "Maç başında lane notu",
   "When a match starts, show how your hero does against your lane enemies, when they are strongest and what is bought against them. Read once, from the draft's ranks. Needs -condebug.": "Maç başlayınca herona karşı lane rakiplerinin nasıl gittiğini, ne zaman en güçlü olduklarını ve onlara karşı ne alındığını gösterir. Bir kez, seçim ekranının rütbelerinden okunur. -condebug gerekir.",
+  "{n} items": "{n} eşya",
+  "The picture could not be made": "Resim oluşturulamadı",
+  "Drawing…": "Çiziliyor…",
+  "Build picture copied: paste it in a chat": "Build resmi kopyalandı: bir sohbete yapıştır",
+  "Build picture saved": "Build resmi kaydedildi",
+  "Copy the build as a picture: the hero, its items in order, its numbers and its code": "Build'i resim olarak kopyala: hero, sırayla eşyalar, değerler ve build kodu",
+  Picture: "Resim",
 };

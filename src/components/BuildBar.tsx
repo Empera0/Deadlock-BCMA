@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Build, fmt, Hero, Item, Sheet } from "../api";
 import { readShareCode, shareCode } from "../share";
+import { buildCard } from "../buildCard";
 import { t } from "../i18n";
 
 interface Props {
@@ -12,7 +13,7 @@ interface Props {
 }
 
 /** Copies the build as a code, and reads a pasted one. */
-function ShareButtons({ build, heroes, items, onChange }: Pick<Props, "build" | "heroes" | "items" | "onChange">) {
+function ShareButtons({ build, heroes, items, sheet, onChange }: Pick<Props, "build" | "heroes" | "items" | "sheet" | "onChange">) {
   const [importing, setImporting] = useState(false);
   const [code, setCode] = useState("");
   const [note, setNote] = useState("");
@@ -28,6 +29,27 @@ function ShareButtons({ build, heroes, items, onChange }: Pick<Props, "build" | 
       },
     );
   };
+  // The build as a picture: copied to paste in a chat, or saved when copying is not allowed.
+  const picture = async () => {
+    const hero = heroes.find((h) => h.class_name === build.hero);
+    if (!hero) return;
+    setNote(t("Drawing…"));
+    try {
+      const blob = await buildCard(build, hero, heroes, items, sheet);
+      try {
+        await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+        setNote(t("Build picture copied: paste it in a chat"));
+      } catch {
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = `${hero.name} build.png`;
+        a.click();
+        setNote(t("Build picture saved"));
+      }
+    } catch (e) {
+      setNote(e instanceof Error ? e.message : String(e));
+    }
+  };
   const load = () => {
     try {
       onChange(readShareCode(code, heroes, [...items.values()]));
@@ -42,6 +64,9 @@ function ShareButtons({ build, heroes, items, onChange }: Pick<Props, "build" | 
     <span className="share">
       <button className="ghost" onClick={share} title={t("Copy the build as a code to paste anywhere")}>
         {t("Share")}
+      </button>
+      <button className="ghost" onClick={picture} disabled={build.purchases.length === 0} title={t("Copy the build as a picture: the hero, its items in order, its numbers and its code")}>
+        {t("Picture")}
       </button>
       <button className="ghost" onClick={() => setImporting(!importing)} title={t("Load a build from a code")}>
         {t("Import")}
@@ -119,7 +144,7 @@ export default function BuildBar({ build, heroes, sheet, items, onChange }: Prop
             </button>
           </>
         )}
-        <ShareButtons build={build} heroes={heroes} items={items} onChange={onChange} />
+        <ShareButtons build={build} heroes={heroes} items={items} sheet={sheet} onChange={onChange} />
       </div>
       <div className="chips">
         {count === 0 && <span className="muted">{t("Click an item in the shop to add it to your build.")}</span>}
