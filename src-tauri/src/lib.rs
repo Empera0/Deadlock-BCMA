@@ -847,7 +847,9 @@ struct ConsoleState {
 async fn console_match() -> Result<ConsoleState, String> {
     tauri::async_runtime::spawn_blocking(|| {
         let logs = console_logs();
-        let Some(path) = logs.iter().find(|p| p.is_file()) else {
+        // With Deadlock in more than one Steam library, the log the game last wrote is the one that counts.
+        let modified = |p: &PathBuf| fs::metadata(p).and_then(|m| m.modified()).ok();
+        let Some(path) = logs.iter().filter(|p| p.is_file()).max_by_key(|p| modified(p)) else {
             return ConsoleState { path: logs.first().map(|p| p.display().to_string()).unwrap_or_default(), found: false, seen: Default::default() };
         };
         let mut text = String::new();
