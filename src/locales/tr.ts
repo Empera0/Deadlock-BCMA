@@ -1302,4 +1302,6 @@ export const TR: Record<string, string> = {
   "Find an item…": "Eşya ara…",
   "{n} min": "{n}. dk",
   "Items are compared with the others of the same cost: an expensive item is bought by players already ahead, so its raw win rate is high whatever it does. S and A win clearly more than their cost's average, C and D clearly less.": "Eşyalar aynı fiyattaki diğerleriyle karşılaştırılır: pahalı bir eşyayı zaten önde olan oyuncular alır, bu yüzden ham kazanma oranı ne işe yararsa yarasın yüksek çıkar. S ve A kendi fiyatının ortalamasından belirgin şekilde çok, C ve D belirgin şekilde az kazanır.",
+  "To see a match here, open its scoreboard once in the game. Matches with their details here open without the statistics service.": "Bir maçı burada görmek için oyunda skor tablosunu bir kez açman yeterli. Ayrıntıları bu bilgisayarda olan maçlar istatistik servisine sormadan açılır.",
+  "details on this PC": "ayrıntılar bu bilgisayarda",
 };

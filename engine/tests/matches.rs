@@ -222,9 +222,9 @@ fn cache_file(host: &str, path: &str) -> Vec<u8> {
 #[test]
 fn replay_downloads_in_the_steam_cache_give_match_ids() {
     let meta = matches::cache_entry(&cache_file("replay404.valve.net", "/1422450/111042906_987654321.meta.bz2")).unwrap();
-    assert_eq!((meta.match_id, meta.salt, meta.demo), (111042906, 987654321, false));
+    assert_eq!((meta.match_id, meta.salt, meta.cluster, meta.demo), (111042906, 987654321, 404, false));
     let demo = matches::cache_entry(&cache_file("replay117.valve.net", "/1422450/112469626_55.dem.bz2")).unwrap();
-    assert_eq!((demo.match_id, demo.demo), (112469626, true));
+    assert_eq!((demo.match_id, demo.cluster, demo.demo), (112469626, 117, true));
     // Other cached requests are ignored: avatars, other games, other files of the same folder.
     assert_eq!(matches::cache_entry(&cache_file("avatars.steamstatic.com", "/e00dfbaddaf37f5147f0ec540ff723d4aa362ab7.jpg")), None);
     assert_eq!(matches::cache_entry(&cache_file("replay404.valve.net", "/570/8123456789_123.meta.bz2")), None);

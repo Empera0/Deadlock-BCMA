@@ -5,6 +5,8 @@ edition = "2021"
 description = "Deadlock stat/build calculation engine (UI independent)"
 
 [dependencies]
+bzip2-rs = "0.1.2"
+prost = "0.13"
 ruzstd = "0.9.1"
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["preserve_order"] }

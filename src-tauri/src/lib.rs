@@ -16,6 +16,17 @@ const STEAM_ID64_BASE: u64 = 76_561_197_960_265_728;
 
 struct AppState {
     data: RwLock<GameData>,
+    /// The matches found in Steam's HTTP cache, read on the first need and again when one is missing from it.
+    cache: std::sync::Mutex<Option<std::collections::BTreeMap<u64, CachedMatch>>>,
+}
+
+/// What Steam's HTTP cache holds of a match: its metadata file, and where Valve serves it.
+#[derive(Clone, Default)]
+struct CachedMatch {
+    meta_path: Option<PathBuf>,
+    cluster: u32,
+    meta_salt: Option<u64>,
+    replay_salt: Option<u64>,
 }
 
 fn data_dir(app: &AppHandle) -> Result<PathBuf, String> {
@@ -675,6 +686,43 @@ async fn match_json(app: &AppHandle, match_id: u64) -> Result<String, String> {
     if let Ok(json) = fs::read_to_string(&path) {
         return Ok(json);
     }
+    // Opened in the game: the file is in Steam's cache, or at least where Valve serves it.
+    let state = app.state::<AppState>();
+    let known = state.cache.lock().unwrap().as_ref().and_then(|c| c.get(&match_id).cloned());
+    let cached = match known {
+        Some(c) => Some(c),
+        None => {
+            let scanned = tauri::async_runtime::spawn_blocking(|| cache_folder().ok().map(|f| scan_cache(&f).2)).await.map_err(|e| e.to_string())?;
+            let found = scanned.as_ref().and_then(|c| c.get(&match_id).cloned());
+            if scanned.is_some() {
+                *state.cache.lock().unwrap() = scanned;
+            }
+            found
+        }
+    };
+    if let Some(cached) = cached {
+        let from_valve = tauri::async_runtime::spawn_blocking(move || -> Result<String, String> {
+            if let Some(json) = cached.meta_path.as_ref().and_then(|p| fs::read(p).ok()).and_then(|f| engine::cached_meta::metadata_json(&f).ok()) {
+                return Ok(json);
+            }
+            let (Some(salt), cluster) = (cached.meta_salt, cached.cluster) else { return Err(String::new()) };
+            if cluster == 0 {
+                return Err(String::new());
+            }
+            // Valve serves the file to anyone who knows its salt; no sign-in.
+            let url = format!("http://replay{cluster}.valve.net/1422450/{match_id}_{salt}.meta.bz2");
+            let resp = ureq::get(&url).timeout(Duration::from_secs(60)).call().map_err(|e| e.to_string())?;
+            let mut bytes = vec![];
+            resp.into_reader().read_to_end(&mut bytes).map_err(|e| e.to_string())?;
+            engine::cached_meta::metadata_json(&bytes)
+        })
+        .await
+        .map_err(|e| e.to_string())?;
+        if let Ok(json) = from_valve {
+            let _ = fs::write(&path, &json);
+            return Ok(json);
+        }
+    }
     let url = format!("{MATCH_API}/matches/{match_id}/metadata");
     let json = tauri::async_runtime::spawn_blocking(move || {
         get(&url, "Match not found. Very recent matches can take a while to become available.")
@@ -1051,6 +1099,8 @@ struct LocalMatch {
     /// Unix seconds of the newest cache file for the match.
     seen_at: u64,
     has_replay: bool,
+    /// The match's details are in the cache: it opens without asking anyone.
+    has_details: bool,
 }
 
 #[derive(serde::Serialize)]
@@ -1086,8 +1136,9 @@ fn steam_folders() -> Vec<PathBuf> {
     out
 }
 
-fn scan_cache(folder: &std::path::Path) -> (usize, Vec<LocalMatch>) {
+fn scan_cache(folder: &std::path::Path) -> (usize, Vec<LocalMatch>, std::collections::BTreeMap<u64, CachedMatch>) {
     let mut found: std::collections::BTreeMap<u64, LocalMatch> = Default::default();
+    let mut cached: std::collections::BTreeMap<u64, CachedMatch> = Default::default();
     let mut files = 0;
     let subfolders = fs::read_dir(folder).into_iter().flatten().flatten();
     for file in subfolders.flat_map(|d| fs::read_dir(d.path()).into_iter().flatten().flatten()) {
@@ -1103,35 +1154,48 @@ fn scan_cache(folder: &std::path::Path) -> (usize, Vec<LocalMatch>) {
             .and_then(|t| t.duration_since(SystemTime::UNIX_EPOCH).ok())
             .map(|d| d.as_secs())
             .unwrap_or(0);
-        let row = found.entry(entry.match_id).or_insert(LocalMatch { match_id: entry.match_id, seen_at: 0, has_replay: false });
+        let row = found.entry(entry.match_id).or_insert(LocalMatch { match_id: entry.match_id, seen_at: 0, has_replay: false, has_details: false });
         row.seen_at = row.seen_at.max(seen_at);
         row.has_replay |= entry.demo;
+        row.has_details |= !entry.demo;
+        let c = cached.entry(entry.match_id).or_default();
+        if entry.cluster > 0 {
+            c.cluster = entry.cluster;
+        }
+        if entry.demo {
+            c.replay_salt = Some(entry.salt);
+        } else {
+            c.meta_salt = Some(entry.salt);
+            c.meta_path = Some(file.path());
+        }
     }
     let mut matches: Vec<LocalMatch> = found.into_values().collect();
     matches.sort_by(|a, b| b.seen_at.cmp(&a.seen_at).then(b.match_id.cmp(&a.match_id)));
-    (files, matches)
+    (files, matches, cached)
+}
+
+/// Steam's HTTP cache folder, when there is one.
+fn cache_folder() -> Result<PathBuf, PathBuf> {
+    let folders: Vec<PathBuf> = steam_folders().into_iter().map(|p| p.join("appcache").join("httpcache")).collect();
+    folders.iter().find(|f| f.is_dir()).cloned().ok_or_else(|| folders.first().cloned().unwrap_or_default())
 }
 
 /// Finds the matches the game has opened on this computer by reading Steam's HTTP cache. Nothing is sent anywhere.
 #[tauri::command]
-async fn find_local_matches() -> Result<LocalScan, String> {
-    tauri::async_runtime::spawn_blocking(|| {
-        let folders: Vec<PathBuf> = steam_folders().into_iter().map(|p| p.join("appcache").join("httpcache")).collect();
-        match folders.iter().find(|f| f.is_dir()) {
-            Some(folder) => {
-                let (files, matches) = scan_cache(folder);
-                LocalScan { folder: folder.display().to_string(), found: true, files, matches }
-            }
-            None => LocalScan {
-                folder: folders.first().map(|f| f.display().to_string()).unwrap_or_default(),
-                found: false,
-                files: 0,
-                matches: vec![],
-            },
+async fn find_local_matches(state: State<'_, AppState>) -> Result<LocalScan, String> {
+    let (scan, cached) = tauri::async_runtime::spawn_blocking(|| match cache_folder() {
+        Ok(folder) => {
+            let (files, matches, cached) = scan_cache(&folder);
+            (LocalScan { folder: folder.display().to_string(), found: true, files, matches }, Some(cached))
         }
+        Err(folder) => (LocalScan { folder: folder.display().to_string(), found: false, files: 0, matches: vec![] }, None),
     })
     .await
-    .map_err(|e| e.to_string())
+    .map_err(|e| e.to_string())?;
+    if let Some(cached) = cached {
+        *state.cache.lock().unwrap() = Some(cached);
+    }
+    Ok(scan)
 }
 
 #[tauri::command]
@@ -1196,7 +1260,7 @@ pub fn run() {
         .setup(|app| {
             let data = load_initial(app.handle());
             note_patch(app.handle(), &data);
-            app.manage(AppState { data: RwLock::new(data) });
+            app.manage(AppState { data: RwLock::new(data), cache: Default::default() });
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![

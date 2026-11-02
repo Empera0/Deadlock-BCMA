@@ -954,7 +954,7 @@ export interface LocalScan {
   folder: string;
   found: boolean;
   files: number;
-  matches: { match_id: number; seen_at: number; has_replay: boolean }[];
+  matches: { match_id: number; seen_at: number; has_replay: boolean; has_details: boolean }[];
 }
 
 /** A mid boss kill: who was at the pit and what the rejuvenator was turned into. */

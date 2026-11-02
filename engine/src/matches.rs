@@ -3348,6 +3348,8 @@ pub fn summarize(report: &MatchReport, account_id: u64) -> Option<MatchSummary> 
 pub struct CacheEntry {
     pub match_id: u64,
     pub salt: u64,
+    /// The replay server's number, NNN of `replayNNN.valve.net` (0 when the host names none).
+    pub cluster: u32,
     /// True for the replay file, false for the match metadata.
     pub demo: bool,
 }
@@ -3360,9 +3362,14 @@ const REPLAY_FOLDER: &[u8] = b"/1422450/";
 /// `replayNNN.valve.net/1422450/<match id>_<salt>.meta.bz2` (and `.dem.bz2`) when a match is opened.
 pub fn cache_entry(head: &[u8]) -> Option<CacheEntry> {
     let at = head.windows(REPLAY_FOLDER.len()).position(|w| w == REPLAY_FOLDER)?;
-    if !head[..at].windows(9).any(|w| w == b"valve.net") {
-        return None;
-    }
+    let host_end = head[..at].windows(9).rposition(|w| w == b"valve.net")?;
+    // The host is the zero-terminated text before the path: "replay429.valve.net".
+    let host_start = head[..host_end].iter().rposition(|b| *b == 0).map(|i| i + 1).unwrap_or(0);
+    let host = &head[host_start..host_end];
+    let cluster = host
+        .strip_prefix(b"replay")
+        .and_then(|rest| std::str::from_utf8(&rest[..rest.iter().take_while(|b| b.is_ascii_digit()).count()]).ok()?.parse().ok())
+        .unwrap_or(0);
     let rest = &head[at + REPLAY_FOLDER.len()..];
     let digits = |bytes: &[u8]| bytes.iter().take_while(|b| b.is_ascii_digit()).count();
     let number = |bytes: &[u8]| std::str::from_utf8(bytes).ok()?.parse::<u64>().ok();
@@ -3377,7 +3384,7 @@ pub fn cache_entry(head: &[u8]) -> Option<CacheEntry> {
     if salt_len == 0 || !(demo || tail.starts_with(b".meta.bz2")) {
         return None;
     }
-    Some(CacheEntry { match_id: number(&rest[..id_len])?, salt: number(&after_id[1..1 + salt_len])?, demo })
+    Some(CacheEntry { match_id: number(&rest[..id_len])?, salt: number(&after_id[1..1 + salt_len])?, cluster, demo })
 }
 
 /// One row of a player's match history (deadlock-api `/v1/players/{id}/match-history`).

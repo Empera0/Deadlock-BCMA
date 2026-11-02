@@ -1781,6 +1781,7 @@ export default function MatchView({ onOpenBuild, onOpenMaster }: Props) {
         {local && (
           <div className="match-history">
             <h3>{t("Matches on this PC")}</h3>
+            <p className="muted">{t("To see a match here, open its scoreboard once in the game. Matches with their details here open without the statistics service.")}</p>
             {local.matches.map((m) => (
               <button
                 key={m.match_id}
@@ -1789,7 +1790,7 @@ export default function MatchView({ onOpenBuild, onOpenMaster }: Props) {
               >
                 <span>
                   <strong>{t("Match {id}", { id: m.match_id })}</strong>
-                  <small>{m.has_replay ? t("replay downloaded") : t("details opened")}</small>
+                  <small>{m.has_details ? t("details on this PC") : m.has_replay ? t("replay downloaded") : t("details opened")}</small>
                 </span>
                 <small>{m.seen_at > 0 ? date(m.seen_at) : ""}</small>
               </button>

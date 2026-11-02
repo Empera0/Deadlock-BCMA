@@ -3,6 +3,7 @@
 pub mod advisor;
 pub mod area;
 pub mod build;
+pub mod cached_meta;
 pub mod calc;
 pub mod combo;
 pub mod counters;
