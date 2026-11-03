@@ -27,6 +27,13 @@ export const SETTINGS = {
   laneNote: "lane-note",
   theme: "theme",
   density: "density",
+  /** The colors of the Custom theme, as JSON (`CustomColors`). */
+  customTheme: "custom-theme",
+  /** The size of everything in percent, corners (sharp, normal, round), font, and whether controls animate. */
+  fontScale: "font-scale",
+  corners: "corners",
+  font: "font",
+  motion: "motion",
 } as const;
 
 export const DEFAULTS: Record<string, string> = {
@@ -45,6 +52,11 @@ export const DEFAULTS: Record<string, string> = {
   [SETTINGS.liveSwitch]: "1",
   [SETTINGS.theme]: "obsidian",
   [SETTINGS.density]: "compact",
+  [SETTINGS.customTheme]: "",
+  [SETTINGS.fontScale]: "100",
+  [SETTINGS.corners]: "normal",
+  [SETTINGS.font]: "default",
+  [SETTINGS.motion]: "1",
 };
 
 /** The ranks, by their badge tier (badge = tier × 10 + subrank 1–6); the names are the game's own, shown as they are (not translated where shown). */
@@ -71,12 +83,127 @@ export const THEMES: [string, string, [string, string, string, string]][] = [
   ["paper", "Paper", ["#f4f3ef", "#ffffff", "#1d1c1a", "#a46a12"]],
 ];
 
-/** Puts the chosen theme and density on the page; called at start and whenever either changes. */
+/** The colors a theme is made from; the rest (lines, hover, muted text…) are worked out from them. */
+export interface CustomColors {
+  light: boolean;
+  bg: string;
+  panel: string;
+  text: string;
+  accent: string;
+  /** The colors of weapon, vitality and spirit items and stats; empty for the theme's own. */
+  weapon: string;
+  vitality: string;
+  spirit: string;
+}
+
+/** Themes made from a few colors, the way the Custom theme is. */
+export const MADE_THEMES: [string, string, CustomColors][] = [
+  ["crimson", "Crimson", { light: false, bg: "#120b0c", panel: "#1a1013", text: "#f2e6e7", accent: "#ff6b6b", weapon: "", vitality: "", spirit: "" }],
+  ["ember", "Ember", { light: false, bg: "#120e0a", panel: "#1a140e", text: "#f3ebe2", accent: "#ff9f43", weapon: "", vitality: "", spirit: "" }],
+  ["hidden-king", "Hidden King", { light: false, bg: "#100d07", panel: "#18130b", text: "#f4ecd9", accent: "#f2b84b", weapon: "", vitality: "", spirit: "" }],
+  ["archmother", "Archmother", { light: false, bg: "#071216", panel: "#0c1b21", text: "#e2f2f6", accent: "#4fc3f7", weapon: "", vitality: "", spirit: "" }],
+  ["violet", "Violet", { light: false, bg: "#0f0c1a", panel: "#161226", text: "#ece8f7", accent: "#a78bfa", weapon: "", vitality: "", spirit: "" }],
+  ["nord", "Nord", { light: false, bg: "#2e3440", panel: "#353c4a", text: "#eceff4", accent: "#88c0d0", weapon: "", vitality: "", spirit: "" }],
+  ["frost", "Frost", { light: true, bg: "#eef3f8", panel: "#ffffff", text: "#18202a", accent: "#2b6cb0", weapon: "", vitality: "", spirit: "" }],
+  ["sand", "Sand", { light: true, bg: "#f3ece0", panel: "#fbf7ef", text: "#2a241b", accent: "#b4532a", weapon: "", vitality: "", spirit: "" }],
+];
+
+export const DEFAULT_CUSTOM: CustomColors = { light: false, bg: "#101014", panel: "#17171c", text: "#ececef", accent: "#e6cf9c", weapon: "", vitality: "", spirit: "" };
+
+/** The Custom theme's colors as kept, or the starting ones. */
+export function customColors(): CustomColors {
+  try {
+    const kept = JSON.parse(readSetting(SETTINGS.customTheme) || "null");
+    return kept ? { ...DEFAULT_CUSTOM, ...kept } : DEFAULT_CUSTOM;
+  } catch {
+    return DEFAULT_CUSTOM;
+  }
+}
+
+const hex = (c: string): [number, number, number] => {
+  const h = c.replace("#", "");
+  const full = h.length === 3 ? h.split("").map((x) => x + x).join("") : h.padEnd(6, "0");
+  return [0, 2, 4].map((i) => parseInt(full.slice(i, i + 2), 16) || 0) as [number, number, number];
+};
+const toHex = (rgb: number[]) => "#" + rgb.map((v) => Math.round(Math.max(0, Math.min(255, v))).toString(16).padStart(2, "0")).join("");
+/** `a` moved toward `b` by `share` (0-1). */
+export const mix = (a: string, b: string, share: number) => {
+  const [x, y] = [hex(a), hex(b)];
+  return toHex(x.map((v, i) => v + (y[i] - v) * share));
+};
+const luminance = (c: string) => {
+  const [r, g, b] = hex(c).map((v) => v / 255);
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+};
+
+/** Every color token of a theme made from its few colors. */
+export function themeTokens(c: CustomColors): Record<string, string> {
+  const [r, g, b] = hex(c.text);
+  const out: Record<string, string> = {
+    "--bg": c.bg,
+    "--bg-deep": mix(c.bg, c.light ? "#000000" : "#000000", c.light ? 0.04 : 0.3),
+    "--panel": c.panel,
+    "--panel-2": mix(c.panel, c.text, 0.06),
+    "--line": mix(c.panel, c.text, 0.12),
+    "--border": mix(c.panel, c.text, 0.09),
+    "--line-strong": mix(c.panel, c.text, 0.18),
+    "--line-hover": mix(c.panel, c.text, 0.27),
+    "--hover": `rgba(${r}, ${g}, ${b}, 0.05)`,
+    "--text": c.text,
+    "--muted": mix(c.text, c.bg, 0.42),
+    "--accent": c.accent,
+    "--on-accent": luminance(c.accent) > 0.5 ? "#0b0b0d" : "#ffffff",
+    "--card-base": mix(c.bg, c.panel, 0.5),
+    "--card-text": c.text,
+  };
+  if (c.weapon) out["--weapon"] = c.weapon;
+  if (c.vitality) out["--vitality"] = c.vitality;
+  if (c.spirit) out["--spirit"] = c.spirit;
+  return out;
+}
+
+/** The fonts that can be picked; `default` is the theme's own. */
+export const FONTS: [string, string, string][] = [
+  ["default", "Default", ""],
+  ["segoe", "Segoe UI", '"Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif'],
+  ["barlow", "Barlow Condensed", '"Barlow Condensed", "Segoe UI", sans-serif'],
+  ["serif", "Serif", 'Georgia, "Times New Roman", serif'],
+  ["mono", "Monospace", 'Consolas, ui-monospace, monospace'],
+];
+
+/** Corner sizes per choice: extra small, small, normal, large. */
+const CORNERS: Record<string, [number, number, number, number]> = {
+  sharp: [0, 1, 2, 3],
+  normal: [3, 6, 8, 12],
+  round: [6, 10, 14, 20],
+};
+
+/** The tokens the look setters put on the page themselves, cleared before each change. */
+let applied: string[] = [];
+
+/** Puts the chosen theme, density, text size, corners, font and motion on the page; called at start and whenever
+ *  one changes. Themes made from colors are set as tokens on the page, over the plain dark or light theme. */
 export function applyLook() {
   const root = document.documentElement;
-  root.dataset.theme = readSetting(SETTINGS.theme);
+  const theme = readSetting(SETTINGS.theme);
+  const made = theme === "custom" ? customColors() : MADE_THEMES.find(([key]) => key === theme)?.[2];
+  for (const name of applied) root.style.removeProperty(name);
+  const tokens: Record<string, string> = made ? themeTokens(made) : {};
+  root.dataset.theme = made ? (made.light ? "paper" : "obsidian") : theme;
   root.dataset.density = readSetting(SETTINGS.density);
+  root.dataset.motion = readSetting(SETTINGS.motion) === "0" ? "off" : "on";
+  // The whole window is scaled, text and layout together: sizes are set in pixels throughout.
+  const scale = Math.max(80, Math.min(140, Number(readSetting(SETTINGS.fontScale)) || 100)) / 100;
+  root.style.zoom = scale === 1 ? "" : String(scale);
+  const [xs, sm, r, lg] = CORNERS[readSetting(SETTINGS.corners)] ?? CORNERS.normal;
+  Object.assign(tokens, { "--r-xs": `${xs}px`, "--r-sm": `${sm}px`, "--r": `${r}px`, "--r-lg": `${lg}px` });
+  const font = FONTS.find(([key]) => key === readSetting(SETTINGS.font))?.[2];
+  if (font) tokens["--font"] = font;
+  for (const [name, value] of Object.entries(tokens)) root.style.setProperty(name, value);
+  applied = Object.keys(tokens);
 }
+
+const LOOK_KEYS: string[] = [SETTINGS.theme, SETTINGS.density, SETTINGS.customTheme, SETTINGS.fontScale, SETTINGS.corners, SETTINGS.font, SETTINGS.motion];
 
 const EVENT = "bcma-setting";
 
@@ -95,7 +222,7 @@ export function writeSetting(key: string, value: string) {
     /* Not kept: the setting holds for this session only. */
   }
   window.dispatchEvent(new CustomEvent(EVENT, { detail: { key, value } }));
-  if (key === SETTINGS.theme || key === SETTINGS.density) applyLook();
+  if (LOOK_KEYS.includes(key)) applyLook();
 }
 
 /** A setting, kept in step across every screen that reads it. */

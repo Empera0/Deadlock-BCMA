@@ -1,14 +1,70 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { api, ConsoleState } from "../api";
 import { CONDEBUG_HELP } from "../live";
 import { date, LANG, LANGUAGES, NAMES, setLang, setNames, t, tn } from "../i18n";
-import { accountFrom, SETTINGS, THEMES, useSetting } from "../settings";
+import { accountFrom, CustomColors, customColors, DEFAULT_CUSTOM, FONTS, MADE_THEMES, SETTINGS, THEMES, themeTokens, useSetting } from "../settings";
 import RankRange from "./RankRange";
 import BackupPanel from "./BackupPanel";
 import ErrorNote from "./ErrorNote";
 import { DAMAGES, FOCUSES } from "./GeneratorView";
 
 /** What the player sets once: their account, the defaults of each screen, and what runs in the background. */
+/** The colors of the Custom theme, each with a picker and its code; the rest of the theme is worked out from them. */
+function ThemeEditor({ colors, onChange }: { colors: CustomColors; onChange: (c: CustomColors) => void }) {
+  const field = (key: "bg" | "panel" | "text" | "accent" | "weapon" | "vitality" | "spirit", label: string, fallback: string) => {
+    const value = colors[key] || fallback;
+    return (
+      <label className="field color-field">
+        <input type="color" value={value} onChange={(e) => onChange({ ...colors, [key]: e.target.value })} />
+        <input type="text" value={colors[key]} placeholder={fallback} onChange={(e) => /^#?[0-9a-f]{0,6}$/i.test(e.target.value) && onChange({ ...colors, [key]: e.target.value })} />
+        {t(label)}
+      </label>
+    );
+  };
+  // Starting from another theme: its colors, to change from there.
+  const startFrom = (key: string) => {
+    const made = MADE_THEMES.find(([k]) => k === key)?.[2];
+    const plain = THEMES.find(([k]) => k === key)?.[2];
+    if (made) onChange({ ...made });
+    else if (plain) onChange({ ...DEFAULT_CUSTOM, light: key === "paper", bg: plain[0], panel: plain[1], text: plain[2], accent: plain[3] });
+  };
+  const sample = themeTokens(colors);
+  return (
+    <div className="theme-editor">
+      {field("bg", "Background", DEFAULT_CUSTOM.bg)}
+      {field("panel", "Cards", DEFAULT_CUSTOM.panel)}
+      {field("text", "Text", DEFAULT_CUSTOM.text)}
+      {field("accent", "Accent", DEFAULT_CUSTOM.accent)}
+      {field("weapon", "Weapon", "#d98a3d")}
+      {field("vitality", "Vitality", "#7cb342")}
+      {field("spirit", "Spirit", "#b07fe0")}
+      <label className="field inline">
+        <input type="checkbox" checked={colors.light} onChange={(e) => onChange({ ...colors, light: e.target.checked })} />
+        {t("Light theme")}
+      </label>
+      <div className="theme-editor-actions">
+        <label className="field inline">
+          {t("Start from")}
+          <select value="" onChange={(e) => startFrom(e.target.value)}>
+            <option value="">…</option>
+            {[...THEMES.map(([k, n]) => [k, n]), ...MADE_THEMES.map(([k, n]) => [k, n])].map(([k, n]) => (
+              <option key={k} value={k}>
+                {t(n)}
+              </option>
+            ))}
+          </select>
+        </label>
+        <button className="ghost small" onClick={() => onChange(DEFAULT_CUSTOM)}>
+          {t("Reset")}
+        </button>
+        <small className="muted" style={{ color: sample["--muted"] }}>
+          {t("Lines, hover and muted text are worked out from these colors. Leave Weapon, Vitality or Spirit empty for the usual ones.")}
+        </small>
+      </div>
+    </div>
+  );
+}
+
 export default function SettingsView({ version, fetchedAt, onRefresh, onGuide }: { version: number | null; fetchedAt: number; onRefresh: () => void; onGuide: () => void }) {
   const [account, setAccount] = useSetting(SETTINGS.account);
   const [typed, setTyped] = useState(account);
@@ -23,6 +79,19 @@ export default function SettingsView({ version, fetchedAt, onRefresh, onGuide }:
   const [liveSwitch, setLiveSwitch] = useSetting(SETTINGS.liveSwitch);
   const [theme, setTheme] = useSetting(SETTINGS.theme);
   const [density, setDensity] = useSetting(SETTINGS.density);
+  const [fontScale, setFontScale] = useSetting(SETTINGS.fontScale);
+  const [corners, setCorners] = useSetting(SETTINGS.corners);
+  const [font, setFont] = useSetting(SETTINGS.font);
+  const [motion, setMotion] = useSetting(SETTINGS.motion);
+  const [customText, setCustomText] = useSetting(SETTINGS.customTheme);
+  // Read again whenever the kept colors change.
+  const custom = useMemo(() => customColors(), [customText]);
+  const setCustom = (c: CustomColors) => setCustomText(JSON.stringify(c));
+  const swatches: [string, string, [string, string, string, string]][] = [
+    ...THEMES,
+    ...MADE_THEMES.map(([key, name, c]): [string, string, [string, string, string, string]] => [key, name, [c.bg, c.panel, c.text, c.accent]]),
+    ["custom", "Custom", [custom.bg, custom.panel, custom.text, custom.accent]],
+  ];
   const [log, setLog] = useState<ConsoleState | null>(null);
   const [logError, setLogError] = useState("");
 
@@ -46,7 +115,7 @@ export default function SettingsView({ version, fetchedAt, onRefresh, onGuide }:
       <section className="group">
         <h3>{t("Look")}</h3>
         <div className="theme-grid">
-          {THEMES.map(([key, name, [bg, panel, text, accent]]) => (
+          {swatches.map(([key, name, [bg, panel, text, accent]]) => (
             <button key={key} className={"theme-card" + (theme === key ? " on" : "")} onClick={() => setTheme(key)}>
               <span className="theme-swatch" style={{ background: bg }}>
                 <i style={{ background: panel }} />
@@ -60,6 +129,7 @@ export default function SettingsView({ version, fetchedAt, onRefresh, onGuide }:
             </button>
           ))}
         </div>
+        {theme === "custom" && <ThemeEditor colors={custom} onChange={setCustom} />}
         <div className="fields">
           <label className="field">
             {t("Spacing")}
@@ -67,6 +137,32 @@ export default function SettingsView({ version, fetchedAt, onRefresh, onGuide }:
               <option value="compact">{t("Compact")}</option>
               <option value="comfortable">{t("Comfortable")}</option>
             </select>
+          </label>
+          <label className="field range-field">
+            {t("Size: {n}%", { n: fontScale })}
+            <input type="range" min={80} max={140} step={5} value={Number(fontScale) || 100} onChange={(e) => setFontScale(e.target.value)} />
+          </label>
+          <label className="field">
+            {t("Corners")}
+            <select value={corners} onChange={(e) => setCorners(e.target.value)}>
+              <option value="sharp">{t("Sharp")}</option>
+              <option value="normal">{t("Normal")}</option>
+              <option value="round">{t("Round")}</option>
+            </select>
+          </label>
+          <label className="field">
+            {t("Font")}
+            <select value={font} onChange={(e) => setFont(e.target.value)}>
+              {FONTS.map(([key, name]) => (
+                <option key={key} value={key}>
+                  {t(name)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="field inline">
+            <input type="checkbox" checked={motion !== "0"} onChange={(e) => setMotion(e.target.checked ? "1" : "0")} />
+            {t("Animations")}
           </label>
         </div>
       </section>

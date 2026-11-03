@@ -7341,3 +7341,51 @@ option:checked {
 .habit-phases button {
   white-space: nowrap;
 }
+
+/* Animations off: every control changes at once. */
+:root[data-motion="off"] *,
+:root[data-motion="off"] *::before,
+:root[data-motion="off"] *::after {
+  transition: none !important;
+  animation: none !important;
+}
+
+/* The Custom theme's editor. */
+.theme-editor {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+}
+.field.color-field {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+.color-field input[type="color"] {
+  width: 34px;
+  height: 26px;
+  padding: 0;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-sm);
+  background: none;
+  cursor: pointer;
+}
+.color-field input[type="text"] {
+  width: 84px;
+  font-family: ui-monospace, monospace;
+}
+.theme-editor-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.range-field input[type="range"] {
+  width: 160px;
+}
