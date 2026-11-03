@@ -2,6 +2,18 @@
 
 Uygulamanın Türkçe yenilik notları. Her sürümde neyin değiştiği, kısa ve sade.
 
+## [0.8.0] – 2026-11-03
+
+Maç analizi maçın nasıl aktığını ve nasıl oynadığını, en iyi oyuncular ve kendi ortalamanla yan yana gösteriyor.
+
+### Eklenenler
+
+1. **Tekrar.** Yeni Tekrar sekmesi maçı mini haritada oynatır: herolar canlarıyla, ölümler ve düşen yapılar; çubuğun altında ölümler, yapılar ve takım savaşları işaretli. Birine tıklayınca 15 saniye öncesinden izlersin; bir heroya tıklayınca onu takip edersin.
+2. **Alışkanlıklar.** Yeni Alışkanlıklar sekmesi her oyuncu için: zamanın nereye gittiği (savaş, askerler, orman, yolda, üste, beklemede, ölü) ve haritada nerede olduğu; lane, orta oyun, geç oyun ve bütün maç için, herodaki en iyi oyuncularla yan yana (birkaç yakın tarihli yüksek rank maçı, haftada bir okunur).
+3. **Lane dakika dakika.** Lane rakiplerine karşı ilk on dakika: her dakika iki tarafın kaybettiği can ve takasta geçen süre, oyunun kayıtlarında ruh, son vuruş ve hasar, ve lane'in ne zaman döndüğü.
+4. **Bu maç ve ortalaman.** Maçın dakika başı değerleri, oyuncunun o herodaki kendi ortalamasıyla yan yana.
+5. **Ranklar.** Maç analizinde her oyuncunun rankı: ranked maçlarda maçın kaydettiği rank, diğerlerinde şu anki rankı, öyle işaretli.
+
 ## [0.7.0] – 2026-11-02
 
 Maçın lobiden sonuca kendiliğinden takip ediliyor ve nasıl oynadığına daha yakından bakılıyor.

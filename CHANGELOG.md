@@ -2,6 +2,18 @@
 
 All notable changes to Deadlock BCMA are listed here. Versions follow [semantic versioning](https://semver.org).
 
+## [0.8.0] – 2026-11-03
+
+Match analysis shows how the match moved and how you play, beside top players and your own average.
+
+### Added
+
+1. **Replay.** A new Replay tab plays the match back on the minimap: heroes with their health, deaths and fallen objectives, with deaths, objectives and team fights marked under the bar. Click one to watch it from 15 seconds before; click a hero to follow them.
+2. **Habits.** A new Habits tab for any player: where the time went (fighting, troopers, camps, moving, in base, waiting, dead) and where on the map, for the laning phase, mid game, late game and the whole match, beside top players of the hero (a few recent high-rank matches, read once a week).
+3. **Lane minute by minute.** The first ten minutes against the lane opponents: health lost by both sides and time spent trading each minute, souls, last hits and damage at the game's snapshots, and when the lane turned.
+4. **This match and your average.** The match's numbers per minute beside the player's own average on the hero.
+5. **Ranks.** Every player's rank in the match analysis: as the match records it in ranked matches, otherwise their current rank, marked as such.
+
 ## [0.7.0] – 2026-11-02
 
 Your match followed on its own, from the lobby to the result, and a closer look at how you play.
@@ -661,6 +673,7 @@ This release adds the **Build generator**, with builds read from top-ranked matc
   - trends across your last matches.
 - Windows installer with a desktop shortcut and automatic updates from GitHub releases.
 
+[0.8.0]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.6.1...v0.7.0
 [0.6.1]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.5.3...v0.6.0
