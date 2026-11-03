@@ -710,6 +710,9 @@ export const api = {
   shareMatch: (matchId: number) => call<SharedMatch>("share_match", { matchId }),
   itemTiming: (matchId: number, slot: number) => call<ItemTimingReport>("item_timing", { matchId, slot }),
   replayStudy: (matchId: number, slot: number) => call<ReplayStudy>("replay_study", { matchId, slot }),
+  matchReview: (matchId: number, slot: number) => call<MatchReview>("match_review", { matchId, slot }),
+  topHabits: (matchId: number, slot: number) => call<Habits>("top_habits", { matchId, slot }),
+  heroAverage: (matchId: number, slot: number) => call<VersusAverage | null>("hero_average", { matchId, slot }),
   matchTeams: (matchId: number, accountId: string) => call<LiveMatch>("match_teams", { matchId, accountId }),
   scoutLobby: (players: LivePlayer[]) => call<Scout[]>("scout_lobby", { players }),
   adviseBuild: (build: Build, style: string) => call<Advice>("advise_build", { build, style }),
@@ -794,6 +797,9 @@ export interface MatchPlayer {
   neutral_damage: number;
   mitigated: number;
   game_mvp_rank: number | null;
+  /** Rank badge (tier × 10 + subrank, 0 unknown); `match` when the match records it, `now` for the current rank. */
+  badge: number;
+  badge_from: "" | "match" | "now";
   macro_stats: { name: string; amount: number }[];
   souls: { name: string; amount: number }[];
   kills_at: { time: number; other: number }[];
@@ -906,7 +912,51 @@ export interface MatchReport {
     paths: { slot: number; points: { time: number; left: number; top: number }[] }[];
     deaths: { time: number; victim: number; killer: number; left: number; top: number }[];
     fights: { time: number; left: number; top: number }[];
+    frame_step: number;
+    /** Thousandths of the minimap, and health percent (0 while dead), every `frame_step` seconds. */
+    frames: { slot: number; x: number[]; y: number[]; hp: number[] }[];
   };
+}
+
+export interface PhaseHabits {
+  seconds: number;
+  /** Shares of `HABIT_KINDS`, 0-1. */
+  time: number[];
+  /** `HABIT_GRID` × `HABIT_GRID` shares of the seconds alive, own base at the bottom. */
+  heat: number[];
+  base: number;
+  own_half: number;
+  enemy_half: number;
+  /** Not counted by the game in newer matches. */
+  unspent: number | null;
+}
+
+export interface Habits {
+  /** Laning, mid game, late game, then the whole match. */
+  phases: PhaseHabits[];
+  matches: number;
+}
+
+export const HABIT_KINDS = ["Fighting heroes", "Troopers and objectives", "Neutral camps", "Moving", "In base", "Waiting", "Dead"];
+export const HABIT_GRID = 24;
+
+export interface LaneFlow {
+  opponents: number[];
+  minutes: { minute: number; lost: number; their_lost: number; fighting: number; kills: number; deaths: number }[];
+  marks: { time: number; souls: number; their_souls: number; last_hits: number; their_last_hits: number; dealt: number; taken: number }[];
+  health: [number, number[]][];
+  turn: [number, number, number] | null;
+}
+
+export interface MatchReview {
+  habits: Habits;
+  lane: LaneFlow;
+}
+
+export interface VersusAverage {
+  matches: number;
+  wins: number;
+  rows: { label: string; this: number; average: number; higher_is_better: boolean }[];
 }
 
 export interface MatchSummary {

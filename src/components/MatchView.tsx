@@ -6,7 +6,10 @@ import MatchCompare from "./MatchCompare";
 import DeathAnalysisPanel, { DeathTrendView } from "./DeathAnalysisPanel";
 import ItemTimingPanel from "./ItemTimingPanel";
 import ReplayPanel from "./ReplayPanel";
-import { readSetting, SETTINGS, useSetting } from "../settings";
+import MatchReplay from "./MatchReplay";
+import MatchHabits from "./MatchHabits";
+import { rankName } from "./MyHeroes";
+import { accountFrom, readSetting, SETTINGS, useSetting } from "../settings";
 import ErrorNote from "./ErrorNote";
 import { dateTime, date, t, tn } from "../i18n";
 import { LOCALE } from "../i18n";
@@ -134,6 +137,22 @@ function toggleDetails(e: MouseEvent<HTMLElement>) {
 }
 
 /** The titles a player earned in the match, as small plates. */
+/** The game's own picture of a rank tier. */
+const rankImage = (badge: number) => `https://assets-bucket.deadlock-api.com/assets-api-res/images/ranks/rank${String(Math.floor(badge / 10)).padStart(2, "0")}_lg.webp`;
+
+/** A player's rank: the one the match records, or else their current one, marked as such. */
+function RankChip({ player }: { player: MatchPlayer }) {
+  if (player.badge <= 0 || !rankName(player.badge)) return null;
+  const now = player.badge_from === "now";
+  return (
+    <span className={"rank-chip" + (now ? " now" : "")} title={now ? t("The player's current rank: the match does not record ranks, so it may differ from their rank at the time.") : t("The player's rank in this match.")}>
+      <img src={rankImage(player.badge)} alt="" loading="lazy" />
+      {rankName(player.badge)}
+      {now && <small>{t("now")}</small>}
+    </span>
+  );
+}
+
 function Titles({ player }: { player: MatchPlayer }) {
   if (player.titles.length === 0) return null;
   return (
@@ -208,6 +227,7 @@ function PlayerDetail({
         <div>
           <strong style={{ color }}>{player.hero_name}</strong>
           {player.player_name && <small className="player-name">{player.player_name}</small>}
+          <RankChip player={player} />
           <small>
             {player.kills}/{player.deaths}/{player.assists} · {t("{n} souls", { n: fmt(player.net_worth) })} · {t("level {n}", { n: player.level })} · {TEAM_NAME[player.team]} ·{" "}
             {player.role}
@@ -911,9 +931,13 @@ function Report({
   onOpenBuild: (build: Build, target?: Build["target"]) => void;
   onOpenMaster: Props["onOpenMaster"];
 }) {
-  const [section, setSection] = useState<"overview" | "lanes" | "graphs" | "player" | "compare" | "duels" | "map">("overview");
+  const [section, setSection] = useState<"overview" | "lanes" | "graphs" | "player" | "habits" | "compare" | "duels" | "map" | "replay">("overview");
   const [selected, setSelected] = useState<number | null>(null);
   const [metricKey, setMetricKey] = useState("souls");
+  // The player's own slot in the match, from the account in Settings: where the Habits section starts.
+  const [account] = useSetting(SETTINGS.account);
+  const own = accountFrom(account);
+  const mine = report.players.find((p) => own !== null && String(p.account_id) === own)?.slot ?? report.ranking[0]?.slot ?? report.players[0].slot;
 
   const colors = useMemo(() => {
     const map = new Map<number, string>();
@@ -996,6 +1020,9 @@ function Report({
         <button className={section === "player" ? "on" : ""} onClick={() => setSection("player")}>
           {player ? t("Player: {hero}", { hero: player.hero_name }) : t("Player")}
         </button>
+        <button className={section === "habits" ? "on" : ""} onClick={() => setSection("habits")} title={t("Where the time went, where on the map, the lane minute by minute and the match beside the player's average")}>
+          {t("Habits")}
+        </button>
         <button className={section === "compare" ? "on" : ""} onClick={() => setSection("compare")}>
           {t("Compare two players")}
         </button>
@@ -1004,6 +1031,9 @@ function Report({
         </button>
         <button className={section === "map" ? "on" : ""} onClick={() => setSection("map")}>
           {t("Map")}
+        </button>
+        <button className={section === "replay" ? "on" : ""} onClick={() => setSection("replay")} title={t("The match played back on the minimap")}>
+          {t("Replay")}
         </button>
       </div>
       <JumpBar watch={`${report.match_id}-${section}-${selected}`} />
@@ -1056,6 +1086,7 @@ function Report({
                       </small>
                     </strong>
                     {p.player_name && <small className="player-name">{p.player_name}</small>}
+                    <RankChip player={p} />
                     <small>
                       {p.kills}/{deathsText(p)}/{p.assists} · {t("{n} souls", { n: fmt(p.net_worth) })}
                       {p.game_mvp_rank !== null ? ` · ${t("game MVP #{n}", { n: p.game_mvp_rank })}` : ""}
@@ -1578,6 +1609,8 @@ function Report({
       {section === "lanes" && <MatchLanes report={report} onOpen={open} />}
       {section === "duels" && <MatchDuels report={report} />}
       {section === "map" && <MatchMap report={report} />}
+      {section === "replay" && <MatchReplay report={report} focus={selected} />}
+      {section === "habits" && <MatchHabits report={report} slot={selected ?? mine} onPick={setSelected} />}
 
       {section === "compare" && (
         <MatchCompare

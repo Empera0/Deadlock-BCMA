@@ -72,12 +72,26 @@ pub struct MapPath {
     pub points: Vec<MapPoint>,
 }
 
+/// Where a player was and how much health they had, every `MapData::frame_step` seconds from the start: for
+/// playing the match back on the minimap.
+#[derive(Debug, Clone, Serialize)]
+pub struct MapFrames {
+    pub slot: u32,
+    /// Thousandths of the minimap from the left and from the top.
+    pub x: Vec<u16>,
+    pub y: Vec<u16>,
+    /// Health, percent; 0 while dead.
+    pub hp: Vec<u8>,
+}
+
 #[derive(Debug, Clone, Serialize)]
 pub struct MapData {
     pub image: String,
     /// Seconds between two points of a path.
     pub step: u32,
     pub paths: Vec<MapPath>,
+    pub frame_step: u32,
+    pub frames: Vec<MapFrames>,
     pub deaths: Vec<MapDeath>,
     /// The middle of each team fight, in the order of `MatchReport::fights`.
     pub fights: Vec<MapPoint>,
@@ -125,9 +139,10 @@ fn in_world(left: f64, top: f64) -> (f64, f64) {
 const MAP_RADIUS: f64 = 10752.0;
 const MAP_IMAGE: &str = "https://assets-bucket.deadlock-api.com/assets-api-res/images/maps/minimap_midtown_mid.png";
 const MAP_STEP_S: u32 = 5;
+const FRAME_STEP_S: u32 = 2;
 
 /// World position to minimap position: x grows to the right, y grows upwards.
-fn on_map(x: f64, y: f64) -> (f64, f64) {
+pub(crate) fn on_map(x: f64, y: f64) -> (f64, f64) {
     (((x + MAP_RADIUS) / (2.0 * MAP_RADIUS)).clamp(0.0, 1.0), ((MAP_RADIUS - y) / (2.0 * MAP_RADIUS)).clamp(0.0, 1.0))
 }
 
@@ -463,6 +478,10 @@ pub struct PlayerReport {
     pub mitigated: f64,
     /// The game's own MVP placement, for the few players it ranks.
     pub game_mvp_rank: Option<u32>,
+    /// The player's rank badge (tier × 10 + subrank, 0 unranked or unknown), and where it was read: `match` for
+    /// the rank the match itself records (ranked matches), `now` for the player's current rank, empty when unknown.
+    pub badge: u32,
+    pub badge_from: String,
     /// Counters the game tracks for its end-of-match awards: boxes broken, urns returned, and so on.
     pub macro_stats: Vec<SourceAmount>,
     /// Souls by where they came from, largest first.
@@ -1139,7 +1158,7 @@ pub struct EnabledDamage {
 }
 
 /// Running totals of the damage matrix by (dealer, target, bullet damage?), one value per sample time.
-fn damage_over_time(matrix: &Value) -> (Vec<u32>, BTreeMap<(u32, u32, bool), Vec<f64>>) {
+pub(crate) fn damage_over_time(matrix: &Value) -> (Vec<u32>, BTreeMap<(u32, u32, bool), Vec<f64>>) {
     let times: Vec<u32> = list(matrix, "sample_time_s").iter().map(|t| t.as_f64().unwrap_or(0.0) as u32).collect();
     let details = matrix.get("source_details").cloned().unwrap_or(Value::Null);
     let (types, names) = (list(&details, "stat_type"), list(&details, "source_name"));
@@ -2488,6 +2507,8 @@ pub fn parse(data: &GameData, json: &str) -> Result<MatchReport, String> {
             neutral_damage: num(&last, "neutral_damage"),
             mitigated: num(&last, "damage_mitigated"),
             game_mvp_rank: p.get("mvp_rank").and_then(Value::as_u64).filter(|r| *r > 0).map(|r| r as u32),
+            badge: p.pointer("/player_rank_data/initial_display_rank").and_then(Value::as_u64).unwrap_or(0) as u32,
+            badge_from: if p.pointer("/player_rank_data/initial_display_rank").and_then(Value::as_u64).unwrap_or(0) > 0 { "match".into() } else { String::new() },
             macro_stats: {
                 let awards = list(p, "accolades");
                 let mut stats: Vec<SourceAmount> = MACRO_STATS
@@ -3086,6 +3107,26 @@ pub fn parse(data: &GameData, json: &str) -> Result<MatchReport, String> {
                     .collect(),
             })
             .collect(),
+        frame_step: FRAME_STEP_S,
+        frames: tracks
+            .iter()
+            .map(|t| {
+                let times: Vec<u32> = (0..duration.min(t.len() as u32)).step_by(FRAME_STEP_S as usize).collect();
+                let at: Vec<(f64, f64)> = times
+                    .iter()
+                    .map(|time| {
+                        let (x, y) = t.place(*time);
+                        on_map(x, y)
+                    })
+                    .collect();
+                MapFrames {
+                    slot: t.slot,
+                    x: at.iter().map(|p| (p.0 * 1000.0).round() as u16).collect(),
+                    y: at.iter().map(|p| (p.1 * 1000.0).round() as u16).collect(),
+                    hp: times.iter().map(|time| t.health_at(*time).min(100) as u8).collect(),
+                }
+            })
+            .collect(),
         deaths: {
             let killers: Vec<(u32, u32, u32)> =
                 players.iter().flat_map(|p| p.deaths_at.iter().map(move |d| (d.time, p.slot, d.other))).collect();
@@ -3222,6 +3263,20 @@ pub fn parse(data: &GameData, json: &str) -> Result<MatchReport, String> {
         winning_team,
         players,
     })
+}
+
+/// Fills in the ranks the match itself does not record from the players' current ranks (deadlock-api
+/// `/v1/players/rank`).
+pub fn apply_ranks(report: &mut MatchReport, ranks_json: &str) {
+    let Ok(Value::Array(ranks)) = serde_json::from_str::<Value>(ranks_json) else { return };
+    for p in report.players.iter_mut().filter(|p| p.badge_from.is_empty()) {
+        let rank = ranks.iter().find(|x| x.get("account_id").and_then(Value::as_u64) == Some(p.account_id));
+        let badge = rank.and_then(|x| x.get("badge")).and_then(Value::as_u64).unwrap_or(0);
+        if badge > 0 {
+            p.badge = badge as u32;
+            p.badge_from = "now".into();
+        }
+    }
 }
 
 /// Fills in player names from a Steam profile list (deadlock-api `/v1/players/steam`).

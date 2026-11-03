@@ -7108,3 +7108,236 @@ option:checked {
 .page > header.live {
   display: none;
 }
+
+/* Rank chips beside player names. */
+.rank-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--muted);
+  margin-right: 6px;
+}
+.rank-chip img {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+}
+.rank-chip.now small {
+  font-size: 10px;
+  opacity: 0.75;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 0 4px;
+}
+
+/* Replay on the minimap. */
+.replay {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.replay-stage {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+.replay-stage svg.map {
+  flex: 1;
+  max-width: 760px;
+  aspect-ratio: 1;
+  background: var(--bg-deep);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+}
+.replay-feed {
+  width: 220px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.replay-clock {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 22px;
+  font-variant-numeric: tabular-nums;
+}
+.replay-fight {
+  font-size: 11px;
+  color: #ff5a52;
+  border: 1px solid #ff5a52;
+  border-radius: 6px;
+  padding: 1px 6px;
+}
+.replay-event {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+.replay-event img {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 2px solid;
+}
+.replay-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.replay-speeds button.on {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.replay-timeline input[type="range"] {
+  width: 100%;
+}
+.replay-track {
+  position: relative;
+  height: 26px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+.replay-band {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.12);
+  cursor: pointer;
+}
+.replay-mark {
+  position: absolute;
+  width: 4px;
+  margin-left: -2px;
+  cursor: pointer;
+  border-radius: 2px;
+}
+.replay-mark.death {
+  top: 3px;
+  height: 10px;
+}
+.replay-mark.death.mine {
+  outline: 2px solid #fff;
+}
+.replay-mark.objective {
+  bottom: 3px;
+  height: 8px;
+  width: 8px;
+  margin-left: -4px;
+}
+.replay-head {
+  position: absolute;
+  top: -3px;
+  bottom: -3px;
+  width: 2px;
+  background: var(--accent);
+  pointer-events: none;
+}
+
+/* Habits: time, places, the lane and the player's average. */
+.habit-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(560px, 1fr));
+  gap: 14px;
+}
+.habit-card h3 {
+  margin-top: 0;
+}
+.habit-phases {
+  margin-bottom: 8px;
+}
+.habit-bar-row {
+  display: grid;
+  grid-template-columns: 110px 1fr;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0;
+}
+.habit-bar {
+  display: flex;
+  height: 16px;
+  border-radius: 4px;
+  overflow: hidden;
+  background: var(--panel-2);
+}
+.habit-bar i {
+  display: block;
+  height: 100%;
+}
+.habit-swatch {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+.habit-table {
+  margin-top: 8px;
+  width: 100%;
+}
+.habit-notable {
+  color: var(--accent);
+  font-weight: 600;
+}
+.habit-notes {
+  margin: 8px 0;
+  padding-left: 18px;
+}
+.habit-heats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.habit-heat {
+  margin: 0;
+}
+.habit-heat svg.map {
+  width: 100%;
+  aspect-ratio: 1;
+  background: var(--bg-deep);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+}
+.habit-heat figcaption {
+  display: flex;
+  flex-direction: column;
+  font-size: 12px;
+}
+.lane-health {
+  width: 100%;
+  height: 130px;
+  background: var(--panel-2);
+  border-radius: 6px;
+}
+.habit-card .good {
+  color: #7cb342;
+}
+.habit-card .bad {
+  color: #ff6b5f;
+}
+@media (max-width: 900px) {
+  .replay-stage {
+    flex-direction: column;
+  }
+  .replay-feed {
+    width: 100%;
+  }
+}
+
+.map-image-bright {
+  filter: brightness(1.9) contrast(1.1);
+}
+.replay-time {
+  font-size: 20px;
+  font-variant-numeric: tabular-nums;
+  min-width: 64px;
+}
+.habit-phases button {
+  white-space: nowrap;
+}

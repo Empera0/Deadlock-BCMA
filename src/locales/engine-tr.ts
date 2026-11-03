@@ -1,6 +1,16 @@
 /** The engine's sentences in Turkish: [English template, Turkish template]. `{n}`, `{n1}`… are numbers; other
  *  parts are put into Turkish on their own when known (WORDS), and kept as they are otherwise. Written plainly. */
 export const SENTENCES: [string, string][] = [
+  ["Kills a minute", "Dakikada öldürme"],
+  ["Deaths a minute", "Dakikada ölüm"],
+  ["Assists a minute", "Dakikada asist"],
+  ["Souls a minute", "Dakikada ruh"],
+  ["Last hits a minute", "Dakikada son vuruş"],
+  ["Denies a minute", "Dakikada engelleme"],
+  ["Hero damage a minute", "Dakikada kahraman hasarı"],
+  ["Damage taken a minute", "Dakikada alınan hasar"],
+  ["Objective damage a minute", "Dakikada yapı hasarı"],
+  ["Hero damage per soul", "Ruh başına kahraman hasarı"],
   ["Reached with {item} at {n1}:{n2}, {against} the match's median of {n3}:{n4}.", "{item} ile {n1}:{n2} anında ulaşıldı, {against} (maçın ortancası {n3}:{n4})."],
   ["Base", "Temel"],
   ["{n1} + {n2} × {n3} spirit power", "{n1} + {n2} × {n3} büyü gücü"],

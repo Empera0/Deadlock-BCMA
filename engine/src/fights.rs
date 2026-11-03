@@ -70,6 +70,20 @@ impl Track {
         (0..self.xs.len().min(duration as usize)).step_by(every.max(1)).map(|t| (self.xs[t], self.ys[t], self.alive(t))).collect()
     }
 
+    /// Health at a second, percent; 0 while dead.
+    pub fn health_at(&self, time: u32) -> u64 {
+        self.health.get(time as usize).copied().unwrap_or(0)
+    }
+
+    /// Seconds recorded.
+    pub fn len(&self) -> usize {
+        self.xs.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.xs.is_empty()
+    }
+
     pub fn alive_at(&self, time: u32) -> bool {
         self.alive(time as usize)
     }

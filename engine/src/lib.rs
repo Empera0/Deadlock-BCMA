@@ -22,6 +22,7 @@ pub mod popular;
 pub mod master;
 pub mod raw;
 pub mod replay;
+pub mod review;
 pub mod scout;
 pub mod suggest;
 pub mod tiers;

@@ -1254,7 +1254,132 @@ async fn fetch_match(app: AppHandle, state: State<'_, AppState>, match_id: u64) 
     if let Some(names) = names {
         matches::apply_names(&mut report, &names);
     }
+    // Ranked matches record each player's rank; for the others, the players' current ranks, read once per match.
+    if report.players.iter().any(|p| p.badge_from.is_empty() && p.account_id > 0) {
+        let ranks_path = dir.join(format!("{match_id}.ranks.json"));
+        let ids: Vec<String> = report.players.iter().map(|p| p.account_id.to_string()).collect();
+        let url = format!("{MATCH_API}/players/rank?account_ids={}", ids.join(","));
+        let ranks = tauri::async_runtime::spawn_blocking(move || kept(&ranks_path, u64::MAX, || get(&url, "No ranks found."))).await.ok().and_then(Result::ok);
+        if let Some(ranks) = ranks {
+            matches::apply_ranks(&mut report, &ranks);
+        }
+    }
     Ok(report)
+}
+
+/// A file kept from an earlier answer while younger than `keep_s` seconds, else a fresh answer that is then kept.
+/// When the service cannot be reached, an older kept answer is used.
+fn kept(path: &std::path::Path, keep_s: u64, fetch: impl FnOnce() -> Result<String, String>) -> Result<String, String> {
+    let fresh = fs::metadata(path).and_then(|m| m.modified()).ok().and_then(|t| t.elapsed().ok()).is_some_and(|age| age.as_secs() < keep_s);
+    if fresh {
+        if let Ok(text) = fs::read_to_string(path) {
+            return Ok(text);
+        }
+    }
+    match fetch() {
+        Ok(text) => {
+            if let Some(dir) = path.parent() {
+                let _ = fs::create_dir_all(dir);
+            }
+            let _ = fs::write(path, &text);
+            Ok(text)
+        }
+        Err(e) => fs::read_to_string(path).map_err(|_| e),
+    }
+}
+
+/// How long the top players' habits on a hero are kept before they are read again.
+const REFERENCE_KEEP_S: u64 = 7 * 86_400;
+/// Top players' matches read for them, and the rank and days they come from.
+const REFERENCE_MATCHES: usize = 3;
+const REFERENCE_BADGE: u32 = 100;
+const REFERENCE_DAYS: u64 = 14;
+/// A player's own record on their heroes is kept this long.
+const OWN_AVERAGE_KEEP_S: u64 = 12 * 3600;
+
+#[derive(serde::Serialize)]
+struct MatchReview {
+    habits: engine::review::Habits,
+    lane: engine::review::LaneFlow,
+}
+
+/// Where a player spent the match, what their time went to and how the laning phase went minute by minute. Read
+/// from the match alone: nothing is downloaded.
+#[tauri::command]
+async fn match_review(app: AppHandle, state: State<'_, AppState>, match_id: u64, slot: u32) -> Result<MatchReview, String> {
+    let data = state.data.read().unwrap().clone();
+    let json = match_json(&app, match_id).await?;
+    tauri::async_runtime::spawn_blocking(move || {
+        let report = matches::parse(&data, &json)?;
+        Ok(MatchReview { habits: engine::review::habits(&json, slot)?, lane: engine::review::lane_flow(&report, &json, slot)? })
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+/// The same habits of top players on the hero a player played in a match, in the same lane when possible: a few
+/// recent high-rank matches of the hero, read once a week.
+#[tauri::command]
+async fn top_habits(app: AppHandle, state: State<'_, AppState>, match_id: u64, slot: u32) -> Result<engine::review::Habits, String> {
+    let data = state.data.read().unwrap().clone();
+    let json = match_json(&app, match_id).await?;
+    let dir = data_dir(&app)?.join("references");
+    tauri::async_runtime::spawn_blocking(move || {
+        let report = matches::parse(&data, &json)?;
+        let player = report.players.iter().find(|p| p.slot == slot).ok_or("No such player in the match")?;
+        let hero_id = data.hero(&player.hero).ok_or("Unknown hero")?.id;
+        let lane = engine::review::assigned_lane(&json, slot);
+        let path = dir.join(format!("{hero_id}-{lane}.json"));
+        let text = kept(&path, REFERENCE_KEEP_S, || {
+            let day = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0) / 86_400;
+            let from = (day - REFERENCE_DAYS) * 86_400;
+            let url = format!(
+                "{MATCH_API}/matches/metadata?hero_ids={hero_id}&min_average_badge={REFERENCE_BADGE}&min_unix_timestamp={from}&min_duration_s=1500&game_mode=normal&include_player_info=true&order_by=match_id&order_direction=desc&limit=10"
+            );
+            let bulk = get(&url, "No recent top-rank matches of this hero.")?;
+            let picked = engine::review::reference_matches(&bulk, hero_id, lane, REFERENCE_MATCHES);
+            let all: Vec<engine::review::Habits> = picked
+                .iter()
+                .filter_map(|(id, slot)| {
+                    let mut bytes = vec![];
+                    let resp = ureq::get(&format!("{MATCH_API}/matches/{id}/metadata/raw")).timeout(Duration::from_secs(60)).call().ok()?;
+                    resp.into_reader().read_to_end(&mut bytes).ok()?;
+                    let json = engine::cached_meta::metadata_json(&bytes).ok()?;
+                    engine::review::habits(&json, *slot).ok()
+                })
+                .collect();
+            if all.is_empty() {
+                return Err("No recent top-rank matches of this hero could be read.".into());
+            }
+            serde_json::to_string(&engine::review::average(&all)).map_err(|e| e.to_string())
+        })?;
+        serde_json::from_str(&text).map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+/// A player's match next to their own average on the hero.
+#[tauri::command]
+async fn hero_average(app: AppHandle, state: State<'_, AppState>, match_id: u64, slot: u32) -> Result<Option<engine::review::VersusAverage>, String> {
+    let data = state.data.read().unwrap().clone();
+    let json = match_json(&app, match_id).await?;
+    let dir = data_dir(&app)?.join("players");
+    tauri::async_runtime::spawn_blocking(move || {
+        let report = matches::parse(&data, &json)?;
+        let player = report.players.iter().find(|p| p.slot == slot).ok_or("No such player in the match")?;
+        if player.account_id == 0 {
+            return Ok(None);
+        }
+        let hero_id = data.hero(&player.hero).ok_or("Unknown hero")?.id;
+        let id = player.account_id;
+        let stats = kept(&dir.join(format!("{id}.hero-stats.json")), OWN_AVERAGE_KEEP_S, || {
+            get(&format!("{MATCH_API}/players/hero-stats?account_ids={id}"), "No matches found for this account.")
+        })?;
+        Ok(engine::review::versus_average(&report, slot, hero_id, &stats))
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 /// A match found in Steam's cache on this computer.
@@ -1508,6 +1633,9 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            match_review,
+            top_habits,
+            hero_average,
             get_data,
             compute,
             rank_next,
