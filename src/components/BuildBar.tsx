@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Build, fmt, Hero, Item, Sheet } from "../api";
 import { readShareCode, shareCode } from "../share";
 import { buildCard } from "../buildCard";
+import BuildCompare from "./BuildCompare";
 import { t } from "../i18n";
 
 interface Props {
@@ -15,6 +16,7 @@ interface Props {
 /** Copies the build as a code, and reads a pasted one. */
 function ShareButtons({ build, heroes, items, sheet, onChange }: Pick<Props, "build" | "heroes" | "items" | "sheet" | "onChange">) {
   const [importing, setImporting] = useState(false);
+  const [comparing, setComparing] = useState(false);
   const [code, setCode] = useState("");
   const [note, setNote] = useState("");
   const share = () => {
@@ -68,6 +70,10 @@ function ShareButtons({ build, heroes, items, sheet, onChange }: Pick<Props, "bu
       <button className="ghost" onClick={picture} disabled={build.purchases.length === 0} title={t("Copy the build as a picture: the hero, its items in order, its numbers and its code")}>
         {t("Picture")}
       </button>
+      <button className="ghost" onClick={() => setComparing(true)} title={t("Set this build beside a saved one: power by souls and the complete numbers")}>
+        {t("Compare")}
+      </button>
+      {comparing && <BuildCompare current={build} heroes={heroes} items={items} onClose={() => setComparing(false)} />}
       <button className="ghost" onClick={() => setImporting(!importing)} title={t("Load a build from a code")}>
         {t("Import")}
       </button>

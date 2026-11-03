@@ -7450,3 +7450,17 @@ button.link {
   cursor: pointer;
   text-decoration: underline;
 }
+
+/* Two builds compared. */
+.build-compare {
+  width: min(980px, 94vw);
+}
+.build-compare .power-charts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.build-compare td.good {
+  color: #7cb342;
+  font-weight: 600;
+}
