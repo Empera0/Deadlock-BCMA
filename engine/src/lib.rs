@@ -14,6 +14,7 @@ pub mod fights;
 pub mod kit;
 pub mod matches;
 pub mod measure;
+pub mod meta;
 pub mod farm;
 pub mod misc;
 pub mod order;

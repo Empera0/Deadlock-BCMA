@@ -3,6 +3,7 @@ import { api, fmt, Hero, HeroTier } from "../api";
 import HeroPage from "./HeroPage";
 import ItemTiers from "./ItemTiers";
 import MyHeroes from "./MyHeroes";
+import MetaShift from "./MetaShift";
 import { percent, t } from "../i18n";
 import { SETTINGS, useSetting } from "../settings";
 import ErrorNote from "./ErrorNote";
@@ -25,7 +26,7 @@ const kda = (h: HeroTier) => (h.kills + h.assists) / Math.max(h.deaths, 1);
 
 /** Every hero at the chosen ranks: how often it wins, is picked and banned, and what its players average. */
 export default function TiersView({ heroes, onBuild }: { heroes: Hero[]; onBuild: (heroClass: string) => void }) {
-  const [view, setView] = useState<"heroes" | "items" | "mine">("heroes");
+  const [view, setView] = useState<"heroes" | "items" | "mine" | "meta">("heroes");
   const [open, setOpen] = useState<number | null>(null);
   const [itemHero, setItemHero] = useState<number | null>(null);
   const [badgeSetting] = useSetting(SETTINGS.draftBadge);
@@ -75,6 +76,9 @@ export default function TiersView({ heroes, onBuild }: { heroes: Hero[]; onBuild
         <button className={view === "mine" && open === null ? "on" : ""} onClick={() => (setView("mine"), setOpen(null))}>
           {t("My heroes")}
         </button>
+        <button className={view === "meta" ? "on" : ""} onClick={() => (setView("meta"), setOpen(null))} title={t("What the patch changed in win and pick rates")}>
+          {t("Patch effect")}
+        </button>
       </div>
       <RankRange inline />
     </div>
@@ -99,6 +103,13 @@ export default function TiersView({ heroes, onBuild }: { heroes: Hero[]; onBuild
       <div className="tiers-view">
         {tabs}
         <MyHeroes badge={badge} maxBadge={maxBadge} onOpen={setOpen} />
+      </div>
+    );
+  if (view === "meta")
+    return (
+      <div className="tiers-view">
+        {tabs}
+        <MetaShift badge={badge} maxBadge={maxBadge} />
       </div>
     );
   if (view === "items")

@@ -499,6 +499,74 @@ async fn item_tiers(app: AppHandle, state: State<'_, AppState>, badge: u32, max_
     .map_err(|e| e.to_string())?
 }
 
+/// The days compared around a patch: up to this many before it and after it.
+const META_DAYS: u64 = 14;
+/// The patch list is read again after this long.
+const PATCHES_KEEP_S: u64 = 86_400;
+/// An answer about days that are over never changes; one about days still running is read again after this long.
+const META_OPEN_KEEP_S: u64 = 6 * 3600;
+
+#[derive(serde::Serialize)]
+struct MetaReport {
+    patches: Vec<engine::meta::PatchDay>,
+    /// The patch compared, and the days each window covers.
+    patch: engine::meta::PatchDay,
+    days_before: u64,
+    days_after: u64,
+    shift: engine::meta::MetaShift,
+}
+
+/// An analytics endpoint between two times at a rank range, kept on this computer.
+fn analytics_between(app: &AppHandle, endpoint: &str, badge: u32, max_badge: Option<u32>, from: u64, to: u64, now: u64) -> Result<String, String> {
+    let query = with_max(&format!("min_unix_timestamp={from}&max_unix_timestamp={to}&min_average_badge={badge}"), max_badge);
+    let key: String = format!("{endpoint}-{query}").chars().map(|c| if c.is_ascii_alphanumeric() { c } else { '_' }).collect();
+    let path = data_dir(app)?.join("meta").join(format!("{key}.json"));
+    let keep = if to < now { u64::MAX } else { META_OPEN_KEEP_S };
+    kept(&path, keep, || get(&format!("{MATCH_API}/analytics/{endpoint}?{query}"), "The statistics service has no data for these days."))
+}
+
+/// Every hero's and item's win and pick rate before a patch beside after it, at a rank range. `patch` picks the
+/// patch by its day; the newest is taken otherwise. Five requests the first time; days that are over are kept.
+#[tauri::command]
+async fn meta_shift(app: AppHandle, state: State<'_, AppState>, patch: Option<u64>, badge: u32, max_badge: Option<u32>) -> Result<MetaReport, String> {
+    let data = state.data.read().unwrap().clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let now = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0);
+        let patches_path = data_dir(&app)?.join("meta").join("patches.json");
+        let patches = engine::meta::patch_days(&kept(&patches_path, PATCHES_KEEP_S, || get(&format!("{MATCH_API}/patches"), "No patch notes found."))?);
+        // The newest patch with at least a day after it, unless one is asked for.
+        let chosen = match patch {
+            Some(day) => patches.iter().find(|p| p.day == day).cloned(),
+            None => patches.iter().find(|p| p.day + 2 * 86_400 <= now).cloned(),
+        }
+        .ok_or("No patch found to compare.")?;
+        // The patch day itself is left out: the patch came out some time in it. The window before stops at the
+        // patch before, so it holds one version of the game.
+        let previous = patches.iter().find(|p| p.day < chosen.day).map(|p| p.day + 86_400).unwrap_or(0);
+        let before_from = chosen.day.saturating_sub(META_DAYS * 86_400).max(previous);
+        let next = patches.iter().filter(|p| p.day > chosen.day).map(|p| p.day).min().unwrap_or(u64::MAX);
+        let after_from = chosen.day + 86_400;
+        let after_to = (after_from + META_DAYS * 86_400).min(next).min(now);
+        if after_to <= after_from {
+            return Err("The patch is too recent: there is not a full day of matches after it yet.".into());
+        }
+        let read = |endpoint: &str, from: u64, to: u64| analytics_between(&app, endpoint, badge, max_badge, from, to, now);
+        let heroes_before: Vec<engine::tiers::HeroRow> = parse(&read("hero-stats", before_from, chosen.day)?)?;
+        let heroes_after: Vec<engine::tiers::HeroRow> = parse(&read("hero-stats", after_from, after_to)?)?;
+        let items_before: Vec<popular::ItemStat> = parse(&read("item-stats", before_from, chosen.day)?)?;
+        let items_after: Vec<popular::ItemStat> = parse(&read("item-stats", after_from, after_to)?)?;
+        Ok(MetaReport {
+            days_before: (chosen.day - before_from) / 86_400,
+            days_after: (after_to - after_from).div_ceil(86_400),
+            shift: engine::meta::shift(&data, &heroes_before, &heroes_after, &items_before, &items_after),
+            patches,
+            patch: chosen,
+        })
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
 #[derive(serde::Serialize)]
 struct MyHeroes {
     /// The player's rank badge (0 when unranked), and the ranks the averages come from.
@@ -1727,6 +1795,7 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            meta_shift,
             share_history,
             match_review,
             top_habits,

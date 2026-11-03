@@ -7389,3 +7389,21 @@ option:checked {
 .range-field input[type="range"] {
   width: 160px;
 }
+
+/* Patch effect. */
+.meta-table img.meta-icon {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+  vertical-align: middle;
+  margin-right: 6px;
+}
+.meta-table .good {
+  color: #7cb342;
+}
+.meta-table .bad {
+  color: #ff6b5f;
+}
+.meta-shift p.bad {
+  color: #ff6b5f;
+}

@@ -725,6 +725,7 @@ export const api = {
   deathAnalysis: (matchId: number, slot: number) => call<DeathAnalysis>("death_analysis", { matchId, slot }),
   matchHistory: (accountId: string) => call<HistoryEntry[]>("match_history", { accountId }),
   shareCachedSalts: () => call<number>("share_cached_salts"),
+  metaShift: (patch: number | null, badge: number, maxBadge: number | null) => call<MetaReport>("meta_shift", { patch, badge, maxBadge }),
   shareHistory: (accountId: string) => call<HistoryShare>("share_history", { accountId }),
   findLocalMatches: () => call<LocalScan>("find_local_matches"),
   analyzeHistory: (accountId: string, count: number) => call<{ rows: MatchSummary[]; skipped: number }>("analyze_history", { accountId, count }),
@@ -947,6 +948,31 @@ export interface LaneFlow {
   marks: { time: number; souls: number; their_souls: number; last_hits: number; their_last_hits: number; dealt: number; taken: number }[];
   health: [number, number[]][];
   turn: [number, number, number] | null;
+}
+
+export interface MetaShiftRow {
+  key: string;
+  name: string;
+  icon: string;
+  category: string;
+  cost: number;
+  matches_before: number;
+  matches_after: number;
+  win_before: number;
+  win_after: number;
+  win_change: number;
+  pick_before: number;
+  pick_after: number;
+  pick_change: number;
+  clear: boolean;
+}
+
+export interface MetaReport {
+  patches: { title: string; day: number }[];
+  patch: { title: string; day: number };
+  days_before: number;
+  days_after: number;
+  shift: { heroes: MetaShiftRow[]; items: MetaShiftRow[] };
 }
 
 export interface HistoryShare {
