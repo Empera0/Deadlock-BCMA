@@ -2,6 +2,23 @@
 
 All notable changes to Deadlock BCMA are listed here. Versions follow [semantic versioning](https://semver.org).
 
+## [0.8.1] – 2026-11-03
+
+More looks to choose from, and a steadier Live screen.
+
+### Added
+
+1. **More themes.** Crimson, Ember, Hidden King, Archmother, Violet and Nord (dark), Frost and Sand (light).
+2. **Custom theme.** Pick the background, cards, text and accent colors, and if you like the weapon, vitality and spirit colors, dark or light; the rest is worked out from them. It can start from any theme.
+3. **Look settings.** The size of the whole window (80–140%), sharp, normal or round corners, the font, and animations on or off.
+
+### Fixed
+
+1. **Live screen.** The teams are first read from Valve's list of live matches (the game's Watch tab), at once, when the match is on it.
+2. In a long match, the match being played could drop out of the console log the app read and show as ended; the log is now read on from where it was left.
+3. Teams read before every player was in were kept as they were; they are now shown and asked for again until everyone is in.
+4. The players on the Live screen are listed even when their hero statistics cannot be read.
+
 ## [0.8.0] – 2026-11-03
 
 Match analysis shows how the match moved and how you play, beside top players and your own average.
@@ -673,6 +690,7 @@ This release adds the **Build generator**, with builds read from top-ranked matc
   - trends across your last matches.
 - Windows installer with a desktop shortcut and automatic updates from GitHub releases.
 
+[0.8.1]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.8.0...v0.8.1
 [0.8.0]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.6.1...v0.7.0
 [0.6.1]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.6.0...v0.6.1

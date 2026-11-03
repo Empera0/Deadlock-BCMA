@@ -2,6 +2,23 @@
 
 Uygulamanın Türkçe yenilik notları. Her sürümde neyin değiştiği, kısa ve sade.
 
+## [0.8.1] – 2026-11-03
+
+Seçilecek daha çok görünüm ve daha sağlam bir Canlı ekranı.
+
+### Eklenenler
+
+1. **Daha çok tema.** Kızıl, Kor, Hidden King, Archmother, Mor ve Nord (koyu), Ayaz ve Kum (açık).
+2. **Özel tema.** Arka plan, kart, yazı ve vurgu renklerini, istersen silah, dayanıklılık ve büyü renklerini de seç; koyu ya da açık. Gerisi bu renklerden hesaplanır. Herhangi bir temadan başlayabilirsin.
+3. **Görünüm ayarları.** Bütün pencerenin boyutu (%80–140), keskin, normal ya da yuvarlak köşeler, yazı tipi ve animasyonları açıp kapatma.
+
+### Düzeltilenler
+
+1. **Canlı ekranı.** Takımlar önce Valve'ın canlı maç listesinden (oyundaki İzle sekmesi) okunur; maç oradaysa hemen gelir.
+2. Uzun bir maçta oynanan maç, uygulamanın okuduğu konsol kaydının dışına düşüp bitmiş görünebiliyordu; kayıt artık kaldığı yerden okunuyor.
+3. Bütün oyuncular gelmeden okunan takımlar öyle kalıyordu; artık gösteriliyor ve herkes gelene kadar tekrar soruluyor.
+4. Canlı ekranındaki oyuncular, hero istatistikleri okunamasa da listeleniyor.
+
 ## [0.8.0] – 2026-11-03
 
 Maç analizi maçın nasıl aktığını ve nasıl oynadığını, en iyi oyuncular ve kendi ortalamanla yan yana gösteriyor.
