@@ -553,3 +553,134 @@ pub fn versus_average(
         rows: out,
     })
 }
+
+/// A thing to do better, from the parts of the player's score that lost the most points.
+#[derive(Debug, Clone, Serialize)]
+pub struct Lesson {
+    pub title: String,
+    pub detail: String,
+    /// Points of the score lost on it (of 100).
+    pub points: f64,
+    /// The section of the match analysis that shows it: `player` or `lanes`.
+    pub section: String,
+}
+
+/// Lessons are given from this many lost points on, three at most.
+const LESSON_POINTS: f64 = 1.0;
+const LESSONS: usize = 3;
+
+/// The three biggest things the player could have done better in the match, each with what it cost in score.
+pub fn lessons(report: &MatchReport, slot: u32) -> Vec<Lesson> {
+    let Some(p) = report.players.iter().find(|p| p.slot == slot) else { return vec![] };
+    let Some(rank) = report.ranking.iter().find(|r| r.slot == slot) else { return vec![] };
+    let part = |label: &str| rank.parts.iter().find(|x| x.label == label);
+    let lost = |labels: &[&str]| labels.iter().filter_map(|l| part(l)).map(|x| x.max_points - x.points).sum::<f64>();
+    let share = |label: &str| part(label).map(|x| if x.max_points > 0.0 { x.points / x.max_points } else { 1.0 }).unwrap_or(1.0);
+    let most = |f: &dyn Fn(&crate::matches::PlayerReport) -> f64| report.players.iter().map(f).fold(0.0, f64::max);
+    let minutes = (report.duration_s as f64 / 60.0).max(1.0);
+    let n = |v: f64| format!("{}", v.round() as i64);
+    let clock = |s: u32| format!("{}:{:02}", s / 60, s % 60);
+    let mut out: Vec<Lesson> = vec![];
+    let mut add = |title: &str, detail: String, points: f64, section: &str| {
+        if points >= LESSON_POINTS {
+            out.push(Lesson { title: title.into(), detail, points, section: section.into() });
+        }
+    };
+
+    if p.caught_deaths >= 2 || p.costly_deaths >= 1 {
+        add(
+            "Die less often alone",
+            format!(
+                "{} of your {} deaths came outside a team fight, alone or outnumbered; {} left your team a player short for a fight or the mid boss. You spent {} dead and lost {} souls to deaths.",
+                p.caught_deaths,
+                p.deaths,
+                p.costly_deaths,
+                clock(p.dead_seconds),
+                n(p.souls_lost_on_death)
+            ),
+            lost(&["Deaths that left the team short", "Deaths and revives"]),
+            "player",
+        );
+    }
+    if p.fights_missed >= 2 || p.late_fights_skipped >= 1 {
+        add(
+            "Be there for team fights",
+            format!(
+                "You were alive for {} team fights and joined {}; {} of the ones you stayed away from were fights your team needed you in, {} of them late in the match.",
+                p.fights_possible, p.fights_joined, p.fights_missed, p.late_fights_skipped
+            ),
+            lost(&["Late-game fights skipped", "Team fights joined %"]),
+            "player",
+        );
+    }
+    if !p.lane_opponents.is_empty() && p.lane_souls_diff <= -500.0 {
+        add(
+            "Win the lane",
+            format!(
+                "At {} you were {} souls behind your lane opponents, with {} last hits and {} denies; you died {} times to them in the lane.",
+                clock(p.lane_time),
+                n(-p.lane_souls_diff),
+                p.lane_last_hits,
+                p.lane_denies,
+                p.lane_deaths_to
+            ),
+            lost(&["Lane lead over the lane opponent"]),
+            "lanes",
+        );
+    }
+    if p.counter_score.is_some_and(|c| c < 60.0) {
+        let late = p.build_timing.iter().find(|x| x.tone == "bad").map(|x| x.text.clone());
+        add(
+            "Buy against their team",
+            late.unwrap_or_else(|| format!("Your items answered {}% of what the enemy team called for.", n(p.counter_score.unwrap_or(0.0)))),
+            lost(&["Items bought against the enemy team %"]),
+            "player",
+        );
+    }
+    if p.avg_unspent_souls > 1500.0 {
+        add("Spend your souls", format!("You carried {} unspent souls on average over the match.", n(p.avg_unspent_souls)), lost(&["Average unspent souls"]), "player");
+    }
+    if p.wins_farmed >= 1 {
+        add(
+            "Take objectives after won fights",
+            format!("{} times your team clearly won a fight and took nothing after it, while you went to the neutral camps.", p.wins_farmed),
+            lost(&["Won a fight, then farmed"]),
+            "player",
+        );
+    }
+    if p.mid_boss_alive > 0 && p.mid_boss_present < p.mid_boss_alive {
+        add(
+            "Go to the mid boss",
+            format!("You were alive for {} mid boss kills of your team's and at {} of them.", p.mid_boss_alive, p.mid_boss_present),
+            lost(&["Mid boss attendance %"]),
+            "player",
+        );
+    }
+    if share("Objective damage") < 0.4 {
+        add(
+            "Hit objectives",
+            format!("You dealt {} damage to objectives; the most in the match was {}.", n(p.objective_damage), n(most(&|x| x.objective_damage))),
+            lost(&["Objective damage"]),
+            "player",
+        );
+    }
+    if share("Souls") < 0.6 {
+        add(
+            "Farm more",
+            format!("You had {} souls, {} a minute; you last-hit {}% of the troopers you could.", n(p.net_worth as f64), n(p.net_worth as f64 / minutes), n(p.last_hit_pct)),
+            lost(&["Souls"]),
+            "player",
+        );
+    }
+    if share("Hero damage") < 0.5 {
+        add(
+            "Deal more damage to heroes",
+            format!("You dealt {} damage to heroes; the most in the match was {}.", n(p.hero_damage), n(most(&|x| x.hero_damage))),
+            lost(&["Hero damage"]),
+            "player",
+        );
+    }
+    out.sort_by(|a, b| b.points.total_cmp(&a.points));
+    out.truncate(LESSONS);
+    out
+}

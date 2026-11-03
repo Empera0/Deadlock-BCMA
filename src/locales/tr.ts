@@ -1485,4 +1485,6 @@ export const TR: Record<string, string> = {
   "Only {n} days after the patch yet: the numbers will move as more matches come in.": "Yamadan sonra henüz sadece {n} gün var: maç geldikçe sayılar değişecek.",
   "What the patch changed in win and pick rates": "Yamanın kazanma ve seçilme oranlarında değiştirdikleri",
   "Patch effect": "Yama etkisi",
+  "Three lessons for {hero}": "{hero} için 3 ders",
+  "Cost {n} points of the score": "Puandan {n} götürdü",
 };

@@ -199,3 +199,21 @@ fn ranks_recorded_in_the_match() {
     matches::apply_ranks(&mut report, &format!(r#"[{{"account_id": {account}, "badge": 63}}]"#));
     assert_eq!(report.players.iter().find(|p| p.slot == slot).unwrap().badge, 104);
 }
+
+#[test]
+fn three_lessons_at_most() {
+    let report = matches::parse(&data(), MATCH).unwrap();
+    for p in &report.players {
+        let lessons = review::lessons(&report, p.slot);
+        assert!(lessons.len() <= 3);
+        assert!(lessons.windows(2).all(|w| w[0].points >= w[1].points));
+        assert!(lessons.iter().all(|l| l.points >= 1.0 && !l.detail.is_empty()));
+    }
+    // The match's last player has something to learn.
+    let last = report.ranking.last().unwrap().slot;
+    let lessons = review::lessons(&report, last);
+    assert!(!lessons.is_empty());
+    for l in &lessons {
+        println!("{} ({:.1}): {}", l.title, l.points, l.detail);
+    }
+}

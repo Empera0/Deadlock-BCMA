@@ -38,6 +38,8 @@ pub struct MatchReport {
     pub duels: Vec<DuelCell>,
     /// Where things happened, for drawing on the minimap.
     pub map: MapData,
+    /// The three biggest things each player could have done better, as (slot, lessons).
+    pub lessons: Vec<(u32, Vec<crate::review::Lesson>)>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -3247,7 +3249,8 @@ pub fn parse(data: &GameData, json: &str) -> Result<MatchReport, String> {
     let ranking = rank(&players);
     award_titles(&mut players, &ranking, &mid_boss);
     let story = story(&players, &lane_reports, &fights, &mid_boss, &death_reports, &ranking, winning_team, duration);
-    Ok(MatchReport {
+    let mut report = MatchReport {
+        lessons: vec![],
         story,
         deaths: death_reports,
         lanes: lane_reports,
@@ -3262,7 +3265,9 @@ pub fn parse(data: &GameData, json: &str) -> Result<MatchReport, String> {
         duration_s: int(info, "duration_s"),
         winning_team,
         players,
-    })
+    };
+    report.lessons = report.players.iter().map(|p| (p.slot, crate::review::lessons(&report, p.slot))).collect();
+    Ok(report)
 }
 
 /// Fills in the ranks the match itself does not record from the players' current ranks (deadlock-api

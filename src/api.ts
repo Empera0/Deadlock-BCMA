@@ -918,6 +918,8 @@ export interface MatchReport {
     /** Thousandths of the minimap, and health percent (0 while dead), every `frame_step` seconds. */
     frames: { slot: number; x: number[]; y: number[]; hp: number[] }[];
   };
+  /** The three biggest things each player could have done better, as [slot, lessons]. */
+  lessons: [number, { title: string; detail: string; points: number; section: string }[]][];
 }
 
 export interface PhaseHabits {

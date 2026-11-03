@@ -137,6 +137,38 @@ function toggleDetails(e: MouseEvent<HTMLElement>) {
 }
 
 /** The titles a player earned in the match, as small plates. */
+/** The three biggest things a player could have done better, each with the points of the score it cost. */
+function Lessons({ report, slot, onOpen }: { report: MatchReport; slot: number; onOpen: (slot: number, section: string) => void }) {
+  const lessons = report.lessons.find(([s]) => s === slot)?.[1] ?? [];
+  const player = report.players.find((p) => p.slot === slot);
+  if (!player || lessons.length === 0) return null;
+  return (
+    <div className="group lessons">
+      <h3>
+        <img src={player.hero_icon} alt="" className="lessons-hero" />
+        {t("Three lessons for {hero}", { hero: player.hero_name })}
+      </h3>
+      <div className="lesson-list">
+        {lessons.map((l, i) => (
+          <div key={l.title} className="lesson">
+            <span className="lesson-n">{i + 1}</span>
+            <div>
+              <b>{l.title}</b>
+              <p>{l.detail}</p>
+              <small className="muted">
+                {t("Cost {n} points of the score", { n: fmt(l.points, 1) })} ·{" "}
+                <button className="link" onClick={() => onOpen(slot, l.section)}>
+                  {t("Show")}
+                </button>
+              </small>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 /** The game's own picture of a rank tier. */
 const rankImage = (badge: number) => `https://assets-bucket.deadlock-api.com/assets-api-res/images/ranks/rank${String(Math.floor(badge / 10)).padStart(2, "0")}_lg.webp`;
 
@@ -1041,6 +1073,7 @@ function Report({
 
       {section === "overview" && (
         <>
+          <Lessons report={report} slot={selected ?? mine} onOpen={(slot, to) => (setSelected(slot), setSection(to as typeof section))} />
           {report.story.length > 0 && (
             <div className="group">
               <h3>{t("The match in short")}</h3>
