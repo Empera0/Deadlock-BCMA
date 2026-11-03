@@ -1435,4 +1435,5 @@ export const TR: Record<string, string> = {
   "0–10 min": "0–10 dk",
   "10–20 min": "10–20 dk",
   "20+ min": "20+ dk",
+  "Not every player was in yet; asking again shortly.": "Henüz bütün oyuncular gelmedi; birazdan tekrar soruluyor.",
 };

@@ -955,16 +955,25 @@ async fn console_match() -> Result<ConsoleState, String> {
         let Some(path) = logs.iter().filter(|p| p.is_file()).max_by_key(|p| modified(p)) else {
             return ConsoleState { path: logs.first().map(|p| p.display().to_string()).unwrap_or_default(), found: false, seen: Default::default() };
         };
-        let mut text = String::new();
+        // What was read so far is kept, and only what the game wrote since is read: a long match can push the
+        // line that started it out of any fixed tail of the log.
+        static READ: std::sync::Mutex<Option<(PathBuf, u64, matches::ConsoleMatch)>> = std::sync::Mutex::new(None);
+        let mut read = READ.lock().unwrap();
+        let len = fs::metadata(path).map(|m| m.len()).unwrap_or(0);
+        let resume = read.as_ref().filter(|(p, offset, _)| p == path && *offset <= len).map(|(_, offset, seen)| (*offset, seen.clone()));
+        // A new log (the game was started again, or another library's) is read from its last part.
+        let (start, mut seen) = resume.unwrap_or_else(|| (len.saturating_sub(CONSOLE_TAIL), matches::ConsoleMatch::default()));
+        let mut bytes = vec![];
         if let Ok(mut f) = fs::File::open(path) {
             use std::io::{Seek, SeekFrom};
-            let len = f.metadata().map(|m| m.len()).unwrap_or(0);
-            let _ = f.seek(SeekFrom::Start(len.saturating_sub(CONSOLE_TAIL)));
-            let mut bytes = vec![];
-            let _ = f.read_to_end(&mut bytes);
-            text = String::from_utf8_lossy(&bytes).into_owned();
+            let _ = f.seek(SeekFrom::Start(start));
+            let _ = f.take(len - start).read_to_end(&mut bytes);
         }
-        ConsoleState { path: path.display().to_string(), found: true, seen: matches::console_match(&text) }
+        // A line still being written is left for the next read.
+        let complete = bytes.iter().rposition(|b| *b == b'\n').map(|i| i + 1).unwrap_or(0);
+        seen.feed(&String::from_utf8_lossy(&bytes[..complete]));
+        *read = Some((path.clone(), start + complete as u64, seen.clone()));
+        ConsoleState { path: path.display().to_string(), found: true, seen }
     })
     .await
     .map_err(|e| e.to_string())
@@ -1132,6 +1141,9 @@ async fn share_cached_salts(app: AppHandle, state: State<'_, AppState>) -> Resul
     Ok(count)
 }
 
+/// Players in a full match.
+const FULL_MATCH: usize = 12;
+
 /// Every player of a match being played, with team, hero and lane, from the statistics service's live query: it
 /// spectates the match and reads its broadcast, which takes about a minute the first time.
 #[tauri::command]
@@ -1174,7 +1186,7 @@ async fn match_teams(match_id: u64, account_id: String) -> Result<matches::LiveM
             let end = line.starts_with("event: end");
             text.push_str(&line);
             text.push('\n');
-            if end || players >= 12 {
+            if end || players >= FULL_MATCH {
                 break;
             }
         }
@@ -1189,7 +1201,10 @@ async fn match_teams(match_id: u64, account_id: String) -> Result<matches::LiveM
     })
     .await
     .map_err(|e| e.to_string())??;
-    *TEAMS.lock().unwrap() = Some((match_id, account, live.clone()));
+    // Teams read before every player was in are shown but asked for again.
+    if live.players.len() >= FULL_MATCH {
+        *TEAMS.lock().unwrap() = Some((match_id, account, live.clone()));
+    }
     Ok(live)
 }
 
@@ -1201,8 +1216,8 @@ async fn scout_lobby(state: State<'_, AppState>, players: Vec<matches::LivePlaye
     tauri::async_runtime::spawn_blocking(move || {
         let ids = players.iter().map(|p| p.account_id.to_string()).collect::<Vec<_>>().join(",");
         let fetch = |path: &str| get(&format!("{MATCH_API}/players/{path}?account_ids={ids}"), "No player data found.");
-        let stats = fetch("hero-stats")?;
-        // Ranks and profiles only add to the report: without them it still stands.
+        // Each part only adds to the report: without one, the players are still listed with the rest.
+        let stats = fetch("hero-stats").unwrap_or_else(|_| "[]".into());
         let ranks = fetch("rank").unwrap_or_else(|_| "[]".into());
         let profiles = fetch("steam").unwrap_or_else(|_| "[]".into());
         Ok(engine::scout::scout(&data, &players, &stats, &ranks, &profiles))

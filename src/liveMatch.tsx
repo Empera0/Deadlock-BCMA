@@ -7,6 +7,8 @@ import { SETTINGS, useSetting } from "./settings";
  *  broadcasting the match, ms. */
 const WATCH_MS = 20_000;
 const RETRY_MS = 60_000;
+/** Players in a full match. */
+const FULL_MATCH = 12;
 
 export type LivePhase = "off" | "no-log" | "waiting" | "loading" | "ready" | "ended";
 
@@ -34,7 +36,7 @@ export function LiveProvider({ children }: { children: ReactNode }) {
   const [maxBadge] = useSetting(SETTINGS.draftMaxBadge);
   const on = setting !== "0";
   const [state, setState] = useState<LiveState>(empty);
-  const current = useRef<{ id: number; tried: number; done: boolean } | null>(null);
+  const current = useRef<{ id: number; tried: number; done: boolean; laneRead?: boolean } | null>(null);
   const [nudge, setNudge] = useState(0);
 
   useEffect(() => {
@@ -73,9 +75,13 @@ export function LiveProvider({ children }: { children: ReactNode }) {
         }
         try {
           const live = await api.matchTeams(id, account);
-          cur.done = true;
-          setState((s) => ({ ...s, phase: "ready", live, error: "" }));
-          if (live.lane.length > 0) {
+          // Teams read before every player was in are shown, and asked for again.
+          const full = live.players.length >= FULL_MATCH;
+          cur.done = full;
+          const lanePending = cur.laneRead !== true;
+          setState((s) => ({ ...s, phase: "ready", live, error: full ? "" : "Not every player was in yet; asking again shortly." }));
+          if (live.lane.length > 0 && lanePending) {
+            cur.laneRead = true;
             const lane = await api.laneNote(live.hero, live.lane, Number(badge) || 0, maxBadge ? Number(maxBadge) : null).catch(() => null);
             setState((s) => (s.matchId === id ? { ...s, lane } : s));
           }

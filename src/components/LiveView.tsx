@@ -8,6 +8,8 @@ import ErrorNote from "./ErrorNote";
 import { LaneEnemies } from "./LaneNote";
 import LobbyScout from "./LobbyScout";
 
+const PARTIAL = "Not every player was in yet; asking again shortly.";
+
 /** Minutes and seconds since a time, ticking. */
 function useElapsed(since: number): string {
   const [now, setNow] = useState(Date.now());
@@ -95,6 +97,7 @@ export default function LiveView({ heroes, onPlan }: { heroes: Hero[]; onPlan: (
         )}
       </div>
       {live.phase === "loading" && <ErrorNote error={live.error} />}
+      {live.phase === "ready" && live.error && (live.error === PARTIAL ? <p className="muted">{t(PARTIAL)}</p> : <ErrorNote error={live.error} />)}
       {live.lane && live.lane.length > 0 && (
         <div className="group live-lane">
           <h3>{t("Your lane")}</h3>

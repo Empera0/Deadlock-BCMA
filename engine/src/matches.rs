@@ -3541,23 +3541,30 @@ fn number_after(line: &str, prefix: &str) -> Option<u64> {
 /// signed-in account shows as "[U:1:789]".
 pub fn console_match(log: &str) -> ConsoleMatch {
     let mut out = ConsoleMatch::default();
-    for line in log.lines() {
-        if let Some(id) = number_after(line, "[U:1:") {
-            out.account_id = Some(id);
-        }
-        if line.contains("Lobby ") && line.contains(" for Match ") {
-            let Some(id) = number_after(line, " for Match ") else { continue };
-            if line.contains("created") {
-                out.match_id = Some(id);
-            } else if line.contains("destroyed") && out.match_id == Some(id) {
-                out.match_id = None;
-                if !out.finished.contains(&id) {
-                    out.finished.push(id);
+    out.feed(log);
+    out
+}
+
+impl ConsoleMatch {
+    /// Takes in more of the console log, written after what was read before.
+    pub fn feed(&mut self, log: &str) {
+        for line in log.lines() {
+            if let Some(id) = number_after(line, "[U:1:") {
+                self.account_id = Some(id);
+            }
+            if line.contains("Lobby ") && line.contains(" for Match ") {
+                let Some(id) = number_after(line, " for Match ") else { continue };
+                if line.contains("created") {
+                    self.match_id = Some(id);
+                } else if line.contains("destroyed") && self.match_id == Some(id) {
+                    self.match_id = None;
+                    if !self.finished.contains(&id) {
+                        self.finished.push(id);
+                    }
                 }
             }
         }
     }
-    out
 }
 
 /// A match being played from Valve's list of matches open to spectators (deadlock-api `/v1/matches/active`, the

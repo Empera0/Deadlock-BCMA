@@ -976,3 +976,16 @@ fn live_match_from_the_watch_list() {
     assert!(live.players[1].ally && !live.players[2].ally);
     assert!(engine::matches::parse_active(json, 8, 9).is_err());
 }
+
+#[test]
+fn console_log_read_in_parts() {
+    // A match started long ago stays the current match while later parts of the log say nothing about it.
+    let mut seen = engine::matches::ConsoleMatch::default();
+    seen.feed("10/31 15:34:57 [Server] SV:  \"Me<0><[U:1:42]><>\" STEAM USERID validated\n10/31 15:38:06 Lobby 9 for Match 128416248 created\n");
+    for _ in 0..3 {
+        seen.feed("10/31 15:40:00 [Prediction] Prediction time is ahead of sim time\n");
+    }
+    assert_eq!((seen.match_id, seen.account_id), (Some(128416248), Some(42)));
+    seen.feed("10/31 16:02:44 Lobby 9 for Match 128416248 destroyed\n");
+    assert_eq!((seen.match_id, seen.finished.clone()), (None, vec![128416248]));
+}
