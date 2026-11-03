@@ -2,6 +2,12 @@
 
 All notable changes to Deadlock BCMA are listed here. Versions follow [semantic versioning](https://semver.org).
 
+## [0.8.2] – 2026-11-03
+
+### Added
+
+1. **Your missing matches are shared.** With Share my finished matches on, the app looks at your last 30 matches when it starts and after each match, and shares the ones deadlock-api does not have: the service gets them from Steam, so they open for anyone, and they are kept on this computer. Settings has a button to do it now.
+
 ## [0.8.1] – 2026-11-03
 
 More looks to choose from, and a steadier Live screen.
@@ -690,6 +696,7 @@ This release adds the **Build generator**, with builds read from top-ranked matc
   - trends across your last matches.
 - Windows installer with a desktop shortcut and automatic updates from GitHub releases.
 
+[0.8.2]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.8.1...v0.8.2
 [0.8.1]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.8.0...v0.8.1
 [0.8.0]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.6.1...v0.7.0

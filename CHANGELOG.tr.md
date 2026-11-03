@@ -2,6 +2,12 @@
 
 Uygulamanın Türkçe yenilik notları. Her sürümde neyin değiştiği, kısa ve sade.
 
+## [0.8.2] – 2026-11-03
+
+### Eklenenler
+
+1. **Eksik maçların gönderiliyor.** Biten maçlarımı paylaş açıksa uygulama açılınca ve her maçtan sonra son 30 maçına bakar, deadlock-api'de olmayanları gönderir: servis onları Steam'den alır, böylece herkes açabilir; maçlar bu bilgisayarda da tutulur. Ayarlar'da hemen yapmak için bir düğme var.
+
 ## [0.8.1] – 2026-11-03
 
 Seçilecek daha çok görünüm ve daha sağlam bir Canlı ekranı.
