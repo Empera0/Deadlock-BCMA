@@ -1090,6 +1090,79 @@ async fn share_match(app: AppHandle, match_id: u64) -> Result<Shared, String> {
     Ok(shared)
 }
 
+/// The player's recent matches looked at for ones the statistics service does not have, and how many of those are
+/// shared in one go.
+const HISTORY_LOOKED_AT: usize = 30;
+const HISTORY_SHARED_AT_ONCE: usize = 10;
+/// Matches known to be on the service, remembered so they are not asked about again.
+const HISTORY_REMEMBERED: usize = 2000;
+
+#[derive(serde::Serialize)]
+struct HistoryShare {
+    /// Recent matches looked at, and how many of them the service did not have.
+    checked: usize,
+    missing: usize,
+    /// Matches the service now has, and the ones it could not get from Steam (yet).
+    shared: Vec<u64>,
+    failed: Vec<u64>,
+}
+
+/// Finds the player's recent matches the statistics service does not have and shares them: asking for a match's
+/// salts makes the service get them from Steam, and reading its metadata makes it download the match from Valve.
+/// The match is then kept on this computer too. One request for the history, one to see which matches the service
+/// has, and two per missing match.
+#[tauri::command]
+async fn share_history(app: AppHandle, account_id: String) -> Result<HistoryShare, String> {
+    let account = steam_account(&account_id)?;
+    let done_path = data_dir(&app)?.join("shared-history.json");
+    let mut done: Vec<u64> = fs::read_to_string(&done_path).ok().and_then(|s| serde_json::from_str(&s).ok()).unwrap_or_default();
+    let history = tauri::async_runtime::spawn_blocking(move || get(&format!("{MATCH_API}/players/{account}/match-history"), "No matches found for this account."))
+        .await
+        .map_err(|e| e.to_string())??;
+    let rows: Vec<serde_json::Value> = serde_json::from_str(&history).map_err(|e| format!("The statistics service answered in an unexpected form: {e}"))?;
+    let recent: Vec<u64> = rows.iter().filter_map(|r| r.get("match_id").and_then(serde_json::Value::as_u64)).take(HISTORY_LOOKED_AT).collect();
+    let unknown: Vec<u64> = recent.iter().copied().filter(|id| !done.contains(id)).collect();
+    let mut out = HistoryShare { checked: recent.len(), missing: 0, shared: vec![], failed: vec![] };
+    if unknown.is_empty() {
+        return Ok(out);
+    }
+    let list = unknown.iter().map(u64::to_string).collect::<Vec<_>>().join(",");
+    let url = format!("{MATCH_API}/matches/metadata?match_ids={list}&include_info=true&limit={}", unknown.len());
+    // The service answers "not found" when it has none of them.
+    let have = tauri::async_runtime::spawn_blocking(move || get(&url, "[]").or_else(|e| if e == "[]" { Ok("[]".into()) } else { Err(e) }))
+        .await
+        .map_err(|e| e.to_string())??;
+    let have: Vec<u64> = serde_json::from_str::<Vec<serde_json::Value>>(&have)
+        .unwrap_or_default()
+        .iter()
+        .filter_map(|m| m.get("match_id").and_then(serde_json::Value::as_u64))
+        .collect();
+    done.extend(have.iter().copied());
+    let missing: Vec<u64> = unknown.into_iter().filter(|id| !have.contains(id)).collect();
+    out.missing = missing.len();
+    for id in missing.into_iter().take(HISTORY_SHARED_AT_ONCE) {
+        match share_match(app.clone(), id).await {
+            Ok(s) if s.metadata => {
+                out.shared.push(id);
+                done.push(id);
+            }
+            Ok(_) => out.failed.push(id),
+            Err(e) => {
+                out.failed.push(id);
+                // Rate limited: the rest wait for the next round.
+                if e.contains("rate limiting") {
+                    break;
+                }
+            }
+        }
+    }
+    done.sort_unstable();
+    done.dedup();
+    let keep = done.len().saturating_sub(HISTORY_REMEMBERED);
+    let _ = fs::write(&done_path, serde_json::to_string(&done[keep..]).unwrap_or_default());
+    Ok(out)
+}
+
 /// Matches sent to the statistics service per request, and the name the shares are sent under.
 const SALTS_PER_POST: usize = 100;
 const SALTS_USERNAME: &str = "deadlock-bcma";
@@ -1654,6 +1727,7 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            share_history,
             match_review,
             top_habits,
             hero_average,

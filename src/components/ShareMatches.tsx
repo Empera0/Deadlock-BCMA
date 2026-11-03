@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { api } from "../api";
+import { savedAccount } from "../live";
 import { SETTINGS, useSetting } from "../settings";
 import { t } from "../i18n";
 
@@ -71,6 +72,14 @@ export default function ShareMatches({ quiet = false }: { quiet?: boolean }) {
         if (count !== ended) {
           ended = count;
           api.shareCachedSalts().catch(() => {});
+          // The player's recent matches the service does not have yet, from their match history.
+          const account = c.account_id ? String(c.account_id) : savedAccount();
+          if (account) {
+            api
+              .shareHistory(account)
+              .then((r) => r.shared.length > 0 && setLast(t("{n} of your matches the service did not have were shared", { n: r.shared.length })))
+              .catch(() => {});
+          }
         }
         if (!c.found) return;
         const state = load();

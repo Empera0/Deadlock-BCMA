@@ -1465,4 +1465,9 @@ export const TR: Record<string, string> = {
   "Cards": "Kartlar",
   "Text": "Yazı",
   "Accent": "Vurgu",
+  "All of your last {n} matches are on deadlock-api.": "Son {n} maçının hepsi deadlock-api'de var.",
+  "{m} of your last {n} matches were missing: {s} shared, {f} not available from Steam yet.": "Son {n} maçından {m} tanesi eksikti: {s} tanesi gönderildi, {f} tanesi henüz Steam'den alınamıyor.",
+  "Looks at your last 30 matches and shares the ones deadlock-api does not have yet. Also done on its own when the app starts and after each match.": "Son 30 maçına bakar ve deadlock-api'de henüz olmayanları gönderir. Uygulama açılınca ve her maçtan sonra bu kendiliğinden de yapılır.",
+  "Share my missing matches now": "Eksik maçlarımı şimdi gönder",
+  "{n} of your matches the service did not have were shared": "Serviste olmayan {n} maçın gönderildi",
 };

@@ -73,6 +73,24 @@ export default function SettingsView({ version, fetchedAt, onRefresh, onGuide }:
   const [damage, setDamage] = useSetting(SETTINGS.masterDamage);
   const [watch, setWatch] = useSetting(SETTINGS.watchLive);
   const [share, setShare] = useSetting(SETTINGS.shareMatches);
+  const [sharing, setSharing] = useState(false);
+  const [shareNote, setShareNote] = useState("");
+  const shareNow = async () => {
+    setSharing(true);
+    setShareNote("");
+    try {
+      const r = await api.shareHistory(account.trim());
+      setShareNote(
+        r.missing === 0
+          ? t("All of your last {n} matches are on deadlock-api.", { n: r.checked })
+          : t("{m} of your last {n} matches were missing: {s} shared, {f} not available from Steam yet.", { m: r.missing, n: r.checked, s: r.shared.length, f: r.failed.length }),
+      );
+    } catch (e) {
+      setShareNote(String(e));
+    } finally {
+      setSharing(false);
+    }
+  };
   const [postMatch, setPostMatch] = useSetting(SETTINGS.postMatch);
   const [laneNote, setLaneNote] = useSetting(SETTINGS.laneNote);
   const [liveTrack, setLiveTrack] = useSetting(SETTINGS.liveTrack);
@@ -320,6 +338,12 @@ export default function SettingsView({ version, fetchedAt, onRefresh, onGuide }:
             </small>
           </span>
         </label>
+        <div className="fields">
+          <button disabled={sharing || !account.trim()} onClick={shareNow} title={t("Looks at your last 30 matches and shares the ones deadlock-api does not have yet. Also done on its own when the app starts and after each match.")}>
+            {sharing ? t("Working…") : t("Share my missing matches now")}
+          </button>
+          {shareNote && <small className="muted">{shareNote}</small>}
+        </div>
       </section>
 
       <BackupPanel />

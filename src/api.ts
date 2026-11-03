@@ -725,6 +725,7 @@ export const api = {
   deathAnalysis: (matchId: number, slot: number) => call<DeathAnalysis>("death_analysis", { matchId, slot }),
   matchHistory: (accountId: string) => call<HistoryEntry[]>("match_history", { accountId }),
   shareCachedSalts: () => call<number>("share_cached_salts"),
+  shareHistory: (accountId: string) => call<HistoryShare>("share_history", { accountId }),
   findLocalMatches: () => call<LocalScan>("find_local_matches"),
   analyzeHistory: (accountId: string, count: number) => call<{ rows: MatchSummary[]; skipped: number }>("analyze_history", { accountId, count }),
 };
@@ -946,6 +947,13 @@ export interface LaneFlow {
   marks: { time: number; souls: number; their_souls: number; last_hits: number; their_last_hits: number; dealt: number; taken: number }[];
   health: [number, number[]][];
   turn: [number, number, number] | null;
+}
+
+export interface HistoryShare {
+  checked: number;
+  missing: number;
+  shared: number[];
+  failed: number[];
 }
 
 export interface MatchReview {
