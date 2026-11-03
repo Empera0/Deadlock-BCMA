@@ -1145,6 +1145,12 @@ async fn match_teams(match_id: u64, account_id: String) -> Result<matches::LiveM
         }
     }
     let live = tauri::async_runtime::spawn_blocking(move || {
+        // Valve's list of matches open to spectators has the teams at once, without anyone watching the match; it
+        // only holds the matches the game's Watch tab lists, so the broadcast is read for the others.
+        let active = get(&format!("{MATCH_API}/matches/active?account_id={account}"), "No live match found.");
+        if let Ok(live) = active.and_then(|json| matches::parse_active(&json, match_id, account)) {
+            return Ok(live);
+        }
         let query = r#"SELECT "m_steamID", "m_iTeamNum", "m_PlayerDataGlobal__m_nHeroID" AS hero, "m_nAssignedLane" AS lane FROM CCitadelPlayerController WHERE "m_PlayerDataGlobal__m_nHeroID" > 0 LIMIT 24"#;
         let resp = match ureq::get(&format!("{MATCH_API}/matches/demo/live/query"))
             .query("match_id", &match_id.to_string())

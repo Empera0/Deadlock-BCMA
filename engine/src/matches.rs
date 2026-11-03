@@ -3560,6 +3560,35 @@ pub fn console_match(log: &str) -> ConsoleMatch {
     out
 }
 
+/// A match being played from Valve's list of matches open to spectators (deadlock-api `/v1/matches/active`, the
+/// game's Watch tab), from the side of the given account. Lanes are not in that list.
+pub fn parse_active(json: &str, match_id: u64, account_id: u64) -> Result<LiveMatch, String> {
+    let rows: Value = serde_json::from_str(json).map_err(|e| format!("Unreadable live match list: {e}"))?;
+    let rows = rows.as_array().map(Vec::as_slice).unwrap_or(&[]);
+    let found = rows
+        .iter()
+        .find(|m| m.get("match_id").and_then(Value::as_u64) == Some(match_id))
+        .or_else(|| rows.iter().find(|m| list(m, "players").iter().any(|p| p.get("account_id").and_then(Value::as_u64) == Some(account_id))))
+        .ok_or("The match is not in Valve's list of live matches.")?;
+    let players: Vec<(u64, u32, u64)> = list(found, "players")
+        .iter()
+        .map(|p| (p.get("account_id").and_then(Value::as_u64).unwrap_or(0), int(p, "team"), p.get("hero_id").and_then(Value::as_u64).unwrap_or(0)))
+        .collect();
+    let &(_, team, hero) = players.iter().find(|p| p.0 == account_id).ok_or("Your account is not among the players of this match")?;
+    let ids = |same: bool| players.iter().filter(|p| p.0 != account_id && (p.1 == team) == same && p.2 > 0).map(|p| p.2).collect::<Vec<_>>();
+    let mut all: Vec<LivePlayer> = players.iter().map(|p| LivePlayer { account_id: p.0, hero: p.2, ally: p.1 == team, lane: 0 }).collect();
+    all.sort_by_key(|p| (p.account_id != account_id, !p.ally));
+    Ok(LiveMatch {
+        match_id: found.get("match_id").and_then(Value::as_u64).unwrap_or(match_id),
+        duration_s: int(found, "duration_s"),
+        hero,
+        allies: ids(true),
+        enemies: ids(false),
+        lane: vec![],
+        players: all,
+    })
+}
+
 /// The answer of the analytics service's live query (server-sent events of player controller rows: Steam ID,
 /// team, hero and lane), from the side of the given account.
 pub fn parse_live_query(text: &str, match_id: u64, account_id: u64) -> Result<LiveMatch, String> {

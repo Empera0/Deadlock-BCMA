@@ -964,3 +964,15 @@ fn deaths_in_the_own_lane_while_it_is_laned_are_never_caught() {
         }
     }
 }
+
+#[test]
+fn live_match_from_the_watch_list() {
+    let json = r#"[{"match_id": 7, "duration_s": 95, "players": [
+        {"account_id": 1, "team": 0, "hero_id": 10}, {"account_id": 2, "team": 0, "hero_id": 11},
+        {"account_id": 3, "team": 1, "hero_id": 12}, {"account_id": 4, "team": 1, "hero_id": 13}]}]"#;
+    let live = engine::matches::parse_active(json, 7, 3).unwrap();
+    assert_eq!((live.hero, live.allies.clone(), live.enemies.clone(), live.duration_s), (12, vec![13], vec![10, 11], 95));
+    assert_eq!(live.players[0].account_id, 3);
+    assert!(live.players[1].ally && !live.players[2].ally);
+    assert!(engine::matches::parse_active(json, 8, 9).is_err());
+}
