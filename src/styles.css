@@ -7591,3 +7591,17 @@ button.link {
 .history-row:has(.history-tags) {
   flex-wrap: wrap;
 }
+
+/* A hero's guide. */
+.hero-guide-phase {
+  display: grid;
+  grid-template-columns: 180px 1fr;
+  gap: 10px;
+  align-items: start;
+  padding: 8px 0;
+  border-top: 1px solid var(--line);
+}
+.hero-guide-phase ul {
+  margin: 0;
+  padding-left: 18px;
+}

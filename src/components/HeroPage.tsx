@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { api, DraftFitRow, fmt, Hero, HeroPageReport, PopularReport } from "../api";
 import { percent, t } from "../i18n";
 import ErrorNote from "./ErrorNote";
+import HeroGuide from "./HeroGuide";
 
 /** Rows shown in each list of matchups. */
 const SHOWN = 7;
@@ -132,21 +133,7 @@ export default function HeroPage({
           <Matchups title={t("Best teammates")} help={t("The win rate of the two together, best first beyond what their own win rates make expected")} rows={page.with.slice(0, SHOWN)} byId={byId} />
         </div>
       )}
-      {build && (
-        <div className="group">
-          <h3>
-            {t("Popular build")} <small className="muted">{t("{rank} lobbies, {n} matches", { rank: build.rank, n: fmt(build.build.matches) })}</small>
-          </h3>
-          <div className="hero-page-build">
-            {build.build.core.map((i) => (
-              <span key={i.item} className={"hero-page-item " + i.category} title={`${i.name} · ${percent(fmt(i.kept_pct, 0))}`}>
-                <img src={i.icon} alt="" />
-                <small>{i.name}</small>
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
+      {build && <HeroGuide hero={hero} build={build} />}
     </div>
   );
 }

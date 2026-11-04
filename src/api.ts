@@ -58,6 +58,8 @@ export interface Hero {
   hero_type: string;
   levels: { level: number; required_souls: number }[];
   invest: Record<Category, InvestTier[]>;
+  /** Its abilities in slot order (the first four are the ones upgraded). */
+  abilities?: { class_name: string; name: string; icon: string }[];
 }
 
 export interface InvestTier {

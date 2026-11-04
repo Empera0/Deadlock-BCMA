@@ -1522,4 +1522,12 @@ export const TR: Record<string, string> = {
   "What you tried, what went wrong, what to do next time…": "Ne denedin, ne ters gitti, bir dahakine ne yapacaksın…",
   "Every match": "Bütün maçlar",
   "{n} matches, {w} won": "{n} maç, {w} galibiyet",
+  "bought at {m} min": "{m}. dakikada alınıyor",
+  "{m} min": "{m}. dk",
+  "When the match calls for it": "Maç gerektirirse",
+  "Power spikes": "Güç sıçramaları",
+  "No purchase stands out: the build grows evenly.": "Öne çıkan bir alım yok: build eşit büyüyor.",
+  "{n} matches, {w}% won": "{n} maç, %{w} kazanma",
+  "Changed in the last patch": "Son yamada değişenler",
+  "{item} (+{p}% fight damage)": "{item} (+%{p} savaş hasarı)",
 };
