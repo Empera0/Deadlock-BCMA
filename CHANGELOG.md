@@ -2,6 +2,18 @@
 
 All notable changes to Deadlock BCMA are listed here. Versions follow [semantic versioning](https://semver.org).
 
+## [0.10.0] – 2026-11-04
+
+What your items and ability order did in a match, a guide for every hero, and matches you can tag and share.
+
+### Added
+
+1. **What your items gave back.** In a player's match analysis: each item's own hero damage, healing, prevented enemy healing and the teammates' damage its resist reduction added, per 1,000 souls; items that gave far less than the rest are marked. Items that only raise stats are listed as such.
+2. **Ability order.** The player's upgrades in a match, with their minutes, beside the order top players of the hero go with most: where they part and which ability each takes to its last tier first.
+3. **Hero guide.** On a hero's page: its build phase by phase the way the Master builder makes it without teams, with what is sold to make room and the situational items, its power curve with the spikes, the ability order top players take, and what the last patch changed for it.
+4. **Match picture.** Picture, by the match title, copies a card of the match: result, hero, place and score, K/D/A and the main numbers, the items kept, titles and the three lessons.
+5. **Notes and tags.** Tags and a note under a match's title, kept on this computer and in backups; recent matches show them and can be narrowed to a tag, with the matches and wins under it.
+
 ## [0.9.0] – 2026-11-04
 
 What to fix after a match, what a patch did, and two builds side by side.
@@ -706,6 +718,7 @@ This release adds the **Build generator**, with builds read from top-ranked matc
   - trends across your last matches.
 - Windows installer with a desktop shortcut and automatic updates from GitHub releases.
 
+[0.10.0]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.8.2...v0.9.0
 [0.8.2]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.8.1...v0.8.2
 [0.8.1]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.8.0...v0.8.1

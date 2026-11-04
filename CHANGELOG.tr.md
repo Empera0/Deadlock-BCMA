@@ -2,6 +2,18 @@
 
 Uygulamanın Türkçe yenilik notları. Her sürümde neyin değiştiği, kısa ve sade.
 
+## [0.10.0] – 2026-11-04
+
+Bir maçta eşyalarının ve yetenek sıranın ne yaptığı, her hero için bir rehber, ve etiketleyip paylaşabileceğin maçlar.
+
+### Eklenenler
+
+1. **Eşyaların ne kazandırdı.** Bir oyuncunun maç analizinde: her eşyanın kendi kahraman hasarı, iyileşmesi, engellediği rakip iyileşmesi ve direnç düşürmesinin takım arkadaşlarına kattığı hasar, 1.000 ruh başına; diğerlerinden çok az kazandıranlar işaretli. Sadece stat veren eşyalar öyle listelenir.
+2. **Yetenek sırası.** Oyuncunun maçtaki yükseltmeleri, dakikalarıyla, herodaki en iyi oyuncuların en çok seçtiği sıranın yanında: nerede ayrıldıkları ve hangisinin hangi yeteneği önce son seviyeye çıkardığı.
+3. **Hero rehberi.** Hero sayfasında: Usta build'in takımlar olmadan kurduğu build evre evre, yer açmak için satılanlar ve duruma göre eşyalarla; güç eğrisi ve sıçramaları, en iyi oyuncuların yetenek sırası ve son yamada hero için değişenler.
+4. **Maç resmi.** Maç başlığının yanındaki Resim, maçın kartını kopyalar: sonuç, hero, sıralama ve puan, Ö/Ö/A ve temel değerler, tutulan eşyalar, unvanlar ve 3 ders.
+5. **Notlar ve etiketler.** Maç başlığının altında etiketler ve bir not; bu bilgisayarda ve yedeklerde tutulur. Son maçlar bunları gösterir ve bir etikete göre süzülebilir, altında maç ve galibiyet sayısıyla.
+
 ## [0.9.0] – 2026-11-04
 
 Maçtan sonra neyi düzelteceğin, bir yamanın ne yaptığı ve iki build yan yana.
