@@ -725,6 +725,8 @@ export const api = {
   deathAnalysis: (matchId: number, slot: number) => call<DeathAnalysis>("death_analysis", { matchId, slot }),
   matchHistory: (accountId: string) => call<HistoryEntry[]>("match_history", { accountId }),
   shareCachedSalts: () => call<number>("share_cached_salts"),
+  itemPayoff: (matchId: number, slot: number) => call<ItemPayoff[]>("item_payoff", { matchId, slot }),
+  matchOrder: (matchId: number, slot: number) => call<OrderCompare | null>("match_order", { matchId, slot }),
   metaShift: (patch: number | null, badge: number, maxBadge: number | null) => call<MetaReport>("meta_shift", { patch, badge, maxBadge }),
   shareHistory: (accountId: string) => call<HistoryShare>("share_history", { accountId }),
   findLocalMatches: () => call<LocalScan>("find_local_matches"),
@@ -975,6 +977,37 @@ export interface MetaReport {
   days_before: number;
   days_after: number;
   shift: { heroes: MetaShiftRow[]; items: MetaShiftRow[] };
+}
+
+export interface ItemPayoff {
+  item: string;
+  name: string;
+  icon: string;
+  category: string;
+  cost: number;
+  bought_at: number;
+  sold_at: number | null;
+  held_s: number;
+  damage: number;
+  healing: number;
+  heal_prevented: number;
+  enabled: number;
+  total: number;
+  /** Null for items that leave no record of their own. */
+  per_1k: number | null;
+  weak: boolean;
+}
+
+export interface OrderCompare {
+  mine: { index: number; ability: string; icon: string; tier: number; time: number; same: boolean }[];
+  top: [number, number][];
+  top_matches: number;
+  top_win_pct: number;
+  shared: number;
+  first_max_mine: number | null;
+  first_max_top: number | null;
+  names: string[];
+  icons: string[];
 }
 
 export interface HistoryShare {

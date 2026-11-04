@@ -1133,6 +1133,41 @@ async fn item_timing(app: AppHandle, state: State<'_, AppState>, match_id: u64, 
     .map_err(|e| e.to_string())?
 }
 
+/// What each item a player bought in a match gave back: its own damage, healing and prevented healing, and the
+/// damage its resist reductions added for teammates. Read from the match alone.
+#[tauri::command]
+async fn item_payoff(app: AppHandle, state: State<'_, AppState>, match_id: u64, slot: u32) -> Result<Vec<engine::payoff::ItemPayoff>, String> {
+    let data = state.data.read().unwrap().clone();
+    let json = match_json(&app, match_id).await?;
+    tauri::async_runtime::spawn_blocking(move || {
+        let report = matches::parse(&data, &json)?;
+        engine::payoff::payoff(&data, &report, &json, slot)
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+/// A player's ability upgrades in a match beside the order top players of the hero go with most.
+#[tauri::command]
+async fn match_order(app: AppHandle, state: State<'_, AppState>, match_id: u64, slot: u32) -> Result<Option<engine::order::OrderCompare>, String> {
+    let data = state.data.read().unwrap().clone();
+    let cache = Cache::new(&app, &data)?;
+    let json = match_json(&app, match_id).await?;
+    tauri::async_runtime::spawn_blocking(move || {
+        let report = matches::parse(&data, &json)?;
+        let p = report.players.iter().find(|p| p.slot == slot).ok_or("No such player in the match")?;
+        let hero_id = data.hero(&p.hero).map(|h| h.id).ok_or("Unknown hero")?;
+        let popular = analytics(&cache, "ability-order-stats", &format!("hero_id={hero_id}"), ASCENDANT)
+            .ok()
+            .and_then(|json| engine::order::popular_orders(&data, hero_id, &json).ok())
+            .unwrap_or_default();
+        let steps: Vec<(usize, u8, u32)> = p.abilities.iter().map(|a| (a.index, a.tier, a.time)).collect();
+        Ok(engine::order::compare_order(&data, &p.hero, &steps, &popular))
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
 /// What the statistics service holds of a finished match once it is shared: its salts, which let anyone read its
 /// metadata and, when Valve kept one, its replay.
 #[derive(serde::Serialize)]
@@ -1795,6 +1830,8 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            item_payoff,
+            match_order,
             meta_shift,
             share_history,
             match_review,

@@ -205,3 +205,69 @@ pub fn popular_orders(data: &GameData, hero_id: u64, json: &str) -> Result<Vec<P
     out.truncate(POPULAR_ORDERS);
     Ok(out)
 }
+
+/// One upgrade a player bought in a match.
+#[derive(Debug, Clone, Serialize)]
+pub struct TakenStep {
+    pub index: usize,
+    pub ability: String,
+    pub icon: String,
+    pub tier: u8,
+    /// Seconds into the match.
+    pub time: u32,
+    /// The top players' order has the same upgrade at the same place.
+    pub same: bool,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct OrderCompare {
+    /// The player's upgrades in order (unlocks left out).
+    pub mine: Vec<TakenStep>,
+    /// The order top players of the hero go with most, its matches and win rate; empty when unknown.
+    pub top: Vec<(usize, u8)>,
+    pub top_matches: u64,
+    pub top_win_pct: f64,
+    /// Upgrades in the same place as the top order before the first difference.
+    pub shared: usize,
+    /// The ability each order takes to its third tier first.
+    pub first_max_mine: Option<usize>,
+    pub first_max_top: Option<usize>,
+    /// The ability names by slot, for reading the orders.
+    pub names: Vec<String>,
+    pub icons: Vec<String>,
+}
+
+/// A player's upgrades in a match beside the most played order of top players. `steps` are the match's ability
+/// steps as (slot, tier, seconds); tier 0 is an unlock.
+pub fn compare_order(data: &GameData, hero: &str, steps: &[(usize, u8, u32)], popular: &[PopularOrder]) -> Option<OrderCompare> {
+    let hero = data.hero(hero)?;
+    let names: Vec<String> = hero.abilities.iter().take(4).map(|a| a.name.clone()).collect();
+    let icons: Vec<String> = hero.abilities.iter().take(4).map(|a| a.icon.clone()).collect();
+    let top = popular.first();
+    let top_steps: Vec<(usize, u8)> = top.map(|t| t.steps.clone()).unwrap_or_default();
+    let mine: Vec<TakenStep> = steps
+        .iter()
+        .filter(|s| s.1 > 0 && s.0 < 4)
+        .enumerate()
+        .map(|(i, s)| TakenStep {
+            index: s.0,
+            ability: names.get(s.0).cloned().unwrap_or_default(),
+            icon: icons.get(s.0).cloned().unwrap_or_default(),
+            tier: s.1,
+            time: s.2,
+            same: top_steps.get(i) == Some(&(s.0, s.1)),
+        })
+        .collect();
+    let shared = mine.iter().take_while(|s| s.same).count();
+    Some(OrderCompare {
+        first_max_mine: mine.iter().find(|s| s.tier >= 3).map(|s| s.index),
+        first_max_top: top_steps.iter().find(|s| s.1 >= 3).map(|s| s.0),
+        top: top_steps,
+        top_matches: top.map(|t| t.matches).unwrap_or(0),
+        top_win_pct: top.map(|t| t.win_pct).unwrap_or(0.0),
+        shared,
+        mine,
+        names,
+        icons,
+    })
+}

@@ -18,6 +18,7 @@ pub mod meta;
 pub mod farm;
 pub mod misc;
 pub mod order;
+pub mod payoff;
 pub mod patch;
 pub mod popular;
 pub mod master;

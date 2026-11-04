@@ -7464,3 +7464,74 @@ button.link {
   color: #7cb342;
   font-weight: 600;
 }
+
+/* What items gave back, and the ability order. */
+.payoff-table img.meta-icon {
+  width: 22px;
+  height: 22px;
+  vertical-align: middle;
+  margin-right: 6px;
+}
+.payoff-table tr.weak td {
+  background: color-mix(in srgb, #ff6b5f 8%, transparent);
+}
+.payoff-table .bad {
+  color: #ff6b5f;
+}
+.payoff-bar {
+  position: relative;
+  display: inline-block;
+  min-width: 110px;
+  text-align: right;
+}
+.payoff-bar i {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  height: 6px;
+  margin-top: -3px;
+  background: var(--accent);
+  opacity: 0.35;
+  border-radius: 3px;
+}
+.order-row {
+  display: grid;
+  grid-template-columns: 110px 1fr;
+  gap: 8px;
+  align-items: start;
+  margin: 6px 0;
+}
+.order-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.order-steps > span {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-size: 10px;
+}
+.order-steps > span.differs {
+  opacity: 0.45;
+}
+.order-step {
+  position: relative;
+  display: inline-block;
+}
+.order-step img {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  background: var(--panel-2);
+}
+.order-step b {
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  font-size: 10px;
+  background: var(--accent);
+  color: var(--on-accent);
+  border-radius: 6px;
+  padding: 0 3px;
+}

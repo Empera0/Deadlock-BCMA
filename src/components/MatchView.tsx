@@ -8,6 +8,7 @@ import ItemTimingPanel from "./ItemTimingPanel";
 import ReplayPanel from "./ReplayPanel";
 import MatchReplay from "./MatchReplay";
 import MatchHabits from "./MatchHabits";
+import { ItemPayoffPanel, OrderComparePanel } from "./BuildReviewPanels";
 import { rankName } from "./MyHeroes";
 import { accountFrom, readSetting, SETTINGS, useSetting } from "../settings";
 import ErrorNote from "./ErrorNote";
@@ -572,6 +573,8 @@ function PlayerDetail({
       )}
 
       <ItemTimingPanel key={`timing-${report.match_id}-${player.slot}`} matchId={report.match_id} slot={player.slot} hero={player.hero_name} />
+      <ItemPayoffPanel matchId={report.match_id} slot={player.slot} />
+      <OrderComparePanel matchId={report.match_id} slot={player.slot} />
 
       {player.build_timing.some((row) => row.advice.length > 0) && (
         <div className="group">
