@@ -133,7 +133,7 @@ export default function HeroPage({
           <Matchups title={t("Best teammates")} help={t("The win rate of the two together, best first beyond what their own win rates make expected")} rows={page.with.slice(0, SHOWN)} byId={byId} />
         </div>
       )}
-      {build && <HeroGuide hero={hero} build={build} />}
+      <HeroGuide hero={hero} situational={build?.build.situational ?? []} />
     </div>
   );
 }

@@ -146,3 +146,32 @@ fn counter_picks_are_in_the_build_and_no_component_follows_its_upgrade() {
         }
     }
 }
+
+#[test]
+fn a_master_build_without_teams_for_the_hero_guide() {
+    let d = data();
+    let haze = popular::popular_build(&d, 13, hero_matches(13), &stats(include_str!("popular/items-haze.json"))).unwrap();
+    let core: Vec<String> = haze.core.iter().map(|c| c.item.clone()).collect();
+    let phase_stats = stats(include_str!("popular/phases-haze.json"));
+    let matchup = Matchup { my_hero: Some("hero_haze"), my_spirit: Some(false), my_gun_pct: None, my_core: &core, allies: &[], enemies: &[], lane: &[], ranged: true };
+    let input = MasterInput {
+        matchup,
+        hero_id: 13,
+        phase_stats: &phase_stats,
+        hero_matches: hero_matches(13),
+        own_build: &haze,
+        focus: "auto",
+        damage: "auto",
+        scaling: &vec![],
+        bought: &[],
+    };
+    let build = master::master_build(&d, &input).unwrap();
+    assert_eq!(build.phases.len(), 4);
+    for (i, phase) in build.phases.iter().enumerate() {
+        assert!(build.items.iter().any(|x| x.phase == i), "nothing bought in {}", phase.title);
+    }
+    // Without teams the build leans on what top players buy at each point.
+    let early: Vec<&str> = build.items.iter().filter(|x| x.phase == 0).map(|x| x.name.as_str()).collect();
+    println!("{early:?}");
+    assert!(build.items.iter().filter(|x| x.phase == 0).all(|x| x.popular_pct > 0.0));
+}

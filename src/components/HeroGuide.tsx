@@ -1,69 +1,61 @@
 import { useEffect, useState } from "react";
-import { api, Build, EMPTY_MAP, fmt, Hero, OrderReport, PatchChange, PopularItem, PopularReport } from "../api";
+import { api, Build, EMPTY_MAP, fmt, Hero, MasterItem, MasterReport, OrderReport, PatchChange, PopularItem } from "../api";
+import { readSetting, SETTINGS } from "../settings";
+import ErrorNote from "./ErrorNote";
+import PowerCurve from "./PowerCurve";
 import { percent, t } from "../i18n";
 
-/** The parts of a match the core items are sorted into, by the minute top players buy them: up to, in minutes. */
-const PHASES: [string, number][] = [
-  ["Laning (0–10 min)", 10],
-  ["Mid game (10–20 min)", 20],
-  ["Late game (20+ min)", Infinity],
-];
-/** A purchase that raises the fight damage by this share or more is a power spike. */
-const SPIKE = 0.15;
-
-function ItemRow({ items }: { items: PopularItem[] }) {
+function ItemRow({ items }: { items: MasterItem[] }) {
   return (
     <div className="hero-page-build">
       {items.map((i) => (
-        <span key={i.item} className={"hero-page-item " + i.category} title={`${i.name} · ${t("bought at {m} min", { m: fmt(i.buy_minute, 0) })} · ${percent(fmt(i.win_pct, 1))}`}>
+        <span
+          key={i.item}
+          className={"hero-page-item " + i.category + (i.sold ? " sold" : "")}
+          title={`${i.name} · ${t("bought by {p}% of top players at this point", { p: fmt(i.popular_pct, 0) })}${i.sold ? ` · ${t("sold later")}` : ""}`}
+        >
           <img src={i.icon} alt="" />
           <small>{i.name}</small>
-          <small className="muted">{t("{m} min", { m: fmt(i.buy_minute, 0) })}</small>
+          <small className="muted">{i.sold ? t("sold later") : percent(fmt(i.popular_pct, 0))}</small>
         </span>
       ))}
     </div>
   );
 }
 
-/** The build top players go with as a guide: its items by part of the match, where it spikes, the ability order
- *  they take, and what the last patch changed for the hero. */
-export default function HeroGuide({ hero, build }: { hero: Hero; build: PopularReport }) {
+/** The hero's build as the Master builder makes it without teams, as a guide: its items phase by phase with the
+ *  ones sold to make room, its power curve with the spikes, the ability order top players take, and what the last
+ *  patch changed for the hero. */
+export default function HeroGuide({ hero, situational }: { hero: Hero; situational: PopularItem[] }) {
+  const [report, setReport] = useState<MasterReport | null>(null);
+  const [error, setError] = useState<unknown>(null);
   const [order, setOrder] = useState<OrderReport | null>(null);
-  const [spikes, setSpikes] = useState<{ item: string; gain: number }[] | null>(null);
   const [changes, setChanges] = useState<PatchChange[]>([]);
-  const core = [...build.build.core].sort((a, b) => a.buy_minute - b.buy_minute);
 
   useEffect(() => {
     let stale = false;
-    const input: Build = {
-      hero: hero.class_name,
-      purchases: core.map((i) => i.item),
-      upto: null,
-      souls: null,
-      active: [],
-      ability_tiers: [0, 0, 0, 0],
-      target: { health: 2000, bullet_resist: 0, spirit_resist: 0 },
-      copied_ult: null,
-      imbues: {},
-      map: EMPTY_MAP,
-    };
+    setReport(null);
+    setError(null);
     api
-      .abilityOrder(input)
-      .then((o) => !stale && setOrder(o))
-      .catch(() => {});
-    // The fight damage after each purchase, for the spikes.
-    api
-      .powerCurve(core.map((_, i) => ({ ...input, upto: i + 1, ability_tiers: [1, 1, 1, 1] })))
-      .then((rows) => {
+      .masterBuild(hero.class_name, [], [], [], readSetting(SETTINGS.masterFocus), readSetting(SETTINGS.masterDamage), null)
+      .then((r) => {
         if (stale) return;
-        const out: { item: string; gain: number }[] = [];
-        rows.forEach((r, i) => {
-          const before = i > 0 ? rows[i - 1] : null;
-          if (r && before && before.fight_damage > 0 && r.fight_damage / before.fight_damage - 1 >= SPIKE) out.push({ item: core[i].name, gain: r.fight_damage / before.fight_damage - 1 });
-        });
-        setSpikes(out);
+        setReport(r);
+        const input: Build = {
+          hero: hero.class_name,
+          purchases: r.master.purchases,
+          upto: null,
+          souls: null,
+          active: [],
+          ability_tiers: [0, 0, 0, 0],
+          target: { health: 2000, bullet_resist: 0, spirit_resist: 0 },
+          copied_ult: null,
+          imbues: r.master.imbues,
+          map: EMPTY_MAP,
+        };
+        return api.abilityOrder(input).then((o) => !stale && setOrder(o));
       })
-      .catch(() => !stale && setSpikes([]));
+      .catch((e) => !stale && setError(e));
     api
       .patchNotes()
       .then((n) => !stale && setChanges((n?.changes ?? []).filter((c) => c.class_name === hero.class_name || c.hero === hero.class_name)))
@@ -71,44 +63,53 @@ export default function HeroGuide({ hero, build }: { hero: Hero; build: PopularR
     return () => {
       stale = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hero.class_name, build]);
+  }, [hero.class_name]);
 
   const names = hero.abilities?.slice(0, 4).map((a) => a.name) ?? [];
   const icons = hero.abilities?.slice(0, 4).map((a) => a.icon) ?? [];
   const top = order?.popular[0];
-  let from = 0;
+  const master = report?.master;
+  const owned = new Set(master?.purchases ?? []);
   return (
     <div className="group hero-guide">
       <h3>
-        {t("Guide")} <small className="muted">{t("{rank} lobbies, {n} matches", { rank: build.rank, n: fmt(build.build.matches) })}</small>
+        {t("Guide")}{" "}
+        {report && <small className="muted">{t("{rank} lobbies · {focus}, built without teams the way the Master builder does", { rank: report.rank, focus: master?.focus_name ?? "" })}</small>}
       </h3>
-      {PHASES.map(([name, to]) => {
-        const items = core.filter((i) => i.buy_minute >= from && i.buy_minute < to);
-        from = to;
-        return items.length > 0 ? (
-          <div key={name} className="hero-guide-phase">
-            <b>{t(name)}</b>
-            <ItemRow items={items} />
-          </div>
-        ) : null;
-      })}
-      {build.build.situational.length > 0 && (
+      <ErrorNote error={error} />
+      {!report && !error && <p className="muted">{t("Working…")}</p>}
+      {master &&
+        master.phases.map((phase, i) => {
+          const items = master.items.filter((x) => x.phase === i);
+          return items.length > 0 ? (
+            <div key={phase.key} className="hero-guide-phase">
+              <b>
+                {phase.title}
+                <br />
+                <small className="muted">{t("{a}–{b} souls", { a: fmt(phase.souls_from), b: fmt(phase.souls_to) })}</small>
+              </b>
+              <div>
+                <ItemRow items={items} />
+                {phase.sold.length > 0 && <small className="muted">{t("Sold to make room: {items}", { items: phase.sold.join(", ") })}</small>}
+              </div>
+            </div>
+          ) : null;
+        })}
+      {situational.filter((x) => !owned.has(x.item)).length > 0 && (
         <div className="hero-guide-phase">
           <b>{t("When the match calls for it")}</b>
-          <ItemRow items={build.build.situational} />
+          <div className="hero-page-build">
+            {situational
+              .filter((x) => !owned.has(x.item))
+              .map((i) => (
+                <span key={i.item} className={"hero-page-item " + i.category} title={`${i.name} · ${percent(fmt(i.win_pct, 1))}`}>
+                  <img src={i.icon} alt="" />
+                  <small>{i.name}</small>
+                </span>
+              ))}
+          </div>
         </div>
       )}
-      <div className="hero-guide-phase">
-        <b>{t("Power spikes")}</b>
-        {spikes === null ? (
-          <span className="muted">{t("Working…")}</span>
-        ) : spikes.length === 0 ? (
-          <span className="muted">{t("No purchase stands out: the build grows evenly.")}</span>
-        ) : (
-          <span>{spikes.map((s) => t("{item} (+{p}% fight damage)", { item: s.item, p: fmt(s.gain * 100, 0) })).join(" · ")}</span>
-        )}
-      </div>
       {top && (
         <div className="hero-guide-phase">
           <b>
@@ -138,6 +139,7 @@ export default function HeroGuide({ hero, build }: { hero: Hero; build: PopularR
           </ul>
         </div>
       )}
+      {master && <PowerCurve master={master} />}
     </div>
   );
 }

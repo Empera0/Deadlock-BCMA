@@ -1530,4 +1530,8 @@ export const TR: Record<string, string> = {
   "{n} matches, {w}% won": "{n} maç, %{w} kazanma",
   "Changed in the last patch": "Son yamada değişenler",
   "{item} (+{p}% fight damage)": "{item} (+%{p} savaş hasarı)",
+  "bought by {p}% of top players at this point": "en iyi oyuncuların %{p} kadarı bu noktada alıyor",
+  "{rank} lobbies · {focus}, built without teams the way the Master builder does": "{rank} lobileri · {focus}; Usta build gibi, takımlar olmadan kuruldu",
+  "{a}–{b} souls": "{a}–{b} ruh",
+  "Sold to make room: {items}": "Yer açmak için satılanlar: {items}",
 };
