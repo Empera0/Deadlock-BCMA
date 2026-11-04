@@ -13,7 +13,7 @@ const NUMBERS: [string, (v: number) => string][] = [
 ];
 const COLORS: Record<string, string> = { weapon: "#d3842f", vitality: "#6ba337", spirit: "#9a5fd4" };
 
-function image(src: string): Promise<HTMLImageElement | null> {
+export function image(src: string): Promise<HTMLImageElement | null> {
   return new Promise((resolve) => {
     if (!src) return resolve(null);
     const img = new Image();
@@ -25,7 +25,7 @@ function image(src: string): Promise<HTMLImageElement | null> {
   });
 }
 
-function rounded(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
+export function rounded(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
   ctx.beginPath();
   ctx.roundRect(x, y, w, h, r);
 }

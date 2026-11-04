@@ -10,6 +10,7 @@ import MatchReplay from "./MatchReplay";
 import MatchHabits from "./MatchHabits";
 import { ItemPayoffPanel, OrderComparePanel } from "./BuildReviewPanels";
 import { rankName } from "./MyHeroes";
+import { matchCard } from "../matchCard";
 import { accountFrom, readSetting, SETTINGS, useSetting } from "../settings";
 import ErrorNote from "./ErrorNote";
 import { dateTime, date, t, tn } from "../i18n";
@@ -167,6 +168,38 @@ function Lessons({ report, slot, onOpen }: { report: MatchReport; slot: number; 
         ))}
       </div>
     </div>
+  );
+}
+
+/** Copies a picture of a player's match to paste in a chat; saves it when the clipboard is not allowed. */
+function MatchPicture({ report, slot }: { report: MatchReport; slot: number }) {
+  const [note, setNote] = useState("");
+  const hero = report.players.find((p) => p.slot === slot)?.hero_name ?? "";
+  const copy = async () => {
+    setNote(t("Working…"));
+    try {
+      const blob = await matchCard(report, slot);
+      try {
+        await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+        setNote(t("Match picture copied: paste it in a chat"));
+      } catch {
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = `${report.match_id} ${hero}.png`;
+        a.click();
+        setNote(t("Match picture saved"));
+      }
+    } catch (e) {
+      setNote(e instanceof Error ? e.message : String(e));
+    }
+  };
+  return (
+    <span className="match-picture">
+      <button className="ghost small" onClick={copy} title={t("Copy {hero}'s match as a picture: result, numbers, items and the three lessons", { hero })}>
+        {t("Picture")}
+      </button>
+      {note && <small className="muted">{note}</small>}
+    </span>
   );
 }
 
@@ -1040,6 +1073,7 @@ function Report({
         <span className="match-winner" style={{ ["--team" as string]: TEAM_COLOR[report.winning_team] }}>
           {t("{team} won", { team: TEAM_NAME[report.winning_team] })}
         </span>
+        <MatchPicture report={report} slot={selected ?? mine} />
       </div>
       <div className="match-nav">
       <div className="side-tabs match-sections">

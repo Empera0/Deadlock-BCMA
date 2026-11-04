@@ -1512,4 +1512,8 @@ export const TR: Record<string, string> = {
   "none": "hiçbirini",
   "Upgrades in a different place from the top order are dimmed. Hover one for the ability and when you took it.": "En iyi oyuncuların sırasından farklı yerdeki yükseltmeler soluk. Yetenek ve ne zaman aldığın için üzerine gel.",
   "No order of top players of this hero is known yet.": "Bu herodaki en iyi oyuncuların sırası henüz bilinmiyor.",
+  "Match picture copied: paste it in a chat": "Maç resmi kopyalandı: bir sohbete yapıştır",
+  "Match picture saved": "Maç resmi kaydedildi",
+  "Copy {hero}'s match as a picture: result, numbers, items and the three lessons": "{hero} maçını resim olarak kopyala: sonuç, değerler, eşyalar ve 3 ders",
+  "{n} of 12 · score {s}": "12 kişide {n}. · puan {s}",
 };
