@@ -1516,4 +1516,10 @@ export const TR: Record<string, string> = {
   "Match picture saved": "Maç resmi kaydedildi",
   "Copy {hero}'s match as a picture: result, numbers, items and the three lessons": "{hero} maçını resim olarak kopyala: sonuç, değerler, eşyalar ve 3 ders",
   "{n} of 12 · score {s}": "12 kişide {n}. · puan {s}",
+  "Add a tag…": "Etiket ekle…",
+  "Note ✓": "Not ✓",
+  "Note": "Not",
+  "What you tried, what went wrong, what to do next time…": "Ne denedin, ne ters gitti, bir dahakine ne yapacaksın…",
+  "Every match": "Bütün maçlar",
+  "{n} matches, {w} won": "{n} maç, {w} galibiyet",
 };

@@ -11,6 +11,8 @@ import MatchHabits from "./MatchHabits";
 import { ItemPayoffPanel, OrderComparePanel } from "./BuildReviewPanels";
 import { rankName } from "./MyHeroes";
 import { matchCard } from "../matchCard";
+import MatchNotes from "./MatchNotes";
+import { allTags, useMatchNotes } from "../matchNotes";
 import { accountFrom, readSetting, SETTINGS, useSetting } from "../settings";
 import ErrorNote from "./ErrorNote";
 import { dateTime, date, t, tn } from "../i18n";
@@ -1075,6 +1077,7 @@ function Report({
         </span>
         <MatchPicture report={report} slot={selected ?? mine} />
       </div>
+      <MatchNotes matchId={report.match_id} />
       <div className="match-nav">
       <div className="side-tabs match-sections">
         <button className={section === "overview" ? "on" : ""} onClick={() => setSection("overview")}>
@@ -1721,6 +1724,10 @@ export default function MatchView({ onOpenBuild, onOpenMaster, open }: Props) {
   const [showDeaths, setShowDeaths] = useState(false);
   const [report, setReport] = useState<MatchReport | null>(null);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
+  const [notes] = useMatchNotes();
+  const [tagFilter, setTagFilter] = useState("");
+  const tags = allTags(notes);
+  const shownHistory = tagFilter ? history.filter((h) => notes[h.match_id]?.tags.includes(tagFilter)) : history;
   const [local, setLocal] = useState<LocalScan | null>(null);
   const [trend, setTrend] = useState<{ rows: MatchSummary[]; skipped: number } | null>(null);
   const [showTrend, setShowTrend] = useState(false);
@@ -1921,7 +1928,25 @@ export default function MatchView({ onOpenBuild, onOpenMaster, open }: Props) {
         {history.length > 0 && (
           <div className="match-history">
             <h3>{t("Recent matches")}</h3>
-            {history.map((h) => (
+            {tags.length > 0 && (
+              <div className="history-filter">
+                <select value={tagFilter} onChange={(e) => setTagFilter(e.target.value)}>
+                  <option value="">{t("Every match")}</option>
+                  {tags.map((x) => (
+                    <option key={x} value={x}>
+                      {x}
+                    </option>
+                  ))}
+                </select>
+                {tagFilter && (
+                  <small className="muted">
+                    {t("{n} matches, {w} won", { n: shownHistory.length, w: shownHistory.filter((h) => h.won).length })}
+                    {shownHistory.length > 0 && ` (${Math.round((shownHistory.filter((h) => h.won).length / shownHistory.length) * 100)}%)`}
+                  </small>
+                )}
+              </div>
+            )}
+            {shownHistory.map((h) => (
               <button
                 key={h.match_id}
                 className={"history-row" + (h.won ? " won" : " lost") + (report?.match_id === h.match_id ? " on" : "")}
@@ -1939,6 +1964,14 @@ export default function MatchView({ onOpenBuild, onOpenMaster, open }: Props) {
                   <br />
                   {date(h.start_time)}
                 </small>
+                {notes[h.match_id] && (
+                  <span className="history-tags" title={notes[h.match_id].note}>
+                    {notes[h.match_id].tags.map((x) => (
+                      <i key={x}>{x}</i>
+                    ))}
+                    {notes[h.match_id].note && <i>✎</i>}
+                  </span>
+                )}
               </button>
             ))}
           </div>

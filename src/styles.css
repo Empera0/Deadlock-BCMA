@@ -7412,6 +7412,7 @@ option:checked {
 .lessons h3 {
   display: flex;
   align-items: center;
+  justify-content: flex-start;
   gap: 8px;
 }
 .lessons-hero {
@@ -7534,4 +7535,59 @@ button.link {
   color: var(--on-accent);
   border-radius: 6px;
   padding: 0 3px;
+}
+
+/* Notes and tags on matches. */
+.match-notes {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 4px 0 8px;
+}
+.tag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 1px 4px 1px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  color: var(--text);
+  font-size: 12px;
+}
+.tag-input {
+  width: 130px;
+  font-size: 12px;
+}
+.match-note {
+  flex-basis: 100%;
+  min-height: 64px;
+  resize: vertical;
+}
+.history-filter {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 6px;
+}
+.history-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  flex-basis: 100%;
+}
+.history-tags i {
+  font-style: normal;
+  font-size: 10px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+}
+.match-picture {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+}
+.history-row:has(.history-tags) {
+  flex-wrap: wrap;
 }
