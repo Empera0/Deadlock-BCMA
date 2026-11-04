@@ -2,6 +2,16 @@
 
 Uygulamanın Türkçe yenilik notları. Her sürümde neyin değiştiği, kısa ve sade.
 
+## [0.9.0] – 2026-11-04
+
+Maçtan sonra neyi düzelteceğin, bir yamanın ne yaptığı ve iki build yan yana.
+
+### Eklenenler
+
+1. **3 ders.** Bir maçın genel bakışının en üstünde: oyuncuya puandan en çok götüren üç şey, maçın kendi sayılarıyla (yalnızken ölümler, kaçırılan takım savaşları, lane, rakip takıma karşı eşyalar…), her biri gösterdiği bölüme bir bağlantıyla.
+2. **Yama etkisi.** Hero sıralamasında yeni bir sekme: her hero ve eşyanın bir yamadan önceki günlerdeki kazanma ve seçilme oranı, sonraki günlerle yan yana, seçili ranklarda. Şanstan büyük değişiklikler belirgin olarak işaretli. Yama günleri oyunun yama notlarından gelir; biten günler bu bilgisayarda tutulur.
+3. **Build karşılaştırma.** Build kur'daki Karşılaştır: şu anki build kayıtlı biriyle, ya da iki kayıtlı build. Her alımdan sonra savaş hasarı ve etkili can, harcanan ruha göre; hangisinin nerede öne geçtiği ve tamamlanmış build'lerin en çok ayrışan değerleri.
+
 ## [0.8.2] – 2026-11-03
 
 ### Eklenenler

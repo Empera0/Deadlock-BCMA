@@ -2,6 +2,16 @@
 
 All notable changes to Deadlock BCMA are listed here. Versions follow [semantic versioning](https://semver.org).
 
+## [0.9.0] – 2026-11-04
+
+What to fix after a match, what a patch did, and two builds side by side.
+
+### Added
+
+1. **Three lessons.** At the top of a match's overview: the three things that cost the player the most points of the score, written with the match's own numbers (deaths alone, team fights missed, the lane, items against the enemy team…), each with a link to the section that shows it.
+2. **Patch effect.** A new tab in Hero tiers: every hero's and item's win and pick rate in the days before a patch beside the days after it, at the chosen ranks. Changes larger than chance are marked clear. Patch days come from the game's changelog; the days that are over are kept on this computer.
+3. **Compare builds.** Compare, in the Build maker: the current build beside a saved one, or two saved ones. Fight damage and effective health after each purchase by the souls spent, where one passes the other, and the complete builds' numbers that differ most.
+
 ## [0.8.2] – 2026-11-03
 
 ### Added
@@ -696,6 +706,7 @@ This release adds the **Build generator**, with builds read from top-ranked matc
   - trends across your last matches.
 - Windows installer with a desktop shortcut and automatic updates from GitHub releases.
 
+[0.9.0]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.8.2...v0.9.0
 [0.8.2]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.8.1...v0.8.2
 [0.8.1]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.8.0...v0.8.1
 [0.8.0]: https://github.com/Empera0/Deadlock-BCMA/compare/v0.7.0...v0.8.0

@@ -1,6 +1,6 @@
 [package]
 name = "deadlock-stat-calculator"
-version = "0.8.2"
+version = "0.9.0"
 description = "Deadlock build and stat calculator"
 edition = "2021"
 
